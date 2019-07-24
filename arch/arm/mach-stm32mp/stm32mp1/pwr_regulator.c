@@ -10,6 +10,7 @@
 #include <syscon.h>
 #include <time.h>
 #include <asm/io.h>
+#include <asm/arch/stm32mp1_smc.h>
 #include <dm/device_compat.h>
 #include <dm/device-internal.h>
 #include <linux/bitops.h>
@@ -43,6 +44,10 @@ static int stm32mp_pwr_write(struct udevice *dev, uint reg,
 
 	if (len != 4)
 		return -EINVAL;
+
+	if (IS_ENABLED(CONFIG_ARM_SMCCC) && !IS_ENABLED(CONFIG_SPL_BUILD))
+		return stm32_smc_exec(STM32_SMC_PWR, STM32_SMC_REG_WRITE,
+				      STM32MP_PWR_CR3, val);
 
 	writel(val, priv->base + STM32MP_PWR_CR3);
 
