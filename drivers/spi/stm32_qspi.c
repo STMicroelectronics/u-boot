@@ -384,8 +384,8 @@ static int stm32_qspi_probe(struct udevice *bus)
 	if (priv->mm_size > STM32_QSPI_MAX_MMAP_SZ)
 		return -EINVAL;
 
-	dev_dbg(bus, "regs=<0x%p> mapped=<0x%p> mapped_size=<0x%lx>\n",
-		priv->regs, priv->mm_base, priv->mm_size);
+	dev_dbg(bus, "%s: regs=<0x%p> mapped=<0x%p> mapped_size=<0x%x>\n",
+		__func__, priv->regs, priv->mm_base, (u32)priv->mm_size);
 
 	ret = clk_get_by_index(bus, 0, &clk);
 	if (ret < 0)
