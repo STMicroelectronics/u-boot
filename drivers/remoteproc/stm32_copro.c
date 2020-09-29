@@ -9,11 +9,14 @@
 #include <fdtdec.h>
 #include <log.h>
 #include <remoteproc.h>
+#include <rproc_optee.h>
 #include <reset.h>
 #include <asm/io.h>
 #include <dm/device_compat.h>
 #include <linux/err.h>
 #include <linux/printk.h>
+
+#define STM32MP15_M4_FW_ID 0
 
 /**
  * struct stm32_copro_privdata - power processor private data
@@ -25,6 +28,8 @@ struct stm32_copro_privdata {
 	struct reset_ctl reset_ctl;
 	struct reset_ctl hold_boot;
 	ulong rsc_table_addr;
+	ulong rsc_table_size;
+	struct rproc_optee trproc;
 };
 
 /**
@@ -34,10 +39,16 @@ struct stm32_copro_privdata {
  */
 static int stm32_copro_probe(struct udevice *dev)
 {
-	struct stm32_copro_privdata *priv;
+	struct stm32_copro_privdata *priv = dev_get_priv(dev);
+	struct rproc_optee *trproc = &priv->trproc;
 	int ret;
 
-	priv = dev_get_priv(dev);
+	trproc->fw_id = (u32)dev_get_driver_data(dev);
+	ret = rproc_optee_open(trproc);
+	if (!ret) {
+		dev_info(dev, "delegate the firmware management to OPTEE\n");
+		return 0;
+	}
 
 	ret = reset_get_by_name(dev, "mcu_rst", &priv->reset_ctl);
 	if (ret) {
@@ -52,6 +63,22 @@ static int stm32_copro_probe(struct udevice *dev)
 	}
 
 	dev_dbg(dev, "probed\n");
+
+	return 0;
+}
+
+/**
+ * stm32_copro_optee_remove() - Close the rproc trusted application session
+ * @dev:	corresponding STM32 remote processor device
+ * @return 0 if all went ok, else corresponding -ve error
+ */
+static int stm32_copro_remove(struct udevice *dev)
+{
+	struct stm32_copro_privdata *priv = dev_get_priv(dev);
+	struct rproc_optee *trproc = &priv->trproc;
+
+	if (trproc->tee)
+		return rproc_optee_close(trproc);
 
 	return 0;
 }
@@ -94,11 +121,13 @@ static void *stm32_copro_device_to_virt(struct udevice *dev, ulong da,
  */
 static int stm32_copro_load(struct udevice *dev, ulong addr, ulong size)
 {
-	struct stm32_copro_privdata *priv;
+	struct stm32_copro_privdata *priv = dev_get_priv(dev);
+	struct rproc_optee *trproc = &priv->trproc;
 	ulong rsc_table_size;
 	int ret;
 
-	priv = dev_get_priv(dev);
+	if (trproc->tee)
+		return rproc_optee_load(trproc, addr, size);
 
 	ret = reset_assert(&priv->hold_boot);
 	if (ret) {
@@ -128,24 +157,41 @@ static int stm32_copro_load(struct udevice *dev, ulong addr, ulong size)
  */
 static int stm32_copro_start(struct udevice *dev)
 {
-	struct stm32_copro_privdata *priv;
+	struct stm32_copro_privdata *priv = dev_get_priv(dev);
+	struct rproc_optee *trproc = &priv->trproc;
+	phys_size_t rsc_size;
+	phys_addr_t rsc_addr;
 	int ret;
 
-	priv = dev_get_priv(dev);
+	if (trproc->tee) {
+		ret = rproc_optee_get_rsc_table(trproc, &rsc_addr, &rsc_size);
+		if (ret)
+			return ret;
 
-	ret = reset_deassert(&priv->hold_boot);
-	if (ret) {
-		dev_err(dev, "Unable to deassert hold boot (ret=%d)\n", ret);
-		return ret;
+		priv->rsc_table_size = (ulong)rsc_size;
+		priv->rsc_table_addr = (ulong)rsc_addr;
+
+		ret = rproc_optee_start(trproc);
+		if (ret)
+			return ret;
+
+	} else {
+		ret = reset_deassert(&priv->hold_boot);
+		if (ret) {
+			dev_err(dev, "Unable to deassert hold boot (ret=%d)\n",
+				ret);
+			return ret;
+		}
+
+		/*
+		 * Once copro running, reset hold boot flag to avoid copro
+		 * rebooting autonomously (error should never occur)
+		 */
+		ret = reset_assert(&priv->hold_boot);
+		if (ret)
+			dev_err(dev, "Unable to assert hold boot (ret=%d)\n",
+				ret);
 	}
-
-	/*
-	 * Once copro running, reset hold boot flag to avoid copro
-	 * rebooting autonomously (error should never occur)
-	 */
-	ret = reset_assert(&priv->hold_boot);
-	if (ret)
-		dev_err(dev, "Unable to assert hold boot (ret=%d)\n", ret);
 
 	/* indicates that copro is running */
 	writel(TAMP_COPRO_STATE_CRUN, TAMP_COPRO_STATE);
@@ -162,21 +208,29 @@ static int stm32_copro_start(struct udevice *dev)
  */
 static int stm32_copro_reset(struct udevice *dev)
 {
-	struct stm32_copro_privdata *priv;
+	struct stm32_copro_privdata *priv = dev_get_priv(dev);
+	struct rproc_optee *trproc = &priv->trproc;
 	int ret;
 
-	priv = dev_get_priv(dev);
 
-	ret = reset_assert(&priv->hold_boot);
-	if (ret) {
-		dev_err(dev, "Unable to assert hold boot (ret=%d)\n", ret);
-		return ret;
-	}
+	if (trproc->tee) {
+		ret = rproc_optee_stop(trproc);
+		if (ret)
+			return ret;
+	} else {
+		ret = reset_assert(&priv->hold_boot);
+		if (ret) {
+			dev_err(dev, "Unable to assert hold boot (ret=%d)\n",
+				ret);
+			return ret;
+		}
 
-	ret = reset_assert(&priv->reset_ctl);
-	if (ret) {
-		dev_err(dev, "Unable to assert reset line (ret=%d)\n", ret);
-		return ret;
+		ret = reset_assert(&priv->reset_ctl);
+		if (ret) {
+			dev_err(dev, "Unable to assert reset line (ret=%d)\n",
+				ret);
+			return ret;
+		}
 	}
 
 	writel(TAMP_COPRO_STATE_OFF, TAMP_COPRO_STATE);
@@ -214,7 +268,7 @@ static const struct dm_rproc_ops stm32_copro_ops = {
 };
 
 static const struct udevice_id stm32_copro_ids[] = {
-	{.compatible = "st,stm32mp1-m4"},
+	{ .compatible = "st,stm32mp1-m4", .data = STM32MP15_M4_FW_ID },
 	{}
 };
 
@@ -224,5 +278,7 @@ U_BOOT_DRIVER(stm32_copro) = {
 	.id = UCLASS_REMOTEPROC,
 	.ops = &stm32_copro_ops,
 	.probe = stm32_copro_probe,
-	.priv_auto	= sizeof(struct stm32_copro_privdata),
+	.remove = stm32_copro_remove,
+	.priv_auto = sizeof(struct stm32_copro_privdata),
+	.flags = DM_FLAG_OS_PREPARE,
 };
