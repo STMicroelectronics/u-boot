@@ -50,6 +50,10 @@
 #define SYSCFG_PMCSETR_ETH_SEL_RGMII	0x1
 #define SYSCFG_PMCSETR_ETH_SEL_RMII	0x4
 
+/* CLOCK feed to PHY */
+#define ETH_CK_F_50M	50000000
+#define ETH_CK_F_125M	125000000
+
 static ulong eqos_get_tick_clk_rate_stm32(struct udevice *dev)
 {
 	struct eqos_priv __maybe_unused *eqos = dev_get_priv(dev);
@@ -131,7 +135,8 @@ static int eqos_stop_clks_stm32(struct udevice *dev)
 }
 
 static int eqos_probe_syscfg_stm32(struct udevice *dev,
-				   phy_interface_t interface_type)
+				   phy_interface_t interface_type,
+				   ulong rate)
 {
 	/* Ethernet 50MHz RMII clock selection. */
 	const bool eth_ref_clk_sel = dev_read_bool(dev, "st,eth-ref-clk-sel");
@@ -190,7 +195,7 @@ static int eqos_probe_syscfg_stm32(struct udevice *dev,
 		 * IO pin (requires matching GPIO block AF setting of that
 		 * pin).
 		 */
-		if (eth_ref_clk_sel || ext_phyclk)
+		if (rate == ETH_CK_F_50M && (eth_ref_clk_sel || ext_phyclk))
 			value |= SYSCFG_PMCSETR_ETH_REF_CLK_SEL;
 		break;
 	case PHY_INTERFACE_MODE_RGMII:
@@ -205,7 +210,7 @@ static int eqos_probe_syscfg_stm32(struct udevice *dev,
 		 * otherwise use external clock from ETHx_CLK125 pin (requires
 		 * matching GPIO block AF setting of that pin).
 		 */
-		if (eth_clk_sel || ext_phyclk)
+		if (rate == ETH_CK_F_125M && (eth_clk_sel || ext_phyclk))
 			value |= SYSCFG_PMCSETR_ETH_CLK_SEL;
 		break;
 	default:
@@ -254,6 +259,7 @@ static int eqos_probe_resources_stm32(struct udevice *dev)
 {
 	struct eqos_priv *eqos = dev_get_priv(dev);
 	phy_interface_t interface;
+	ulong rate = 0;
 	int ret;
 
 	dev_dbg(dev, "%s:\n", __func__);
@@ -271,7 +277,15 @@ static int eqos_probe_resources_stm32(struct udevice *dev)
 		return -EINVAL;
 	}
 
-	ret = eqos_probe_syscfg_stm32(dev, interface);
+	/*  Get ETH_CLK clocks (optional) */
+	ret = clk_get_by_name(dev, "eth-ck", &eqos->clk_ck);
+	if (ret)
+		debug("No phy clock provided %d", ret);
+	else
+		rate = clk_get_rate(&eqos->clk_ck);
+
+	/*  Initialize the soc for the PHY configuration */
+	ret = eqos_probe_syscfg_stm32(dev, interface, rate);
 	if (ret)
 		return -EINVAL;
 
@@ -292,11 +306,6 @@ static int eqos_probe_resources_stm32(struct udevice *dev)
 		dev_err(dev, "clk_get_by_name(tx) failed: %d\n", ret);
 		goto err_probe;
 	}
-
-	/*  Get ETH_CLK clocks (optional) */
-	ret = clk_get_by_name(dev, "eth-ck", &eqos->clk_ck);
-	if (ret)
-		dev_warn(dev, "No phy clock provided %d\n", ret);
 
 	/* Get reset gpio pin (optional) */
 	ret = gpio_request_by_name(dev, "phy-reset-gpios", 0,
