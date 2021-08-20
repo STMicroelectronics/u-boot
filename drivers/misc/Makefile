@@ -74,6 +74,7 @@ obj-$(CONFIG_SIFIVE_OTP) += sifive-otp.o
 obj-$(CONFIG_SMSC_LPC47M) += smsc_lpc47m.o
 obj-$(CONFIG_SMSC_SIO1007) += smsc_sio1007.o
 obj-$(CONFIG_STM32MP_FUSE) += stm32mp_fuse.o
+obj-$(CONFIG_STM32_OMM) += stm32_omm.o
 obj-$(CONFIG_STM32_RCC) += stm32_rcc.o
 obj-$(CONFIG_SYS_DPAA_QBMAN) += fsl_portals.o
 obj-$(CONFIG_TEGRA186_BPMP) += tegra186_bpmp.o

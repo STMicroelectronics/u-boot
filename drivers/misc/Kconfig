@@ -452,6 +452,23 @@ config STM32MP_FUSE
 	  for STM32MP architecture.
 	  This API is needed for CMD_FUSE.
 
+config STM32_OMM
+	bool "Enable Octo Memory Manager (OMM) driver for the STM32MP2 SoC's family"
+	depends on STM32MP25X && MISC
+	help
+	  This driver manages the muxing between the 2 OSPI busses and
+	  the 2 output ports. There are 4 possible muxing configurations:
+	  - direct mode (no multiplexing): OSPI1 output is on port 1 and OSPI2
+	       output is on port 2
+	  - OSPI1 and OSPI2 are multiplexed over the same output port 1
+	  - swapped mode (no multiplexing), OSPI1 output is on port 2,
+	       OSPI2 output is on port 1
+	  - OSPI1 and OSPI2 are multiplexed over the same output port 2
+	  It also manages :
+	    - the split of the memory area shared between the 2 OSPI instances.
+	    - chip select selection override.
+	    - the time between 2 transactions in multiplexed mode.
+
 config STM32_RCC
 	bool "Enable RCC driver for the STM32 SoC's family"
 	depends on (ARCH_STM32 || ARCH_STM32MP) && MISC
