@@ -31,6 +31,8 @@
 #include <asm/io.h>
 #include <asm/byteorder.h>
 #include <asm/unaligned.h>
+#include <dm/of_access.h>
+#include <dm/ofnode.h>
 #include <env_internal.h>
 #include <linux/delay.h>
 #include <mtd/cfi_flash.h>
@@ -2502,6 +2504,13 @@ static int cfi_flash_probe(struct udevice *dev)
 	fdt_addr_t addr;
 	fdt_size_t size;
 	int idx;
+
+	/*
+	 * first, check if parent's node has a "status" property
+	 * if this status property is set to disabled, don't probe cfi
+	 */
+	if (!dev_read_enabled(dev_get_parent(dev)))
+		return -ENODEV;
 
 	for (idx = 0; idx < CFI_MAX_FLASH_BANKS; idx++) {
 		addr = dev_read_addr_size_index(dev, idx, &size);
