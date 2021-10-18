@@ -19,4 +19,6 @@ config TYPEC_STUSB160X
 	  Say Y or M here if your system has STMicroelectronics STUSB160x
 	  Type-C port controller.
 
+source "drivers/usb/typec/ucsi/Kconfig"
+
 endif
