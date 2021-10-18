@@ -31,6 +31,7 @@
 #include <remoteproc.h>
 #include <reset.h>
 #include <syscon.h>
+#include <typec.h>
 #include <usb.h>
 #include <watchdog.h>
 #include <asm/global_data.h>
@@ -48,8 +49,6 @@
 #include <linux/printk.h>
 #include <power/regulator.h>
 #include <usb/dwc2_udc.h>
-
-#include "../../st/common/stusb160x.h"
 
 /* SYSCFG registers */
 #define SYSCFG_BOOTR		0x00
@@ -196,6 +195,20 @@ static void board_key_check(void)
 	}
 }
 
+static int typec_usb_cable_connected(void)
+{
+	struct udevice *dev;
+	int ret;
+	u8 connector = 0;
+
+	ret = uclass_get_device(UCLASS_USB_TYPEC, 0, &dev);
+	if (ret < 0)
+		return ret;
+
+	return (typec_is_attached(dev, connector) == TYPEC_ATTACHED) &&
+	       (typec_get_data_role(dev, connector) == TYPEC_DEVICE);
+}
+
 int g_dnl_board_usb_cable_connected(void)
 {
 	struct udevice *dwc2_udc_otg;
@@ -211,8 +224,8 @@ int g_dnl_board_usb_cable_connected(void)
 	if ((get_bootmode() & TAMP_BOOT_DEVICE_MASK) == BOOT_SERIAL_USB)
 		return true;
 
-	/* if typec stusb160x is present, means DK1 or DK2 board */
-	ret = stusb160x_cable_connected();
+	/* if Type-C is present, it means DK1 or DK2 board */
+	ret = typec_usb_cable_connected();
 	if (ret >= 0)
 		return ret;
 

@@ -11,4 +11,3 @@ obj-$(CONFIG_SET_DFU_ALT_INFO) += stm32mp_dfu.o
 obj-$(CONFIG_$(PHASE_)DFU_VIRT) += stm32mp_dfu_virt.o
 endif
 
-obj-$(CONFIG_TYPEC_STUSB160X) += stusb160x.o
