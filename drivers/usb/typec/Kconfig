@@ -9,3 +9,14 @@ menuconfig TYPEC
 	  to be able to swap the power role (decide are you supplying or
 	  consuming power over the cable) or data role (host or device) when
 	  both roles are supported.
+
+if TYPEC
+
+config TYPEC_STUSB160X
+    bool "STMicroelectronics STUSB160x Type-C controller driver"
+	depends on DM && DM_I2C
+	help
+	  Say Y or M here if your system has STMicroelectronics STUSB160x
+	  Type-C port controller.
+
+endif
