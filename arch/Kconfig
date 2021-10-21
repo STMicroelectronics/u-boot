@@ -530,7 +530,7 @@ endmenu
 
 config SYS_HAS_NONCACHED_MEMORY
 	bool "Enable reserving a non-cached memory area for drivers"
-	depends on (ARM || MIPS) && (RTL8169 || MEDIATEK_ETH)
+	depends on (ARM || MIPS) && (RTL8169 || MEDIATEK_ETH || DWC_ETH_QOS)
 	help
 	  This is useful for drivers that would otherwise require a lot of
 	  explicit cache maintenance. For some drivers it's also impossible to

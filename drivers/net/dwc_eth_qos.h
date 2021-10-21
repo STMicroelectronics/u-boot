@@ -245,9 +245,11 @@ struct eqos_config {
 	struct eqos_ops *ops;
 };
 
+struct eqos_priv;
+
 struct eqos_ops {
-	void (*eqos_inval_desc)(void *desc);
-	void (*eqos_flush_desc)(void *desc);
+	void (*eqos_inval_desc)(struct eqos_priv *eqos, void *desc);
+	void (*eqos_flush_desc)(struct eqos_priv *eqos, void *desc);
 	void (*eqos_inval_buffer)(void *buf, size_t size);
 	void (*eqos_flush_buffer)(void *buf, size_t size);
 	int (*eqos_probe_resources)(struct udevice *dev);
@@ -296,13 +298,14 @@ struct eqos_priv {
 	bool started;
 	bool reg_access_ok;
 	bool clk_ck_enabled;
+	bool use_cached_mem;
 	unsigned int tx_fifo_sz, rx_fifo_sz;
 	u32 reset_delays[3];
 	struct udevice *phy_supply;
 };
 
-void eqos_inval_desc_generic(void *desc);
-void eqos_flush_desc_generic(void *desc);
+void eqos_inval_desc_generic(struct eqos_priv *eqos, void *desc);
+void eqos_flush_desc_generic(struct eqos_priv *eqos, void *desc);
 void eqos_inval_buffer_generic(void *buf, size_t size);
 void eqos_flush_buffer_generic(void *buf, size_t size);
 int eqos_get_base_addr_dt(struct udevice *dev);
