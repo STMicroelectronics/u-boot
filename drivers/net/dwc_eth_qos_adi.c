@@ -89,6 +89,7 @@ static struct eqos_ops eqos_adi_ops = {
 	.eqos_set_tx_clk_speed = eqos_null_ops,
 	.eqos_get_enetaddr = eqos_get_enetaddr_adi,
 	.eqos_get_tick_clk_rate = eqos_get_tick_clk_rate_adi,
+	.eqos_phy_power_on = eqos_null_ops,
 };
 
 struct eqos_config __maybe_unused eqos_adi_config = {

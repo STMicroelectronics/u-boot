@@ -233,6 +233,7 @@ static struct eqos_ops eqos_jh7110_ops = {
 	.eqos_set_tx_clk_speed = eqos_set_tx_clk_speed_jh7110,
 	.eqos_get_enetaddr = eqos_null_ops,
 	.eqos_get_tick_clk_rate = eqos_get_tick_clk_rate_jh7110
+	.eqos_phy_power_on = eqos_null_ops,
 };
 
 /* mdio_wait: There is no need to wait after setting the MAC_MDIO_Address register

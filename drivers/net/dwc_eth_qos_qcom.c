@@ -602,6 +602,7 @@ static struct eqos_ops eqos_qcom_ops = {
 	.eqos_disable_calibration = eqos_null_ops,
 	.eqos_set_tx_clk_speed = eqos_set_tx_clk_speed_qcom,
 	.eqos_get_enetaddr = eqos_null_ops,
+	.eqos_phy_power_on = eqos_null_ops,
 };
 
 struct eqos_config __maybe_unused eqos_qcom_config = {

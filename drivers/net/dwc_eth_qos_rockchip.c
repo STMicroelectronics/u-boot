@@ -814,6 +814,7 @@ static struct eqos_ops eqos_rockchip_ops = {
 	.eqos_set_tx_clk_speed = eqos_set_tx_clk_speed_rk,
 	.eqos_get_enetaddr = eqos_null_ops,
 	.eqos_get_tick_clk_rate = eqos_get_tick_clk_rate_rk,
+	.eqos_phy_power_on = eqos_null_ops,
 };
 
 struct eqos_config eqos_rockchip_config = {

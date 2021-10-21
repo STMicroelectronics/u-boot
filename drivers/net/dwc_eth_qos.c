@@ -691,6 +691,12 @@ static int eqos_start(struct udevice *dev)
 	eqos->tx_desc_idx = 0;
 	eqos->rx_desc_idx = 0;
 
+	ret = eqos->config->ops->eqos_phy_power_on(dev);
+	if (ret < 0) {
+		pr_err("eqos_phy_power_on() failed: %d", ret);
+		goto err;
+	}
+
 	ret = eqos->config->ops->eqos_start_resets(dev);
 	if (ret < 0) {
 		pr_err("eqos_start_resets() failed: %d\n", ret);
@@ -1571,6 +1577,7 @@ static struct eqos_ops eqos_tegra186_ops = {
 	.eqos_stop_clks = eqos_stop_clks_tegra186,
 	.eqos_start_clks = eqos_start_clks_tegra186,
 	.eqos_calibrate_pads = eqos_calibrate_pads_tegra186,
+	.eqos_phy_power_on = eqos_null_ops,
 	.eqos_disable_calibration = eqos_disable_calibration_tegra186,
 	.eqos_set_tx_clk_speed = eqos_set_tx_clk_speed_tegra186,
 	.eqos_get_enetaddr = eqos_null_ops,

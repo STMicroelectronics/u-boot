@@ -432,6 +432,7 @@ static struct eqos_ops eqos_intel_ops = {
 	.eqos_set_tx_clk_speed = eqos_null_ops,
 	.eqos_get_enetaddr = eqos_get_enetaddr_intel,
 	.eqos_get_tick_clk_rate = eqos_get_tick_clk_rate_intel,
+	.eqos_phy_power_on = eqos_null_ops,
 };
 
 struct eqos_config eqos_intel_config = {

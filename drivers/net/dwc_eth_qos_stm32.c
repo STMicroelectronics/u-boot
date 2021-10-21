@@ -28,6 +28,7 @@
 #include <wait_bit.h>
 #include <linux/bitfield.h>
 #include <linux/delay.h>
+#include <power/regulator.h>
 
 #include "dwc_eth_qos.h"
 
@@ -128,6 +129,26 @@ static int eqos_stop_clks_stm32(struct udevice *dev)
 	clk_disable(&eqos->clk_tx);
 	clk_disable(&eqos->clk_rx);
 	clk_disable(&eqos->clk_master_bus);
+
+	dev_dbg(dev, "%s: OK\n", __func__);
+
+	return 0;
+}
+
+static int eqos_phy_power_on_stm32(struct udevice *dev)
+{
+	struct eqos_priv *eqos = dev_get_priv(dev);
+	int ret;
+
+	dev_dbg(dev, "%s(dev=%p):\n", __func__, dev);
+
+	if (eqos->phy_supply) {
+		ret = regulator_set_enable(eqos->phy_supply, true);
+		if (ret) {
+			printf("%s: Error enabling phy supply\n", dev->name);
+			return ret;
+		}
+	}
 
 	dev_dbg(dev, "%s: OK\n", __func__);
 
@@ -307,6 +328,13 @@ static int eqos_probe_resources_stm32(struct udevice *dev)
 		goto err_probe;
 	}
 
+	/* check presence of optional regulator */
+	ret = device_get_supply_regulator(dev, "phy-supply", &eqos->phy_supply);
+	if (ret && ret != -ENOENT) {
+		pr_err("device_get_supply_regulator failed: %d", ret);
+		goto err_probe;
+	}
+
 	/* Get reset gpio pin (optional) */
 	ret = gpio_request_by_name(dev, "phy-reset-gpios", 0,
 				   &eqos->phy_reset_gpio, GPIOD_IS_OUT);
@@ -361,7 +389,8 @@ static struct eqos_ops eqos_stm32_ops = {
 	.eqos_disable_calibration = eqos_null_ops,
 	.eqos_set_tx_clk_speed = eqos_null_ops,
 	.eqos_get_enetaddr = eqos_null_ops,
-	.eqos_get_tick_clk_rate = eqos_get_tick_clk_rate_stm32
+	.eqos_get_tick_clk_rate = eqos_get_tick_clk_rate_stm32,
+	.eqos_phy_power_on = eqos_phy_power_on_stm32
 };
 
 struct eqos_config __maybe_unused eqos_stm32mp13_config = {

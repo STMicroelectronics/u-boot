@@ -262,6 +262,7 @@ struct eqos_ops {
 	int (*eqos_get_enetaddr)(struct udevice *dev);
 	ulong (*eqos_get_tick_clk_rate)(struct udevice *dev);
 	void (*eqos_fix_soc_reset)(struct udevice *dev);
+	int (*eqos_phy_power_on)(struct udevice *dev);
 };
 
 struct eqos_priv {
@@ -297,6 +298,7 @@ struct eqos_priv {
 	bool clk_ck_enabled;
 	unsigned int tx_fifo_sz, rx_fifo_sz;
 	u32 reset_delays[3];
+	struct udevice *phy_supply;
 };
 
 void eqos_inval_desc_generic(void *desc);

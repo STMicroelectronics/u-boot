@@ -254,6 +254,7 @@ static struct eqos_ops eqos_imx_ops = {
 	.eqos_get_enetaddr = eqos_get_enetaddr_imx,
 	.eqos_get_tick_clk_rate = eqos_get_tick_clk_rate_imx,
 	.eqos_fix_soc_reset = eqos_fix_soc_reset_imx,
+	.eqos_phy_power_on = eqos_null_ops,
 };
 
 struct eqos_config __maybe_unused eqos_imx_config = {
