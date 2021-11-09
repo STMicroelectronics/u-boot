@@ -70,6 +70,66 @@ int typec_get_data_role(struct udevice *dev, u8 con_idx);
  * @return Type-C connector number or -ve on error.
  */
 int typec_get_nb_connector(struct udevice *dev);
+
+/**
+ * typec_get_device_from_usb() - Allows to retrieve a Type-C device from
+ * an USB device. typec_get_driver_from_usb() checks in USB device node
+ * for port and endpoint sub-node, if exist, retrieve the connector node,
+ * probe the associated Type-C device and return it (see DT example below).
+ * See Documentation/devicetree/bindings/connector/usb-connector.yaml for more
+ * details
+ *
+ * @dev: USB device
+ * @typec: Type-C device
+ * @index: USB controller port number
+ * @return -ve on error.
+ *
+ * usb_dwc3_0: usb@10000000 {
+ *	...
+ *	port@0 {
+ *		reg = <0>;
+ *		typec_hs: endpoint {
+ *			remote-endpoint = <&usb_con_hs>;
+ *		};
+ *	};
+ *
+ *	port@1 {
+ *		reg = <1>;
+ *		typec_ss: endpoint {
+ *			remote-endpoint = <&usb_con_ss>;
+ *		};
+ *	};
+ * };
+ *
+ * usb-typec@1 {
+ *	...
+ *	connector {
+ *		compatible = "usb-c-connector";
+ *		label = "USB-C";
+ *
+ *		ports {
+ *			#address-cells = <1>;
+ *			#size-cells = <0>;
+ *
+ *			port@0 {
+ *				reg = <0>;
+ *				usb_con_hs: endpoint {
+ *					remote-endpoint = <&typec_hs>;
+ *				};
+ *			};
+ *
+ *			port@1 {
+ *				reg = <1>;
+ *				usb_con_ss: endpoint {
+ *					remote-endpoint = <&typec_ss>;
+ *				};
+ *			};
+ *		};
+ *	};
+ * };
+ */
+int typec_get_device_from_usb(struct udevice *dev, struct udevice **typec, u8
+			      index);
 #else
 static inline int typec_is_attached(struct udevice *dev, u8 con_idx)
 {
@@ -85,5 +145,10 @@ static inline int typec_get_nb_connector(struct udevice *dev)
 {
 	return -EINVAL;
 }
-#endif
 
+static inline int typec_get_device_from_usb(struct udevice *dev, struct udevice **typec,
+					    u8 index)
+{
+	return -ENODEV;
+}
+#endif
