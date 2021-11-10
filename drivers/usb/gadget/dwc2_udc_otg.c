@@ -23,6 +23,7 @@
 #include <log.h>
 #include <malloc.h>
 #include <reset.h>
+#include <typec.h>
 #include <dm/device_compat.h>
 #include <dm/devres.h>
 #include <linux/bug.h>
@@ -971,6 +972,7 @@ static void dwc2_phy_shutdown(struct udevice *dev, struct phy_bulk *phys)
 static int dwc2_udc_otg_of_to_plat(struct udevice *dev)
 {
 	struct dwc2_plat_otg_data *plat = dev_get_plat(dev);
+	struct udevice *typec;
 	ulong drvdata;
 	void (*set_params)(struct dwc2_plat_otg_data *data);
 	int ret;
@@ -993,11 +995,20 @@ static int dwc2_udc_otg_of_to_plat(struct udevice *dev)
 			return ret;
 	}
 
-	plat->force_b_session_valid =
-		dev_read_bool(dev, "u-boot,force-b-session-valid");
-
-	plat->force_vbus_detection =
-		dev_read_bool(dev, "u-boot,force-vbus-detection");
+	/*
+	 * check for High speed port/endpoint subnode presence and retrieve Type-C
+	 * device if exist. HS port subnode is always port number 0 => port@0
+	 */
+	ret = typec_get_device_from_usb(dev, &typec, 0);
+	if (!ret) {
+		ret = typec_get_data_role(typec, 0);
+		plat->force_b_session_valid = (ret == TYPEC_DEVICE);
+	} else {
+		plat->force_b_session_valid =
+			dev_read_bool(dev, "u-boot,force-b-session-valid");
+		plat->force_vbus_detection =
+			dev_read_bool(dev, "u-boot,force-vbus-detection");
+	}
 
 	/* force plat according compatible */
 	drvdata = dev_get_driver_data(dev);
