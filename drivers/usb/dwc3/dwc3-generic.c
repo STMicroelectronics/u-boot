@@ -7,14 +7,22 @@
  * Based on dwc3-omap.c.
  */
 
+#define LOG_CATEGORY UCLASS_USB
+
+#include <asm/gpio.h>
+#include <clk.h>
 #include <dm.h>
 #include <reset.h>
 #include <asm/gpio.h>
 #include <dm/device_compat.h>
 #include <dm/lists.h>
+#include <linux/bitfield.h>
 #include <linux/delay.h>
 #include <linux/usb/gadget.h>
 #include <power/regulator.h>
+#include <regmap.h>
+#include <reset.h>
+#include <syscon.h>
 #include <usb/xhci.h>
 #include "core.h"
 #include "dwc3-generic.h"
@@ -164,7 +172,7 @@ static int dwc3_generic_of_to_plat(struct udevice *dev)
 
 	plat->maximum_speed = usb_get_maximum_speed(node);
 	if (plat->maximum_speed == USB_SPEED_UNKNOWN) {
-		pr_info("No USB maximum speed specified. Using super speed\n");
+		dev_info(dev, "No USB maximum speed specified. Using super speed\n");
 		plat->maximum_speed = USB_SPEED_SUPER;
 	}
 
@@ -496,6 +504,58 @@ static void dwc3_qcom_glue_configure(struct udevice *dev, int index,
 		dwc3_qcom_vbus_override_enable(qscratch_base, true);
 }
 
+void dwc3_stm32_glue_configure(struct udevice *dev, int index, enum usb_dr_mode mode)
+{
+#define SYSCFG_USB3DRCR_USB2ONLYH_MASK        BIT(3U) /*!< 0x00000008 : USB2-only Mode for Host */
+#define SYSCFG_USB3DRCR_USB2ONLYD_MASK        BIT(4U) /*!< 0x00000010 : USB2-only Mode for Device */
+	int ret;
+	struct regmap *regmap;
+	struct dwc3_glue_data *glue = dev_get_plat(dev);
+	u32 syscfg_usb3drcr_reg_off;
+	bool usb2only_conf;
+	regmap = syscon_regmap_lookup_by_phandle(dev, "st,syscfg");
+	if (IS_ERR(regmap)) {
+		dev_err(dev, "unable to find regmap\n");
+		return;
+	}
+	ret = ofnode_count_phandle_with_args(ofnode_first_subnode(dev_ofnode(dev)),
+					     "phys", "#phy-cells", 0);
+	if (ret < 1) {
+		dev_err(dev, "unable to find phys\n");
+		return;
+	}
+	if (ret < 2)
+		usb2only_conf = true;
+	else
+		usb2only_conf = false;
+	dev_info(dev, "configured in %s mode\n", usb2only_conf ? "usb2" : "usb3");
+	ret = dev_read_u32_index(dev, "st,syscfg", 1, &syscfg_usb3drcr_reg_off);
+	if (ret) {
+		dev_err(dev, "Can't get sysconfig usb3drcr offset (%d)\n", ret);
+		return;
+	}
+	dev_dbg(dev, "syscfg-usb3drcr-reg offset 0x%x\n", syscfg_usb3drcr_reg_off);
+	ret = regmap_update_bits(regmap, syscfg_usb3drcr_reg_off, SYSCFG_USB3DRCR_USB2ONLYD_MASK |
+			SYSCFG_USB3DRCR_USB2ONLYH_MASK,
+			FIELD_PREP(SYSCFG_USB3DRCR_USB2ONLYD_MASK, usb2only_conf ? 1 : 0) |
+			FIELD_PREP(SYSCFG_USB3DRCR_USB2ONLYH_MASK, usb2only_conf ? 1 : 0));
+	if (ret) {
+		dev_err(dev, "regmap_write error: %d\n", ret);
+		return;
+	}
+	// Assert + Deassert Reset for DWC3-ctrl to sample syscfg settings
+	ret = reset_assert_bulk(&glue->resets);
+	if (ret) {
+		dev_err(dev, "reset_assert_bulk error: %d\n", ret);
+		return;
+	}
+	ret = reset_deassert_bulk(&glue->resets);
+	if (ret) {
+		dev_err(dev, "reset_deassert_bulk error: %d\n", ret);
+		return;
+	}
+}
+
 /* In cases where there is no dwc3 node and it's flattened into the glue node */
 static int dwc3_flat_dt_get_ctrl_dev(struct udevice *dev, ofnode *node)
 {
@@ -517,6 +577,10 @@ struct dwc3_glue_ops qcom_flat_dt_ops = {
 
 struct dwc3_glue_ops rk_ops = {
 	.glue_get_ctrl_dev = dwc3_flat_dt_get_ctrl_dev,
+};
+
+struct dwc3_glue_ops stm32_ops = {
+	.glue_configure = dwc3_stm32_glue_configure,
 };
 
 static int dwc3_glue_bind_common(struct udevice *parent, ofnode node)
@@ -731,6 +795,7 @@ static const struct udevice_id dwc3_glue_ids[] = {
 	{ .compatible = "intel,tangier-dwc3" },
 	{ .compatible = "samsung,exynos7870-dwusb3" },
 	{ .compatible = "samsung,exynos850-dwusb3" },
+	{ .compatible = "st,stm32mp25-dwc3", .data = (ulong)&stm32_ops },
 	{ }
 };
 
