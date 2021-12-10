@@ -14,12 +14,15 @@
 
 /*
  * Closed device: OTP0
- * STM32MP15x: bit 6 of OPT0
+ * STM32MP15x: bit 6 of OTP0
  * STM32MP13x: 0b111111 = 0x3F for OTP_SECURED closed device
+ * STM32MP25x: bit 0 of OTP18
  */
-#define STM32_OTP_CLOSE_ID		0
+#define STM32MP1_OTP_CLOSE_ID		0
 #define STM32_OTP_STM32MP13X_CLOSE_MASK	0x3F
 #define STM32_OTP_STM32MP15X_CLOSE_MASK	BIT(6)
+#define STM32MP25_OTP_CLOSE_ID		18
+#define STM32_OTP_STM32MP25X_CLOSE_MASK	0xF
 
 /* PKH is the first element of the key list */
 #define STM32KEY_PKH 0
@@ -27,7 +30,7 @@
 struct stm32key {
 	char *name;
 	char *desc;
-	u8 start;
+	u16 start;
 	u8 size;
 };
 
@@ -55,6 +58,27 @@ const struct stm32key stm32mp15_list[] = {
 	}
 };
 
+const struct stm32key stm32mp25_list[] = {
+	[STM32KEY_PKH] = {
+		.name = "PKHTH",
+		.desc = "Hash of the 8 ECC Public Keys Hashes Table (ECDSA is the authentication algorithm)",
+		.start = 144,
+		.size = 8,
+	},
+	{
+		.name = "FIP-EDMK",
+		.desc = "Encryption/Decryption Master Key for FIP",
+		.start = 260,
+		.size = 8,
+	},
+	{
+		.name = "EDMK",
+		.desc = "Encryption/Decryption Master Key",
+		.start = 364,
+		.size = 4,
+	}
+};
+
 /* index of current selected key in stm32key list, 0 = PKH by default */
 static u8 stm32key_index;
 
@@ -65,6 +89,9 @@ static u8 get_key_nb(void)
 
 	if (IS_ENABLED(CONFIG_STM32MP15X))
 		return ARRAY_SIZE(stm32mp15_list);
+
+	if (IS_ENABLED(CONFIG_STM32MP25X))
+		return ARRAY_SIZE(stm32mp25_list);
 }
 
 static const struct stm32key *get_key(u8 index)
@@ -74,6 +101,9 @@ static const struct stm32key *get_key(u8 index)
 
 	if (IS_ENABLED(CONFIG_STM32MP15X))
 		return &stm32mp15_list[index];
+
+	if (IS_ENABLED(CONFIG_STM32MP25X))
+		return &stm32mp25_list[index];
 }
 
 static u32 get_otp_close_mask(void)
@@ -83,6 +113,18 @@ static u32 get_otp_close_mask(void)
 
 	if (IS_ENABLED(CONFIG_STM32MP15X))
 		return STM32_OTP_STM32MP15X_CLOSE_MASK;
+
+	if (IS_ENABLED(CONFIG_STM32MP25X))
+		return STM32_OTP_STM32MP25X_CLOSE_MASK;
+}
+
+static int get_otp_close_word(void)
+{
+	if (IS_ENABLED(CONFIG_STM32MP13X) || IS_ENABLED(CONFIG_STM32MP15X))
+		return STM32MP1_OTP_CLOSE_ID;
+
+	if (IS_ENABLED(CONFIG_STM32MP25X))
+		return STM32MP25_OTP_CLOSE_ID;
 }
 
 static int get_misc_dev(struct udevice **dev)
@@ -102,7 +144,7 @@ static void read_key_value(const struct stm32key *key, u32 addr)
 
 	for (i = 0; i < key->size; i++) {
 		printf("%s OTP %i: [%08x] %08x\n", key->name, key->start + i,
-		       addr, __be32_to_cpu(*(u32 *)addr));
+		       addr, __be32_to_cpu(*(u32 *)(long)addr));
 		addr += 4;
 	}
 }
@@ -162,7 +204,7 @@ static int read_close_status(struct udevice *dev, bool print, bool *closed)
 	bool status;
 
 	result = 0;
-	word = STM32_OTP_CLOSE_ID;
+	word = get_otp_close_word();
 	ret = misc_read(dev, STM32_BSEC_OTP(word), &val, 4);
 	if (ret < 0)
 		result = ret;
@@ -176,7 +218,12 @@ static int read_close_status(struct udevice *dev, bool print, bool *closed)
 		lock = BSEC_LOCK_ERROR;
 
 	mask = get_otp_close_mask();
-	status = (val & mask) == mask;
+
+	if (IS_ENABLED(CONFIG_STM32MP13X) || IS_ENABLED(CONFIG_STM32MP15X))
+		status = (val & mask) == mask;
+	else
+		status = (val & mask) != 0;
+
 	if (closed)
 		*closed = status;
 	if (print)
@@ -191,7 +238,7 @@ static int fuse_key_value(struct udevice *dev, const struct stm32key *key, u32 a
 	int i, ret;
 
 	for (i = 0, word = key->start; i < key->size; i++, word++, addr += 4) {
-		val = __be32_to_cpu(*(u32 *)addr);
+		val = __be32_to_cpu(*(u32 *)(long)addr);
 		if (print)
 			printf("Fuse %s OTP %i : %08x\n", key->name, word, val);
 
@@ -408,9 +455,9 @@ static int do_stm32key_close(struct cmd_tbl *cmdtp, int flag, int argc, char *co
 		return CMD_RET_FAILURE;
 
 	val = get_otp_close_mask();
-	ret = misc_write(dev, STM32_BSEC_OTP(STM32_OTP_CLOSE_ID), &val, 4);
+	ret = misc_write(dev, STM32_BSEC_OTP(get_otp_close_word()), &val, 4);
 	if (ret != 4) {
-		printf("Error: can't update OTP %d\n", STM32_OTP_CLOSE_ID);
+		printf("Error: can't update OTP %d\n", get_otp_close_word());
 		return CMD_RET_FAILURE;
 	}
 
