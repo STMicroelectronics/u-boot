@@ -47,6 +47,7 @@
 #define STM32H7_LINCALRDYW1		BIT(22)
 #define STM32H7_ADCALLIN		BIT(16)
 #define STM32H7_BOOST			BIT(8)
+#define STM32H7_ADSTP			BIT(4)
 #define STM32H7_ADSTART			BIT(2)
 #define STM32H7_ADDIS			BIT(1)
 #define STM32H7_ADEN			BIT(0)
@@ -254,7 +255,15 @@ static int stm32_adc_channel_data(struct udevice *dev, int channel,
 
 	*data = readl(adc->regs + STM32H7_ADC_DR);
 
-	return 0;
+	ret = readl_poll_timeout(adc->regs + STM32H7_ADC_CR, val,
+				 !(val & (STM32H7_ADSTART)), STM32_ADC_TIMEOUT_US);
+	if (ret)
+		dev_warn(dev, "conversion stop timed out\n");
+
+	if (adc->cfg->has_presel)
+		setbits_le32(adc->regs + STM32H7_ADC_PCSEL, 0);
+
+	return ret;
 }
 
 /**
