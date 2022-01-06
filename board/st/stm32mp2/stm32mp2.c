@@ -8,6 +8,7 @@
 #include <common.h>
 #include <button.h>
 #include <config.h>
+#include <dm.h>
 #include <env.h>
 #include <env_internal.h>
 #include <fdt_support.h>
@@ -17,6 +18,12 @@
 #include <log.h>
 #include <misc.h>
 #include <mmc.h>
+#include <init.h>
+#include <net.h>
+#include <netdev.h>
+#include <phy.h>
+#include <regmap.h>
+#include <syscon.h>
 #include <asm/io.h>
 #include <asm/global_data.h>
 #include <asm/gpio.h>
@@ -27,6 +34,18 @@
 #include <dm/uclass.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <linux/delay.h>
+#include <linux/err.h>
+#include <linux/iopoll.h>
+
+#define SYSCFG_ETHCR_ETH_SEL_MII	0
+#define SYSCFG_ETHCR_ETH_SEL_RGMII	BIT(4)
+#define SYSCFG_ETHCR_ETH_SEL_RMII	BIT(6)
+#define SYSCFG_ETHCR_ETH_CLK_SEL	BIT(1)
+#define SYSCFG_ETHCR_ETH_REF_CLK_SEL	BIT(0)
+/* CLOCK feed to PHY*/
+#define ETH_CK_F_25M	25000000
+#define ETH_CK_F_50M	50000000
+#define ETH_CK_F_125M	125000000
 
 #define GOODIX_REG_ID		0x8140
 #define GOODIX_ID_LEN		4
@@ -380,6 +399,72 @@ int board_init(void)
 	check_user_button();
 
 	return 0;
+}
+
+/* eth init function : weak called in eqos driver */
+int board_interface_eth_init(struct udevice *dev,
+			     phy_interface_t interface_type, ulong rate)
+{
+	struct regmap *regmap;
+	uint regmap_mask, regmap_offset;
+	int ret;
+	u32 value;
+	bool ext_phyclk;
+
+	/* Ethernet PHY have no cristal or need to be clock by RCC */
+	ext_phyclk = dev_read_bool(dev, "st,ext-phyclk");
+
+	regmap = syscon_regmap_lookup_by_phandle(dev, "st,syscon");
+
+	if (!IS_ERR(regmap)) {
+		u32 fmp[3];
+
+		ret = dev_read_u32_array(dev, "st,syscon", fmp, 3);
+		if (ret) {
+			pr_err("%s: Need to specify Offset and Mask of syscon register\n", __func__);
+			return ret;
+		}
+		else {
+			regmap_mask = fmp[2];
+			regmap_offset = fmp[1];
+		}
+	} else {
+		return -ENODEV;
+	}
+	switch (interface_type) {
+	case PHY_INTERFACE_MODE_MII:
+		value = SYSCFG_ETHCR_ETH_SEL_MII;
+		debug("%s: PHY_INTERFACE_MODE_MII\n", __func__);
+		break;
+	case PHY_INTERFACE_MODE_RMII:
+		if (rate == ETH_CK_F_50M && ext_phyclk)
+			value = SYSCFG_ETHCR_ETH_SEL_RMII |
+				SYSCFG_ETHCR_ETH_REF_CLK_SEL;
+		else
+			value = SYSCFG_ETHCR_ETH_SEL_RMII;
+		debug("%s: PHY_INTERFACE_MODE_RMII\n", __func__);
+		break;
+	case PHY_INTERFACE_MODE_RGMII:
+	case PHY_INTERFACE_MODE_RGMII_ID:
+	case PHY_INTERFACE_MODE_RGMII_RXID:
+	case PHY_INTERFACE_MODE_RGMII_TXID:
+		if (rate == ETH_CK_F_125M && ext_phyclk)
+			value = SYSCFG_ETHCR_ETH_SEL_RGMII |
+				SYSCFG_ETHCR_ETH_CLK_SEL;
+		else
+			value = SYSCFG_ETHCR_ETH_SEL_RGMII;
+		debug("%s: PHY_INTERFACE_MODE_RGMII\n", __func__);
+		break;
+	default:
+		debug("%s: Do not manage %d interface\n",
+		      __func__, interface_type);
+		/* Do not manage others interfaces */
+		return -EINVAL;
+	}
+
+	ret = regmap_update_bits(regmap, regmap_offset, regmap_mask, value);
+
+	return ret;
 }
 
 enum env_location env_get_location(enum env_operation op, int prio)
