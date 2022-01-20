@@ -25,7 +25,7 @@ static void show_clks(struct udevice *dev, int depth, int last_flag)
 		depth++;
 		rate = clk_get_rate(clkp);
 
-		printf(" %-12u  %8d        ", rate, clkp->enable_count);
+		printf(" %-12u  %8lx  %8d        ", rate, clkp->id, clkp->enable_count);
 
 		for (i = depth; i >= 0; i--) {
 			is_last = (last_flag >> i) & 1;
@@ -60,8 +60,8 @@ static int soc_clk_dump(void)
 	struct udevice *dev;
 	const struct clk_ops *ops;
 
-	printf(" Rate               Usecnt      Name\n");
-	printf("------------------------------------------\n");
+	printf(" Rate             Id          Usecnt      Name\n");
+	printf("--------------------------------------------------\n");
 
 	uclass_foreach_dev_probe(UCLASS_CLK, dev)
 		show_clks(dev, -1, 0);
