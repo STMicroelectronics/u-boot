@@ -581,7 +581,8 @@ error:
 static bool board_is_stm32mp15x_dk2(void)
 {
 	if (CONFIG_IS_ENABLED(TARGET_ST_STM32MP15X) &&
-	    of_machine_is_compatible("st,stm32mp157c-dk2"))
+	    (of_machine_is_compatible("st,stm32mp157c-dk2") ||
+	     of_machine_is_compatible("st,stm32mp157f-dk2")))
 		return true;
 
 	return false;
