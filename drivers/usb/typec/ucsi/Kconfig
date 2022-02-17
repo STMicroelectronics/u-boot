@@ -17,3 +17,10 @@ menuconfig TYPEC_UCSI
 
 	  The UCSI specification can be downloaded from:
 	  https://www.intel.com/content/www/us/en/io/universal-serial-bus/usb-type-c-ucsi-spec.html
+
+config UCSI_STM32G0
+	bool "Support for STM32G0 UCSI controller"
+	depends on TYPEC_UCSI && DM_I2C
+	help
+	  This driver enables UCSI support on platforms that expose a STM32G0
+	  Type-C controller over I2C interface.
