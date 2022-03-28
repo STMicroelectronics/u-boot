@@ -18,6 +18,14 @@
 
 #define STM32MP15_M4_FW_ID 0
 
+/* TAMP_COPRO_STATE register values */
+#define TAMP_COPRO_STATE_OFF		0
+#define TAMP_COPRO_STATE_INIT		1
+#define TAMP_COPRO_STATE_CRUN		2
+#define TAMP_COPRO_STATE_CSTOP		3
+#define TAMP_COPRO_STATE_STANDBY	4
+#define TAMP_COPRO_STATE_CRASH		5
+
 /**
  * struct stm32_copro_privdata - power processor private data
  * @reset_ctl:		reset controller handle
