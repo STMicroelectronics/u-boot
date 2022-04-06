@@ -272,6 +272,7 @@ int arch_misc_init(void)
 {
 	setup_boot_mode();
 	setup_serial_number();
+	setup_mac_address();
 
 	return 0;
 }
