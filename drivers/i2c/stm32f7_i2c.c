@@ -170,9 +170,11 @@ struct stm32_i2c_setup {
 /**
  * struct stm32_i2c_data - driver data for I2C configuration by compatible
  * @fmp_clr_offset: Fast Mode Plus clear register offset from set register
+ * @fmp_cr1_bit: Fast Mode Plus control is done via a bit in CR1
  */
 struct stm32_i2c_data {
 	u32 fmp_clr_offset;
+	bool fmp_cr1_bit;
 };
 
 /**
@@ -268,6 +270,10 @@ static const struct stm32_i2c_data stm32mp15_data = {
 
 static const struct stm32_i2c_data stm32mp13_data = {
 	.fmp_clr_offset = 0x4,
+};
+
+static const struct stm32_i2c_data stm32mp25_data = {
+	.fmp_cr1_bit = true,
 };
 
 static int stm32_i2c_check_device_busy(struct stm32_i2c_priv *i2c_priv)
@@ -797,6 +803,8 @@ static int stm32_i2c_write_fm_plus_bits(struct stm32_i2c_priv *i2c_priv)
 	int ret;
 	bool enable = i2c_priv->speed > I2C_SPEED_FAST_RATE;
 
+	/* TODO STM32MP25: handle FMP bit in CR1  register (fmp_cr1_bit = true) */
+
 	/* Optional */
 	if (IS_ERR_OR_NULL(i2c_priv->regmap))
 		return 0;
@@ -934,19 +942,21 @@ static int stm32_of_to_plat(struct udevice *dev)
 
 	i2c_priv->setup.analog_filter = dev_read_bool(dev, "i2c-analog-filter");
 
-	/* Optional */
-	i2c_priv->regmap = syscon_regmap_lookup_by_phandle(dev,
-							   "st,syscfg-fmp");
-	if (!IS_ERR(i2c_priv->regmap)) {
-		u32 fmp[3];
+	if (!data->fmp_cr1_bit) {
+		/* Optional */
+		i2c_priv->regmap = syscon_regmap_lookup_by_phandle(dev,
+								   "st,syscfg-fmp");
+		if (!IS_ERR(i2c_priv->regmap)) {
+			u32 fmp[3];
 
-		ret = dev_read_u32_array(dev, "st,syscfg-fmp", fmp, 3);
-		if (ret)
-			return ret;
+			ret = dev_read_u32_array(dev, "st,syscfg-fmp", fmp, 3);
+			if (ret)
+				return ret;
 
-		i2c_priv->regmap_sreg = fmp[1];
-		i2c_priv->regmap_creg = fmp[1] + data->fmp_clr_offset;
-		i2c_priv->regmap_mask = fmp[2];
+			i2c_priv->regmap_sreg = fmp[1];
+			i2c_priv->regmap_creg = fmp[1] + data->fmp_clr_offset;
+			i2c_priv->regmap_mask = fmp[2];
+		}
 	}
 
 	return 0;
@@ -961,6 +971,7 @@ static const struct udevice_id stm32_i2c_of_match[] = {
 	{ .compatible = "st,stm32f7-i2c", .data = (ulong)&stm32f7_data },
 	{ .compatible = "st,stm32mp15-i2c", .data = (ulong)&stm32mp15_data },
 	{ .compatible = "st,stm32mp13-i2c", .data = (ulong)&stm32mp13_data },
+	{ .compatible = "st,stm32mp25-i2c", .data = (ulong)&stm32mp25_data },
 	{}
 };
 
