@@ -170,12 +170,18 @@ static int stm32_gpio_get_function(struct udevice *dev, unsigned int offset)
 {
 	struct stm32_gpio_priv *priv = dev_get_priv(dev);
 	struct stm32_gpio_regs *regs = priv->regs;
+	ulong drv_data = dev_get_driver_data(dev);
 	int bits_index;
 	int mask;
 	u32 mode;
 
 	if (!stm32_gpio_is_mapped(dev, offset))
 		return GPIOF_UNKNOWN;
+
+	/* Return 'protected' if the IO is secured */
+	if ((drv_data & STM32_GPIO_FLAG_SEC_CTRL) &&
+	    ((readl(&regs->seccfgr) >> SECCFG_BITS(offset)) & SECCFG_MSK))
+		return GPIOF_PROTECTED;
 
 	bits_index = MODE_BITS(offset);
 	mask = MODE_BITS_MASK << bits_index;
