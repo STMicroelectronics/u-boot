@@ -28,9 +28,10 @@
 #define GPIOD_EXT_DRIVEN	BIT(30)	/* external source is driven */
 #define GPIOD_EXT_PULL_UP	BIT(29)	/* GPIO has external pull-up */
 #define GPIOD_EXT_PULL_DOWN	BIT(28)	/* GPIO has external pull-down */
+#define GPIOD_EXT_PROTECTED	BIT(27)	/* GPIO is access protected */
 
 #define GPIOD_EXT_PULL		(BIT(28) | BIT(29))
-#define GPIOD_SANDBOX_MASK	GENMASK(31, 28)
+#define GPIOD_SANDBOX_MASK	GENMASK(31, 27)
 
 /**
  * Return the simulated value of a GPIO (used only in sandbox test code)

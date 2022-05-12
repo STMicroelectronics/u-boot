@@ -191,6 +191,8 @@ static int sb_gpio_set_value(struct udevice *dev, unsigned offset, int value)
 
 static int sb_gpio_get_function(struct udevice *dev, unsigned offset)
 {
+	if (get_gpio_flag(dev, offset, GPIOD_EXT_PROTECTED))
+		return GPIOF_PROTECTED;
 	if (get_gpio_flag(dev, offset, GPIOD_IS_OUT))
 		return GPIOF_OUTPUT;
 	if (get_gpio_flag(dev, offset, GPIOD_IS_IN))
@@ -198,7 +200,7 @@ static int sb_gpio_get_function(struct udevice *dev, unsigned offset)
 	if (get_gpio_flag(dev, offset, GPIOD_IS_AF))
 		return GPIOF_FUNC;
 
-	return GPIOF_INPUT; /*GPIO is not configurated */
+	return GPIOF_INPUT; /* GPIO is not configured */
 }
 
 static int sb_gpio_xlate(struct udevice *dev, struct gpio_desc *desc,
@@ -528,6 +530,14 @@ static int sb_pinctrl_get_pin_muxing(struct udevice *dev,
 	unsigned int gpio_idx;
 	ulong flags;
 	int function;
+	static const char * const gpio_function[GPIOF_COUNT] = {
+		"input",
+		"output",
+		"unused",
+		"unknown",
+		"func",
+		"protected",
+	};
 
 	/* look up for the bank which owns the requested pin */
 	gpio_dev = sb_pinctrl_get_gpio_dev(dev, selector, &gpio_idx);
@@ -536,9 +546,7 @@ static int sb_pinctrl_get_pin_muxing(struct udevice *dev,
 	} else {
 		function = sb_gpio_get_function(gpio_dev, gpio_idx);
 		flags = *get_gpio_flags(gpio_dev, gpio_idx);
-
-		snprintf(buf, size, "gpio %s %s",
-			 function == GPIOF_OUTPUT ? "output" : "input",
+		snprintf(buf, size, "gpio %s %s", gpio_function[function],
 			 get_flags_string(flags));
 	}
 

@@ -110,6 +110,7 @@ enum gpio_func_t {
 	GPIOF_UNUSED,		/* Not claimed */
 	GPIOF_UNKNOWN,		/* Not known */
 	GPIOF_FUNC,		/* Not used as a GPIO */
+	GPIOF_PROTECTED,	/* Protected access */
 
 	GPIOF_COUNT,
 };

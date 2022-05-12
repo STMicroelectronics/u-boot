@@ -112,6 +112,11 @@ static int dm_test_gpio(struct unit_test_state *uts)
 	ut_asserteq_str("a", name);
 	ut_asserteq(25, offset_count);
 
+	/* Flag a pin as protected, and check its status */
+	ut_assertok(gpio_lookup_name("a1", &dev, &offset, &gpio));
+	sandbox_gpio_set_flags(dev, 1, GPIOD_EXT_PROTECTED);
+	ut_asserteq(GPIOF_PROTECTED, gpio_get_raw_function(dev, 1, NULL));
+
 	/* add gpio hog tests */
 	ut_assertok(gpio_hog_lookup_name("hog_input_active_low", &desc));
 	ut_asserteq(GPIOD_IS_IN | GPIOD_ACTIVE_LOW, desc->flags);

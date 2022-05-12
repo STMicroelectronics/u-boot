@@ -867,6 +867,7 @@ static const char * const gpio_function[GPIOF_COUNT] = {
 	"unused",
 	"unknown",
 	"func",
+	"protected",
 };
 
 static int get_function(struct udevice *dev, int offset, bool skip_unused,
