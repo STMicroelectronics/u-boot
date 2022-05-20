@@ -172,6 +172,14 @@ config PHY_STM32_USBPHYC
 	  between an HS USB OTG controller and an HS USB Host controller,
 	  selected by an USB switch.
 
+config PHY_STM32_USB2PHY
+	tristate "STMicroelectronics STM32 USB2 PHY Controller driver"
+	depends on PHY && ARCH_STM32MP
+	help
+	  Enable this to support the High-Speed USB2 transceivers that are part
+	  of some STMicroelectronics STM32 SoCs. The PHY integrated is from
+	  synopsys, and called USB2-PHY
+
 config MESON_GXBB_USB_PHY
 	bool "Amlogic Meson GXBB USB PHY"
 	depends on PHY && ARCH_MESON && MESON_GXBB
