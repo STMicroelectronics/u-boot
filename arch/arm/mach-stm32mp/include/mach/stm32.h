@@ -183,8 +183,13 @@ enum forced_boot_mode {
 /* TAMP registers x = 0 to 127 : hardcoded description, waiting NVMEM node in DT */
 #define TAMP_BACKUP_REGISTER(x)		(STM32_TAMP_BASE + 0x100 + 4 * (x))
 
+/* TAMP registers zone 2 RIF 2 (RO) at 72 */
+#define TAMP_COPRO_STATE TAMP_BACKUP_REGISTER(72)
+
 /* TAMP registers zone 3 RIF 1 (RW) at 96*/
 #define TAMP_BOOT_CONTEXT		TAMP_BACKUP_REGISTER(96)
+#define TAMP_COPRO_RSC_TBL_ADDRESS	TAMP_BACKUP_REGISTER(97)
+#define TAMP_COPRO_RSC_TBL_SIZE		TAMP_BACKUP_REGISTER(98)
 #endif /* STM32MP25X */
 
 /* offset used for BSEC driver: misc_read and misc_write */
