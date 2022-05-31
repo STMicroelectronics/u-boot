@@ -35,8 +35,37 @@
 #ifdef CONFIG_DISTRO_DEFAULTS
 /*****************************************************************************/
 
-#define BOOT_TARGET_DEVICES(func) \
-	func(MMC, mmc, 0)
+#ifdef CONFIG_CMD_MMC
+#define BOOT_TARGET_MMC0(func)	func(MMC, mmc, 0)
+#define BOOT_TARGET_MMC1(func)	func(MMC, mmc, 1)
+#define BOOT_TARGET_MMC2(func)	func(MMC, mmc, 2)
+#else
+#define BOOT_TARGET_MMC0(func)
+#define BOOT_TARGET_MMC1(func)
+#define BOOT_TARGET_MMC2(func)
+#endif
+
+#define BOOT_TARGET_DEVICES(func)	\
+	BOOT_TARGET_MMC1(func)		\
+	BOOT_TARGET_MMC0(func)		\
+	BOOT_TARGET_MMC2(func)		\
+
+/*
+ * default bootcmd for stm32mp25:
+ * for serial/usb: execute the stm32prog command
+ * for mmc boot (eMMC, SD card), distro boot on the same mmc device
+ * for other boot, use the default distro order in ${boot_targets}
+ */
+#define STM32MP_BOOTCMD "bootcmd_stm32mp=" \
+	"echo \"Boot over ${boot_device}${boot_instance}!\";" \
+	"if test ${boot_device} = serial || test ${boot_device} = usb;" \
+	"then stm32prog ${boot_device} ${boot_instance}; " \
+	"else " \
+		"run env_check;" \
+		"if test ${boot_device} = mmc;" \
+		"then env set boot_targets \"mmc${boot_instance}\"; fi;" \
+		"run distro_bootcmd;" \
+	"fi;\0"
 
 #ifndef STM32MP_BOARD_EXTRA_ENV
 #define STM32MP_BOARD_EXTRA_ENV
@@ -68,6 +97,7 @@
 #include <config_distro_bootcmd.h>
 #define CFG_EXTRA_ENV_SETTINGS \
 	STM32MP_MEM_LAYOUT \
+	STM32MP_BOOTCMD \
 	BOOTENV \
 	STM32MP_EXTRA \
 	STM32MP_BOARD_EXTRA_ENV
