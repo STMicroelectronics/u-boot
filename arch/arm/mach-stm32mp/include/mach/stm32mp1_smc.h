@@ -67,14 +67,16 @@
 	stm32_smc(svc, op, data1, data2, NULL)
 
 #ifdef CONFIG_ARM_SMCCC
-static inline u32 stm32_smc(u32 svc, u8 op, u32 data1, u32 data2, u32 *result)
+static inline u32 stm32_smc(unsigned long svc, unsigned long op,
+			    unsigned long data1, unsigned long data2,
+			    u32 *result)
 {
 	struct arm_smccc_res res;
 
 	arm_smccc_smc(svc, op, data1, data2, 0, 0, 0, 0, &res);
 
 	if (res.a0) {
-		pr_err("%s: Failed to exec svc=%x op=%x in secure mode (err = %ld)\n",
+		pr_err("%s: Failed to exec svc=%lx op=%lx in secure mode (err = %ld)\n",
 		       __func__, svc, op, res.a0);
 		return -EINVAL;
 	}
@@ -84,7 +86,9 @@ static inline u32 stm32_smc(u32 svc, u8 op, u32 data1, u32 data2, u32 *result)
 	return 0;
 }
 #else
-static inline u32 stm32_smc(u32 svc, u8 op, u32 data1, u32 data2, u32 *result)
+static inline u32 stm32_smc(unsigned long svc, unsigned long op,
+			    unsigned long data1, unsigned long data2,
+			    u32 *result)
 {
 	return 0;
 }
