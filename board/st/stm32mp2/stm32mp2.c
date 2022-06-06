@@ -10,6 +10,7 @@
 #include <env.h>
 #include <env_internal.h>
 #include <fdt_support.h>
+#include <g_dnl.h>
 #include <log.h>
 #include <misc.h>
 #include <asm/global_data.h>
@@ -54,6 +55,20 @@ int checkboard(void)
 
 	return 0;
 }
+
+#ifdef CONFIG_USB_GADGET_DOWNLOAD
+#define STM32MP1_G_DNL_DFU_PRODUCT_NUM 0xdf11
+int g_dnl_bind_fixup(struct usb_device_descriptor *dev, const char *name)
+{
+	if (IS_ENABLED(CONFIG_DFU_OVER_USB) &&
+	    !strcmp(name, "usb_dnl_dfu"))
+		put_unaligned(STM32MP1_G_DNL_DFU_PRODUCT_NUM, &dev->idProduct);
+	else
+		put_unaligned(CONFIG_USB_GADGET_PRODUCT_NUM, &dev->idProduct);
+
+	return 0;
+}
+#endif /* CONFIG_USB_GADGET_DOWNLOAD */
 
 /* board dependent setup after realloc */
 int board_init(void)
