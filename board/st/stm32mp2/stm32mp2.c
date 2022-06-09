@@ -209,3 +209,17 @@ void fwu_plat_get_bootidx(uint *boot_idx)
 		    TAMP_FWU_BOOT_IDX_OFFSET) & TAMP_FWU_BOOT_IDX_MASK;
 }
 #endif /* CONFIG_FWU_MULTI_BANK_UPDATE */
+
+#if defined(CONFIG_USB_DWC3) && defined(CONFIG_CMD_STM32PROG_USB)
+#include <dfu.h>
+/*
+ * TEMP: force USB BUS reset forced to false, because it is not supported
+ *       in DWC3 USB driver
+ * avoid USB bus reset support in DFU stack is required to reenumeration in
+ * stm32prog command after flashlayout load or after "dfu-util -e -R"
+ */
+bool dfu_usb_get_reset(void)
+{
+	return false;
+}
+#endif
