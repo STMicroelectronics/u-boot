@@ -208,7 +208,7 @@ void stm32mp_cpu_init(void)
 	if (!IS_ENABLED(CONFIG_SPL) || IS_ENABLED(CONFIG_SPL_BUILD)) {
 		/* Reset Coprocessor state unless it wakes up from Standby power mode */
 		if (!(readl(PWR_MCUCR) & PWR_MCUCR_SBF)) {
-			writel(TAMP_COPRO_STATE_OFF, TAMP_COPRO_STATE);
+			writel(0, TAMP_COPRO_STATE);
 			writel(0, TAMP_COPRO_RSC_TBL_ADDRESS);
 		}
 	}
