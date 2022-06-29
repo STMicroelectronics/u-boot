@@ -26,7 +26,13 @@
 #else
 #define OTP_SIZE_SMC		0
 #endif
-#define OTP_SIZE_TA		776
+/* size of the OTP struct in NVMEM PTA */
+#define _OTP_SIZE_TA(otp)	(((otp) * 2 + 2) * 4)
+#ifdef CONFIG_STM32MP25X
+#define OTP_SIZE_TA		_OTP_SIZE_TA(368)
+#else
+#define OTP_SIZE_TA		_OTP_SIZE_TA(96)
+#endif
 #define PMIC_SIZE		8
 
 enum stm32prog_target {
