@@ -6,6 +6,7 @@
 #define LOG_CATEGORY LOGC_BOARD
 
 #include <common.h>
+#include <button.h>
 #include <config.h>
 #include <env.h>
 #include <env_internal.h>
@@ -14,11 +15,13 @@
 #include <led.h>
 #include <log.h>
 #include <misc.h>
+#include <asm/io.h>
 #include <asm/global_data.h>
 #include <asm/arch/sys_proto.h>
 #include <dm/device.h>
 #include <dm/ofnode.h>
 #include <dm/uclass.h>
+#include <linux/delay.h>
 
 /*
  * Get a global data pointer
@@ -106,10 +109,34 @@ static int setup_led(enum led_state_t cmd)
 	return ret;
 }
 
+static void check_user_button(void)
+{
+	struct udevice *button;
+	int i;
+
+	if (!IS_ENABLED(CONFIG_CMD_STM32PROG) || !IS_ENABLED(CONFIG_BUTTON))
+		return;
+
+	if (button_get_by_label("User-2", &button))
+		return;
+
+	for (i = 0; i < 21; ++i) {
+		if (button_get_state(button) != BUTTON_ON)
+			return;
+		if (i < 20)
+			mdelay(50);
+	}
+
+	log_notice("entering download mode...\n");
+	clrsetbits_le32(TAMP_BOOT_CONTEXT, TAMP_BOOT_FORCED_MASK, BOOT_STM32PROG);
+}
+
 /* board dependent setup after realloc */
 int board_init(void)
 {
 	setup_led(LEDST_ON);
+
+	check_user_button();
 
 	return 0;
 }
