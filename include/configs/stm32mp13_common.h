@@ -37,6 +37,12 @@
 #define BOOT_TARGET_MMC1(func)
 #endif
 
+#ifdef CONFIG_NET
+#define BOOT_TARGET_PXE(func)	func(PXE, pxe, na)
+#else
+#define BOOT_TARGET_PXE(func)
+#endif
+
 #ifdef CONFIG_CMD_UBIFS
 #define BOOT_TARGET_UBIFS(func)	func(UBIFS, ubifs, 0, UBI, boot)
 #else
@@ -53,7 +59,8 @@
 	BOOT_TARGET_MMC1(func)		\
 	BOOT_TARGET_MMC0(func)		\
 	BOOT_TARGET_UBIFS(func)		\
-	BOOT_TARGET_USB(func)
+	BOOT_TARGET_USB(func)		\
+	BOOT_TARGET_PXE(func)
 
 /*
  * default bootcmd for stm32mp13:
