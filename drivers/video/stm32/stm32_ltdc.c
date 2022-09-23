@@ -13,7 +13,9 @@
 #include <dm.h>
 #include <log.h>
 #include <panel.h>
+#include <regmap.h>
 #include <reset.h>
+#include <syscon.h>
 #include <video.h>
 #include <video_bridge.h>
 #include <asm/io.h>
@@ -264,6 +266,9 @@ static const u32 layer_regs_a2[] = {
 #define HWVER_20101 0x020101
 #define HWVER_40100 0x040100
 
+#define SYSCFG_DISPLAYCLKCR 0x5000
+#define DISPLAYCLKCR_DPI	0x02
+
 enum stm32_ltdc_pix_fmt {
 	PF_ARGB8888 = 0,	/* ARGB [32 bits] */
 	PF_ABGR8888,		/* ABGR [32 bits] */
@@ -505,8 +510,28 @@ static int stm32_ltdc_probe(struct udevice *dev)
 	struct display_timing timings;
 	struct clk pclk, bclk;
 	struct reset_ctl rst;
+	struct regmap *regmap = NULL;
+	struct udevice *syscon;
 	ulong rate;
 	int ret;
+
+	if (IS_ENABLED(CONFIG_SYSCON)) {
+		ret = uclass_get_device_by_phandle(UCLASS_SYSCON, dev, "st,syscon", &syscon);
+		if (ret) {
+			if (ret != -ENOENT) {
+				dev_err(dev, "unable to find syscon device\n");
+				return ret;
+			}
+		} else {
+			regmap = syscon_get_regmap(syscon);
+			if (IS_ERR(regmap)) {
+				dev_err(dev, "Fail to get Syscon regmap\n");
+				return PTR_ERR(regmap);
+			}
+
+			regmap_write(regmap, SYSCFG_DISPLAYCLKCR, DISPLAYCLKCR_DPI);
+		}
+	}
 
 	priv->regs = dev_read_addr_ptr(dev);
 	if (!priv->regs) {
