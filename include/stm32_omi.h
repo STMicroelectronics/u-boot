@@ -117,24 +117,57 @@
 #define OSPI_HLCR_TACC_MASK	GENMASK(15,8)
 #define OSPI_HLCR_TRWR_MASK	GENMASK(23,16)
 
+#define SYSCFG_DLYBOS_CR		0
+#define DLYBOS_CR_EN			BIT(0)
+#define DLYBOS_CR_RXTAPSEL_SHIFT	1
+#define DLYBOS_CR_RXTAPSEL_MASK		GENMASK(6, 1)
+#define DLYBOS_CR_TXTAPSEL_SHIFT	7
+#define DLYBOS_CR_TXTAPSEL_MASK		GENMASK(12, 7)
+#define DLYBOS_TAPSEL_NB		33
+#define DLYBOS_BYP_EN			BIT(16)
+#define DLYBOS_BYP_CMD_MASK		GENMASK(21, 17)
+
+#define SYSCFG_DLYBOS_SR	4
+#define DLYBOS_SR_LOCK		BIT(0)
+#define DLYBOS_SR_RXTAPSEL_ACK	BIT(1)
+#define DLYBOS_SR_TXTAPSEL_ACK	BIT(2)
+
 #define OSPI_MAX_MMAP_SZ	SZ_256M
 #define OSPI_MAX_CHIP		2
 
-#define OSPI_ABT_TIMEOUT_US	100000
-#define OSPI_BUSY_TIMEOUT_US	100000
-#define OSPI_CMD_TIMEOUT_US	1000000
-#define OSPI_FIFO_TIMEOUT_US	30000
+#define OSPI_ABT_TIMEOUT_US		100000
+#define OSPI_BUSY_TIMEOUT_US		100000
+#define OSPI_CMD_TIMEOUT_US		1000000
+#define OSPI_FIFO_TIMEOUT_US		30000
+#define STM32_DLYB_FREQ_THRESHOLD	50000000
+#define STM32_DLYBOS_TIMEOUT_MS		1000
+#define STM32_DLYBOS_DELAY_NB		24
 
 struct stm32_omi_plat {
-	struct udevice *dev;
+	struct regmap *regmap;
 	phys_addr_t regs_base;		/* register base address */
 	phys_addr_t mm_base;		/* memory map base address */
 	resource_size_t mm_size;
 	struct clk clk;
 	struct reset_ctl_bulk rst_ctl;
 	ulong clock_rate;
+	u32 dlyb_base;
 };
 
-int stm32_omi_tx_poll(struct stm32_omi_plat *omi, u8 *buf, u32 len, bool read);
-int stm32_omi_wait_cmd(struct stm32_omi_plat *omi);
-int stm32_omi_wait_for_not_busy(struct stm32_omi_plat *omi);
+struct stm32_omi_priv {
+	int (*check_transfer)(struct udevice * omi_dev);
+	struct udevice *dev;
+};
+
+struct stm32_tap_window {
+	u8 end;
+	u8 length;
+};
+
+int stm32_omi_dlyb_configure(struct udevice *dev,
+			     bool bypass_mode, u16 period_ps);
+int stm32_omi_dlyb_find_tap(struct udevice *dev, bool rx_only);
+int stm32_omi_dlyb_stop(struct udevice *dev);
+int stm32_omi_tx_poll(struct udevice *dev, u8 *buf, u32 len, bool read);
+int stm32_omi_wait_cmd(struct udevice *dev);
+int stm32_omi_wait_for_not_busy(struct udevice *dev);
