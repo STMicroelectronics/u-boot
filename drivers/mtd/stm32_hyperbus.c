@@ -23,6 +23,7 @@
 struct stm32_hb_priv {
 	struct udevice *dev;
 	struct udevice *omi_dev;
+	ulong real_flash_freq;		/* real flash freq = bus_freq x prescaler */
 };
 
 struct stm32_hb_plat {
@@ -116,6 +117,69 @@ void flash_write16(u16 value, void *addr)
 		dev_err(priv->dev, "%s failed, ret=%i\n", __func__, ret);
 };
 
+static int stm32_hb_test_cfi(struct udevice *omi_dev)
+{
+	struct stm32_omi_plat *omi_plat = dev_get_plat(omi_dev);
+	phys_addr_t mm_base = omi_plat->mm_base;
+	int ret = -EIO;
+	u16 qry[3];
+
+	/* Reset/Enter in CFI */
+	flash_write16(AMD_CMD_RESET, (void *)mm_base);
+	flash_write16(FLASH_CMD_CFI, (void *)mm_base + 0xaa);
+
+	qry[0] = readw(mm_base + 0x20);
+	qry[1] = readw(mm_base + 0x22);
+	qry[2] = readw(mm_base + 0x24);
+	if (qry[0] == 'Q' && qry[1] == 'R' && qry[2] == 'Y')
+		ret = 0;
+
+	/* Reset/Exit from CFI */
+	flash_write16(AMD_CMD_RESET, (void *)mm_base);
+	flash_write16(FLASH_CMD_RESET, (void *)mm_base);
+
+	return ret;
+}
+
+static int stm32_hb_calibrate(struct stm32_hb_priv *priv)
+{
+	struct stm32_omi_plat *omi_plat = dev_get_plat(priv->omi_dev);
+	u32 prescaler;
+	u16 period_ps = 0;
+	int ret;
+	bool bypass_mode = false;
+
+	prescaler = FIELD_GET(OSPI_DCR2_PRESC_MASK,
+			      readl(omi_plat->regs_base + OSPI_DCR2));
+	if (prescaler)
+		setbits_le32(omi_plat->regs_base + OSPI_TCR, OSPI_TCR_DHQC);
+
+	if (priv->real_flash_freq <= STM32_DLYB_FREQ_THRESHOLD) {
+		bypass_mode = true;
+		period_ps = NSEC_PER_SEC / (priv->real_flash_freq / 1000);
+	}
+
+	ret = stm32_omi_dlyb_configure(priv->omi_dev, bypass_mode, period_ps);
+	if (ret)
+		return ret;
+
+	if (bypass_mode || prescaler)
+		/* perform only RX TAP selection */
+		ret = stm32_omi_dlyb_find_tap(priv->omi_dev, true);
+	else
+		/* perform RX/TX TAP selection */
+		ret = stm32_omi_dlyb_find_tap(priv->omi_dev, false);
+
+	if (ret) {
+		dev_err(priv->omi_dev, "Calibration failed\n");
+		if (!bypass_mode)
+			/* stop delay block when configured in lock mode */
+			ret = stm32_omi_dlyb_stop(priv->omi_dev);
+	}
+
+	return ret;
+}
+
 static void stm32_hb_init(struct udevice *dev)
 {
 	struct stm32_hb_priv *priv = dev_get_priv(dev);
@@ -204,7 +268,7 @@ static int stm32_hb_probe(struct udevice *dev)
 	omi_priv->check_transfer = stm32_hb_test_cfi;
 	stm32_hb_init(dev);
 
-	return 0;
+	return stm32_hb_calibrate(priv);
 }
 
 static int stm32_hb_of_to_plat(struct udevice *dev)
