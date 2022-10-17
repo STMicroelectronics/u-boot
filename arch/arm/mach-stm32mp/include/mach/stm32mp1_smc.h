@@ -16,10 +16,38 @@
  * for SiP (silicon Partner)
  * http://infocenter.arm.com/help/topic/com.arm.doc.den0028a/index.html
  */
-#define STM32_SMC_VERSION		0x82000000
 
 /* Secure Service access from Non-secure */
+
+/*
+ * STM32_SMC_PWR call API
+ *
+ * Argument a0: (input) SMCC ID.
+ *		(output) Status return code.
+ * Argument a1: (input) Service ID (STM32_SMC_REG_xxx).
+ * Argument a2: (input) Register offset or physical address.
+ *		(output) Register read value, if applicable.
+ * Argument a3: (input) Register target value if applicable.
+ */
+#define STM32_SMC_PWR			0x82001001
+
+/*
+ * STM32_SMC_BSEC call API
+ *
+ * Argument a0: (input) SMCC ID
+ *		(output) status return code
+ * Argument a1: (input) Service ID (STM32_SMC_BSEC_xxx)
+ * Argument a2: (input) OTP index
+ *		(output) OTP read value, if applicable
+ * Argument a3: (input) OTP value if applicable
+ */
 #define STM32_SMC_BSEC			0x82001003
+
+/* Service ID for STM32_SMC_PWR */
+#define STM32_SMC_REG_READ		0x0
+#define STM32_SMC_REG_WRITE		0x1
+#define STM32_SMC_REG_SET		0x2
+#define STM32_SMC_REG_CLEAR		0x3
 
 /* Service for BSEC */
 #define STM32_SMC_READ_SHADOW		0x01
@@ -31,10 +59,10 @@
 #define STM32_SMC_WRLOCK_OTP		0x07
 
 /* SMC error codes */
-#define STM32_SMC_OK			0x0
-#define STM32_SMC_NOT_SUPPORTED		-1
-#define STM32_SMC_FAILED		-2
-#define STM32_SMC_INVALID_PARAMS	-3
+#define STM32_SMC_OK			0x00000000U
+#define STM32_SMC_NOT_SUPPORTED		0xffffffffU
+#define STM32_SMC_FAILED		0xfffffffeU
+#define STM32_SMC_INVALID_PARAMS	0xfffffffdU
 
 #define stm32_smc_exec(svc, op, data1, data2) \
 	stm32_smc(svc, op, data1, data2, NULL)
