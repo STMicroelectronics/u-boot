@@ -191,6 +191,13 @@ static inline s64 mmc_offset(struct mmc *mmc, int copy)
 			return val;
 	}
 
+	/* try the GPT partition with "U-Boot ENV" TYPE GUID */
+	if (IS_ENABLED(CONFIG_PARTITION_TYPE_GUID)) {
+		err = mmc_offset_try_partition(NULL, copy, &val);
+		if (!err)
+			return val;
+	}
+
 	defvalue = ENV_MMC_OFFSET;
 	propname = dt_prop.offset;
 
