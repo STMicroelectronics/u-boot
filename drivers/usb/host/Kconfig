@@ -461,3 +461,17 @@ config USB_MAX_CONTROLLER_COUNT
 	depends on USB_EHCI_FSL || USB_XHCI_FSL || \
 		(SPL_USB_HOST && !DM_SPL_USB) || (USB_HOST && !DM_USB)
 	default 1
+
+config USB_STM32_USBH
+	bool "Support for STMicroelectronics STM32 Family USBH controller"
+	depends on DM && OF_CONTROL
+	select USB_HOST
+	select USB_EHCI_HCD
+	select USB_EHCI_GENERIC
+	select USB_OHCI_HCD
+	select USB_OHCI_GENERIC
+	help
+	  STM32 Family USB 2.0 Host Controller includes generic EHCI and OHCI
+	  controller blocks to support High-Speed and Full+Low-Speed respectively
+	  This driver is to configure the glue logic to enable EHCI+OHCI controllers
+	  inside the USBH block.

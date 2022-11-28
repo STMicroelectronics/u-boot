@@ -58,3 +58,6 @@ obj-$(CONFIG_USB_XHCI_OCTEON) += dwc3-octeon-glue.o
 
 # designware
 obj-$(CONFIG_USB_DWC2) += dwc2.o
+
+# STM32
+obj-$(CONFIG_USB_STM32_USBH) += usbh-stm32.o
