@@ -1153,7 +1153,8 @@ void dwc3_of_parse(struct dwc3 *dwc)
 				       i, &val))
 			break;
 
-		dwc->incrx_mode = INCRX_UNDEF_LENGTH_BURST_MODE;
+		if (i > 0)
+			dwc->incrx_mode = INCRX_UNDEF_LENGTH_BURST_MODE;
 		dwc->incrx_size = max(dwc->incrx_size, val);
 	}
 }
