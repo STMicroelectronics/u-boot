@@ -20,7 +20,7 @@ allows this script to be run stand-alone, e.g.:
     ./pylibfdt/setup.py install [--prefix=...]
 """
 
-from setuptools import setup, Extension, sic
+from setuptools import setup, Extension
 from setuptools.command.build_py import build_py as _build_py
 import os
 import re
@@ -145,7 +145,7 @@ class build_py(_build_py):
 
 setup(
     name='libfdt',
-    version=sic(version),
+    version=version,
     cmdclass = {'build_py' : build_py},
     author='Simon Glass',
     author_email='sjg@chromium.org',
