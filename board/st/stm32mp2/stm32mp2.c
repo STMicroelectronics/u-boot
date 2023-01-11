@@ -248,3 +248,20 @@ bool dfu_usb_get_reset(void)
 	return false;
 }
 #endif
+
+#if defined(CONFIG_STM32_HYPERBUS)
+/* weak function called from common/board_r.c */
+int is_flash_available(void)
+{
+	struct udevice *dev;
+	int ret;
+
+	ret = uclass_get_device_by_driver(UCLASS_MTD,
+					  DM_DRIVER_GET(stm32_hyperbus),
+					  &dev);
+	if (ret)
+		return 0;
+
+	return 1;
+}
+#endif
