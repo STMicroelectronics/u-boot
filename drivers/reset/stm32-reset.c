@@ -16,12 +16,15 @@
 #include <asm/io.h>
 #include <dm/device_compat.h>
 #include <linux/bitops.h>
+#include <linux/iopoll.h>
 
 /* offset of register without set/clear management */
 #define RCC_MP_GCR_OFFSET 0x10C
 
 /* reset clear offset for STM32MP RCC */
 #define RCC_CL 0x4
+
+#define STM32_DEASSERT_TIMEOUT_US	10000
 
 struct stm32_reset_priv {
 	fdt_addr_t base;
@@ -48,6 +51,18 @@ static int stm32_reset_assert(struct reset_ctl *reset_ctl)
 	return 0;
 }
 
+static int stm32_check_deassert(struct reset_ctl *reset_ctl)
+{
+	struct stm32_reset_priv *priv = dev_get_priv(reset_ctl->dev);
+	int bank = (reset_ctl->id / (sizeof(u32) * BITS_PER_BYTE)) * 4;
+	int offset = reset_ctl->id % (sizeof(u32) * BITS_PER_BYTE);
+	u32 status;
+
+	return readl_poll_timeout(priv->base + bank, status,
+				  !(status & BIT(offset)),
+				   STM32_DEASSERT_TIMEOUT_US);
+}
+
 static int stm32_reset_deassert(struct reset_ctl *reset_ctl)
 {
 	struct stm32_reset_priv *priv = dev_get_priv(reset_ctl->dev);
@@ -66,7 +81,8 @@ static int stm32_reset_deassert(struct reset_ctl *reset_ctl)
 	else
 		clrbits_le32(priv->base + bank, BIT(offset));
 
-	return 0;
+
+	return stm32_check_deassert(reset_ctl);
 }
 
 static const struct reset_ops stm32_reset_ops = {
