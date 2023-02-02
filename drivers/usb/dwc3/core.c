@@ -1049,6 +1049,8 @@ int dm_usb_gadget_handle_interrupts(struct udevice *dev)
 int dwc3_setup_phy(struct udevice *dev, struct phy_bulk *phys)
 {
 	int ret;
+	enum usb_dr_mode dr_mode;
+	enum phy_mode phymode;
 
 	ret = generic_phy_get_bulk(dev, phys);
 	if (ret)
@@ -1060,7 +1062,32 @@ int dwc3_setup_phy(struct udevice *dev, struct phy_bulk *phys)
 
 	ret = generic_phy_power_on_bulk(phys);
 	if (ret)
-		generic_phy_exit_bulk(phys);
+		goto err_power_on;
+
+	dr_mode = usb_get_dr_mode(dev_ofnode(dev));
+
+	switch(dr_mode)
+	{
+		case USB_DR_MODE_HOST:
+			phymode = PHY_MODE_USB_HOST;
+			break;
+		case USB_DR_MODE_PERIPHERAL:
+			phymode = PHY_MODE_USB_DEVICE;
+			break;
+		default:
+			goto err_mode;
+	}
+
+	ret = generic_phy_set_mode_bulk(phys, phymode, 0);
+	if (ret)
+		goto err_mode;
+
+	return ret;
+
+err_mode:
+	generic_phy_power_off_bulk(phys);
+err_power_on:
+	generic_phy_exit_bulk(phys);
 
 	return ret;
 }
