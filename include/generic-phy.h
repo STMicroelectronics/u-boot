@@ -429,6 +429,17 @@ int generic_setup_phy(struct udevice *dev, struct phy *phy, int index);
  */
 int generic_shutdown_phy(struct phy *phy);
 
+/**
+ * generic_phy_set_mode_bulk() - Set Mode on all phys in a phy bulk struct.
+ *
+ * @bulk:	A phy bulk struct that was previously successfully requested
+ *		by generic_phy_get_bulk().
+ * @mode:	PHY mode, enum phy_mode
+ * @submode:	submode, underlying data is specific to the PHY function
+ * Return 0 if OK, or negative error code.
+ */
+int generic_phy_set_mode_bulk(struct phy_bulk *bulk, enum phy_mode mode, int submode);
+
 #else /* CONFIG_PHY */
 
 static inline int generic_phy_init(struct phy *phy)
@@ -515,6 +526,11 @@ static inline int generic_setup_phy(struct udevice *dev, struct phy *phy, int in
 }
 
 static inline int generic_shutdown_phy(struct phy *phy)
+{
+	return 0;
+}
+
+static inline int generic_phy_set_mode_bulk(struct phy_bulk *bulk, enum phy_mode mode, int submode)
 {
 	return 0;
 }

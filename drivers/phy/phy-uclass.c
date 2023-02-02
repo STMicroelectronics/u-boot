@@ -546,6 +546,22 @@ int generic_shutdown_phy(struct phy *phy)
 	return ret;
 }
 
+int generic_phy_set_mode_bulk(struct phy_bulk *bulk, enum phy_mode mode, int submode)
+{
+	struct phy *phys = bulk->phys;
+	int i, ret;
+
+	for (i = 0; i < bulk->count; i++) {
+		ret = generic_phy_set_mode(&phys[i], mode, submode);
+		if (ret) {
+			pr_err("Can't set mode on PHY%d\n", i);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
 UCLASS_DRIVER(phy) = {
 	.id		= UCLASS_PHY,
 	.name		= "phy",
