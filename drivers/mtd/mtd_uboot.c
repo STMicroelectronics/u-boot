@@ -320,16 +320,18 @@ int mtd_probe_devices(void)
 	mtd_probe_uclass_spi_nor_devs();
 
 	/*
-	 * Check if mtdparts/mtdids changed, if the MTD dev list was updated
+	 * Check if the MTD dev list is updated or
+	 * if mtdparts/mtdids changed,
 	 * or if our previous attempt to delete existing partititions failed.
 	 * In any of these cases we want to update the partitions, otherwise,
 	 * everything is up-to-date and we can return 0 directly.
 	 */
-	if ((!mtdparts && !old_mtdparts && !mtdids && !old_mtdids) ||
-	    (mtdparts && old_mtdparts && mtdids && old_mtdids &&
-	     !mtd_dev_list_updated() && !mtd_del_all_parts_failed &&
-	     !strcmp(mtdparts, old_mtdparts) &&
-	     !strcmp(mtdids, old_mtdids)))
+	if (!mtd_dev_list_updated() &&
+	    ((!mtdparts && !old_mtdparts && !mtdids && !old_mtdids) ||
+	     (mtdparts && old_mtdparts && mtdids && old_mtdids &&
+	      !mtd_del_all_parts_failed &&
+	      !strcmp(mtdparts, old_mtdparts) &&
+	      !strcmp(mtdids, old_mtdids))))
 		return 0;
 
 	/* Update the local copy of mtdparts */
