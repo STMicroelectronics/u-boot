@@ -55,6 +55,10 @@ static int ohci_usb_probe(struct udevice *dev)
 	if (err)
 		goto reset_err;
 
+	err = generic_phy_set_mode(&priv->phy, PHY_MODE_USB_HOST, 0);
+	if (err)
+		goto phy_err;
+
 	err = ohci_register(dev, regs);
 	if (err)
 		goto phy_err;

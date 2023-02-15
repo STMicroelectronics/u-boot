@@ -100,6 +100,12 @@ static int ehci_usb_probe(struct udevice *dev)
 	if (err)
 		goto regulator_err;
 
+	err = generic_phy_set_mode(&priv->phy, PHY_MODE_USB_HOST, 0);
+	if (err) {
+		dev_dbg(dev, "failed to set mode on usb phy\n");
+		goto phy_err;
+	}
+
 	hccr = map_physmem(dev_read_addr(dev), 0x100, MAP_NOCACHE);
 	hcor = (struct ehci_hcor *)((uintptr_t)hccr +
 				    HC_LENGTH(ehci_readl(&hccr->cr_capbase)));
