@@ -536,8 +536,10 @@ static efi_status_t efi_disk_add_dev(
 		ret = efi_add_protocol(&diskobj->header,
 				       &efi_simple_file_system_protocol_guid,
 				       diskobj->volume);
-		if (ret != EFI_SUCCESS)
+		if (ret != EFI_SUCCESS) {
+			log_debug("simple FS failed\n");
 			goto error;
+		}
 	}
 	diskobj->ops = block_io_disk_template;
 
