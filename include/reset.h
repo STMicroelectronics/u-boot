@@ -330,10 +330,10 @@ int reset_deassert_bulk(struct reset_ctl_bulk *bulk);
 int reset_status(struct reset_ctl *reset_ctl);
 
 /**
- * reset_release_all - Assert/Free an array of previously requested resets.
+ * reset_release_all - Free an array of previously requested resets.
  *
  * For each reset contained in the reset array, this function will check if
- * reset has been previously requested and then will assert and free it.
+ * reset has been previously requested and then free it.
  *
  * @reset_ctl:	A reset struct array that was previously successfully
  *		requested by reset_get_by_*().
@@ -343,12 +343,11 @@ int reset_status(struct reset_ctl *reset_ctl);
 int reset_release_all(struct reset_ctl *reset_ctl, int count);
 
 /**
- * reset_release_bulk - Assert/Free an array of previously requested reset
+ * reset_release_bulk - Free an array of previously requested reset
  * signals in a reset control bulk struct.
  *
  * For each reset contained in the reset control bulk struct, this function
- * will check if reset has been previously requested and then will assert
- * and free it.
+ * will check if reset has been previously requested and then will free it.
  *
  * @bulk:	A reset control bulk struct that was previously successfully
  *		requested by reset_get_bulk().

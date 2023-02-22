@@ -142,7 +142,29 @@ static int dm_test_reset_bulk(struct unit_test_state *uts)
 	ut_asserteq(0, sandbox_reset_query(dev_reset, TEST_RESET_ID));
 	ut_asserteq(0, sandbox_reset_query(dev_reset, OTHER_RESET_ID));
 
+	/* reset release don't change the reset level */
+	ut_asserteq(1, sandbox_reset_is_requested(dev_reset, OTHER_RESET_ID));
+	ut_asserteq(1, sandbox_reset_is_requested(dev_reset, TEST_RESET_ID));
 	ut_assertok(sandbox_reset_test_release_bulk(dev_test));
+	ut_asserteq(0, sandbox_reset_is_requested(dev_reset, OTHER_RESET_ID));
+	ut_asserteq(0, sandbox_reset_is_requested(dev_reset, TEST_RESET_ID));
+	ut_asserteq(0, sandbox_reset_query(dev_reset, TEST_RESET_ID));
+	ut_asserteq(0, sandbox_reset_query(dev_reset, OTHER_RESET_ID));
+
+	ut_assertok(sandbox_reset_test_get_bulk(dev_test));
+	ut_asserteq(0, sandbox_reset_query(dev_reset, TEST_RESET_ID));
+	ut_asserteq(0, sandbox_reset_query(dev_reset, OTHER_RESET_ID));
+
+	ut_assertok(sandbox_reset_test_assert_bulk(dev_test));
+	ut_asserteq(1, sandbox_reset_query(dev_reset, TEST_RESET_ID));
+	ut_asserteq(1, sandbox_reset_query(dev_reset, OTHER_RESET_ID));
+
+	/* reset release don't change the reset level */
+	ut_asserteq(1, sandbox_reset_is_requested(dev_reset, OTHER_RESET_ID));
+	ut_asserteq(1, sandbox_reset_is_requested(dev_reset, TEST_RESET_ID));
+	ut_assertok(sandbox_reset_test_release_bulk(dev_test));
+	ut_asserteq(0, sandbox_reset_is_requested(dev_reset, OTHER_RESET_ID));
+	ut_asserteq(0, sandbox_reset_is_requested(dev_reset, TEST_RESET_ID));
 	ut_asserteq(1, sandbox_reset_query(dev_reset, TEST_RESET_ID));
 	ut_asserteq(1, sandbox_reset_query(dev_reset, OTHER_RESET_ID));
 

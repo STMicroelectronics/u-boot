@@ -245,10 +245,6 @@ int reset_release_all(struct reset_ctl *reset_ctl, int count)
 		if (!reset_ctl[i].dev)
 			continue;
 
-		ret = reset_assert(&reset_ctl[i]);
-		if (ret)
-			return ret;
-
 		ret = reset_free(&reset_ctl[i]);
 		if (ret)
 			return ret;
