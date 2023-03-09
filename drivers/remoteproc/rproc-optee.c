@@ -193,6 +193,7 @@ int rproc_optee_open(struct rproc_optee *trproc)
 	struct udevice *tee = NULL;
 	const struct tee_optee_ta_uuid uuid = TA_REMOTEPROC_UUID;
 	struct tee_open_session_arg arg = { };
+	struct tee_param param;
 	int rc;
 
 	if (!trproc)
@@ -203,7 +204,11 @@ int rproc_optee_open(struct rproc_optee *trproc)
 		return -ENODEV;
 
 	tee_optee_ta_uuid_to_octets(arg.uuid, &uuid);
-	rc = tee_open_session(tee, &arg, 0, NULL);
+
+	param.attr = TEE_PARAM_ATTR_TYPE_VALUE_INPUT;
+	param.u.value.a = trproc->fw_id;
+
+	rc = tee_open_session(tee, &arg, 1, &param);
 	if (rc < 0 || arg.ret != 0) {
 		if (!rc)
 			rc = -EIO;
