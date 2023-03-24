@@ -49,6 +49,12 @@ extern bool usb_started; /* flag for the started/stopped USB status */
  */
 #define USB_TIMEOUT_MS(pipe) (usb_pipebulk(pipe) ? 5000 : 1000)
 
+/*
+ * USB Resume Timer: Every Host controller driver should drive the resume
+ * signalling on the bus for the amount of time defined by this macro.
+ */
+#define USB_RESUME_TIMEOUT      40 /* ms */
+
 /* device request (setup) */
 struct devrequest {
 	__u8	requesttype;

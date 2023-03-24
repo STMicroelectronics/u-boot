@@ -178,8 +178,26 @@ static int handshake(uint32_t *ptr, uint32_t mask, uint32_t done, int usec)
 
 static int ehci_reset(struct ehci_ctrl *ctrl)
 {
-	uint32_t cmd;
-	int ret = 0;
+	uint32_t cmd, reg;
+	int ret = 0, i;
+	int max_ports = HCS_N_PORTS(ehci_readl(&ctrl->hccr->cr_hcsparams));
+
+	for (i = 0; i < max_ports; i++) {
+		reg = ehci_readl(&ctrl->hcor->or_portsc[i]);
+		if (reg & EHCI_PS_SUSP) {
+			reg &= ~EHCI_PS_CLEAR;
+			reg |= EHCI_PS_FPR;
+			ehci_writel(&ctrl->hcor->or_portsc[i], reg);
+		}
+	}
+	mdelay(USB_RESUME_TIMEOUT);
+	for (i = 0; i < max_ports; i++) {
+		reg = ehci_readl(&ctrl->hcor->or_portsc[i]);
+		if (reg & EHCI_PS_FPR) {
+			reg &= ~(EHCI_PS_CLEAR | EHCI_PS_SUSP | EHCI_PS_FPR);
+			ehci_writel(&ctrl->hcor->or_portsc[i], reg);
+		}
+	}
 
 	cmd = ehci_readl(&ctrl->hcor->or_usbcmd);
 	cmd = (cmd & ~CMD_RUN) | CMD_RESET;
