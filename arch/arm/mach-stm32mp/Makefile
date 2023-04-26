@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0+
 #
-# Copyright (C) 2018, STMicroelectronics - All Rights Reserved
+# Copyright (C) 2018-2024, STMicroelectronics - All Rights Reserved
 #
 
 obj-y += dram_init.o
@@ -11,6 +11,7 @@ obj-y += soc.o
 
 obj-$(CONFIG_STM32MP13X) += stm32mp1/
 obj-$(CONFIG_STM32MP15X) += stm32mp1/
+obj-$(CONFIG_STM32MP21X) += stm32mp2/
 obj-$(CONFIG_STM32MP23X) += stm32mp2/
 obj-$(CONFIG_STM32MP25X) += stm32mp2/
 

@@ -1310,6 +1310,9 @@ dtb-$(CONFIG_STM32MP15X) += \
 	stm32mp15xx-dhcor-drc-compact.dtb \
 	stm32mp15xx-dhcor-testbench.dtb
 
+dtb-$(CONFIG_STM32MP21X) += \
+	stm32mp215f-dk.dtb
+
 dtb-$(CONFIG_STM32MP23X) += \
 	stm32mp235f-dk.dtb
 

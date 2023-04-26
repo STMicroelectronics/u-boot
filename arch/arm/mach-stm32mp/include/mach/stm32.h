@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0+ OR BSD-3-Clause */
 /*
- * Copyright (C) 2018, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2018-2024, STMicroelectronics - All Rights Reserved
  */
 
 #ifndef _MACH_STM32_H_
@@ -154,16 +154,20 @@ enum forced_boot_mode {
 #define TAMP_BOOT_AUTH_ST_MASK		GENMASK(7, 4)
 #define TAMP_BOOT_PARTITION_MASK	GENMASK(3, 0)
 
-#if defined(CONFIG_STM32MP23X) || defined(CONFIG_STM32MP25X)
+#if defined(CONFIG_STM32MP21X) || defined(CONFIG_STM32MP23X) || defined(CONFIG_STM32MP25X)
 #define STM32_USART2_BASE		0x400E0000
 #define STM32_USART3_BASE		0x400F0000
 #define STM32_UART4_BASE		0x40100000
 #define STM32_UART5_BASE		0x40110000
 #define STM32_USART6_BASE		0x40220000
+#ifdef CONFIG_STM32MP25X
 #define STM32_UART9_BASE		0x402C0000
+#endif
 #define STM32_USART1_BASE		0x40330000
 #define STM32_UART7_BASE		0x40370000
+#ifdef CONFIG_STM32MP25X
 #define STM32_UART8_BASE		0x40380000
+#endif
 #define STM32_RCC_BASE			0x44200000
 #define STM32_TAMP_BASE			0x46010000
 #define STM32_SDMMC1_BASE		0x48220000
@@ -184,7 +188,7 @@ enum forced_boot_mode {
 #define TAMP_BOOT_CONTEXT		TAMP_BACKUP_REGISTER(96)
 #define TAMP_COPRO_RSC_TBL_ADDRESS	TAMP_BACKUP_REGISTER(97)
 #define TAMP_COPRO_RSC_TBL_SIZE		TAMP_BACKUP_REGISTER(98)
-#endif /* defined(CONFIG_STM32MP23X) || defined(CONFIG_STM32MP25X) */
+#endif /* defined(CONFIG_STM32MP21X) || defined(CONFIG_STM32MP23X) || defined(CONFIG_STM32MP25X) */
 
 /* offset used for BSEC driver: misc_read and misc_write */
 #define STM32_BSEC_SHADOW_OFFSET	0x0
@@ -208,7 +212,7 @@ enum forced_boot_mode {
 #define BSEC_OTP_MAC	57
 #define BSEC_OTP_BOARD	60
 #endif
-#if defined(CONFIG_STM32MP23X) || defined(CONFIG_STM32MP25X)
+#if defined(CONFIG_STM32MP21X) || defined(CONFIG_STM32MP23X) || defined(CONFIG_STM32MP25X)
 #define BSEC_OTP_SERIAL	5
 #define BSEC_OTP_RPN	9
 #define BSEC_OTP_REVID	102
@@ -217,7 +221,7 @@ enum forced_boot_mode {
 #define BSEC_OTP_BOARD	246
 #define BSEC_OTP_MAC	247
 
-#endif /* defined(CONFIG_STM32MP23X) || defined(CONFIG_STM32MP25X) */
+#endif /* defined(CONFIG_STM32MP21X) || defined(CONFIG_STM32MP23X) || defined(CONFIG_STM32MP25X) */
 
 #ifndef __ASSEMBLY__
 #include <asm/types.h>

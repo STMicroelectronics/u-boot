@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later OR BSD-3-Clause
 /*
- * Copyright (C) 2023, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2023-2024, STMicroelectronics - All Rights Reserved
  */
 
 #define LOG_CATEGORY LOGC_ARCH
@@ -120,8 +120,10 @@ static void setup_boot_mode(void)
 		STM32_UART5_BASE,
 		STM32_USART6_BASE,
 		STM32_UART7_BASE,
+#ifdef CONFIG_STM32MP25X
 		STM32_UART8_BASE,
 		STM32_UART9_BASE
+#endif
 	};
 	const u32 sdmmc_addr[] = {
 		STM32_SDMMC1_BASE,

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+ OR BSD-3-Clause
 /*
- * Copyright (C) 2019, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2019-2024, STMicroelectronics - All Rights Reserved
  */
 
 #include <common.h>
@@ -16,21 +16,21 @@
  * Closed device: OTP0
  * STM32MP15x: bit 6 of OTP0
  * STM32MP13x: 0b111111 = 0x3F for OTP_SECURED closed device
- * STM32MP25x: bit 0 of OTP18
+ * STM32MP2xx: bit 0 of OTP18
  */
 #define STM32MP1_OTP_CLOSE_ID				0
 #define STM32_OTP_STM32MP13X_CLOSE_MASK		GENMASK(5, 0)
 #define STM32_OTP_STM32MP15X_CLOSE_MASK		BIT(6)
-#define STM32MP25_OTP_WORD8				8
-#define STM32_OTP_STM32MP25X_BOOTROM_CLOSE_MASK	GENMASK(7, 0)
-#define STM32MP25_OTP_CLOSE_ID			18
-#define STM32_OTP_STM32MP25X_CLOSE_MASK		GENMASK(3, 0)
-#define STM32_OTP_STM32MP25X_PROVISIONING_DONE_MASK	GENMASK(7, 4)
-#define STM32MP25_OTP_HWCONFIG			124
-#define STM32_OTP_STM32MP25X_DISABLE_SCAN_MASK	BIT(20)
+#define STM32MP2X_OTP_WORD8				8
+#define STM32_OTP_STM32MP2X_BOOTROM_CLOSE_MASK	GENMASK(7, 0)
+#define STM32MP2X_OTP_CLOSE_ID			18
+#define STM32_OTP_STM32MP2X_CLOSE_MASK		GENMASK(3, 0)
+#define STM32_OTP_STM32MP2X_PROVISIONING_DONE_MASK	GENMASK(7, 4)
+#define STM32MP2X_OTP_HWCONFIG			124
+#define STM32_OTP_STM32MP2X_DISABLE_SCAN_MASK	BIT(20)
 
-#define STM32MP25_OTP_BOOTROM_CONF8	17
-#define STM32_OTP_STM32MP25X_OEM_KEY2_EN	BIT(8)
+#define STM32MP2X_OTP_BOOTROM_CONF8	17
+#define STM32_OTP_STM32MP2X_OEM_KEY2_EN	BIT(8)
 
 /* PKH is the first element of the key list */
 #define STM32KEY_PKH 0
@@ -69,7 +69,7 @@ const struct stm32key stm32mp15_list[] = {
 
 static int post_process_edmk2(struct udevice *dev);
 
-const struct stm32key stm32mp25_list[] = {
+const struct stm32key stm32mp2x_list[] = {
 	[STM32KEY_PKH] = {
 		.name = "PKHTH",
 		.desc = "Hash of the 8 ECC Public Keys Hashes Table (ECDSA is the authentication algorithm)",
@@ -132,23 +132,23 @@ const struct otp_close stm32mp15_close_state_otp[] = {
 	}
 };
 
-const struct otp_close stm32mp25_close_state_otp[] = {
+const struct otp_close stm32mp2x_close_state_otp[] = {
 	{
-		.word = STM32MP25_OTP_WORD8,
-		.mask_wr = STM32_OTP_STM32MP25X_BOOTROM_CLOSE_MASK,
+		.word = STM32MP2X_OTP_WORD8,
+		.mask_wr = STM32_OTP_STM32MP2X_BOOTROM_CLOSE_MASK,
 		.mask_rd = 0,
 		.close_status_ops = NULL
 	},
 	{
-		.word = STM32MP25_OTP_CLOSE_ID,
-		.mask_wr = STM32_OTP_STM32MP25X_CLOSE_MASK |
-			   STM32_OTP_STM32MP25X_PROVISIONING_DONE_MASK,
-		.mask_rd = STM32_OTP_STM32MP25X_CLOSE_MASK,
+		.word = STM32MP2X_OTP_CLOSE_ID,
+		.mask_wr = STM32_OTP_STM32MP2X_CLOSE_MASK |
+			   STM32_OTP_STM32MP2X_PROVISIONING_DONE_MASK,
+		.mask_rd = STM32_OTP_STM32MP2X_CLOSE_MASK,
 		.close_status_ops = compare_any_bits
 	},
 	{
-		.word = STM32MP25_OTP_HWCONFIG,
-		.mask_wr = STM32_OTP_STM32MP25X_DISABLE_SCAN_MASK,
+		.word = STM32MP2X_OTP_HWCONFIG,
+		.mask_wr = STM32_OTP_STM32MP2X_DISABLE_SCAN_MASK,
 		.mask_rd = 0,
 		.close_status_ops = NULL
 	},
@@ -165,8 +165,9 @@ static u8 get_key_nb(void)
 	if (IS_ENABLED(CONFIG_STM32MP15X))
 		return ARRAY_SIZE(stm32mp15_list);
 
-	if (IS_ENABLED(CONFIG_STM32MP23X) || IS_ENABLED(CONFIG_STM32MP25X))
-		return ARRAY_SIZE(stm32mp25_list);
+	if (IS_ENABLED(CONFIG_STM32MP21X) || IS_ENABLED(CONFIG_STM32MP23X) ||
+	    IS_ENABLED(CONFIG_STM32MP25X))
+		return ARRAY_SIZE(stm32mp2x_list);
 }
 
 static const struct stm32key *get_key(u8 index)
@@ -177,8 +178,9 @@ static const struct stm32key *get_key(u8 index)
 	if (IS_ENABLED(CONFIG_STM32MP15X))
 		return &stm32mp15_list[index];
 
-	if (IS_ENABLED(CONFIG_STM32MP23X) || IS_ENABLED(CONFIG_STM32MP25X))
-		return &stm32mp25_list[index];
+	if (IS_ENABLED(CONFIG_STM32MP21X) || IS_ENABLED(CONFIG_STM32MP23X) ||
+	    IS_ENABLED(CONFIG_STM32MP25X))
+		return &stm32mp2x_list[index];
 }
 
 static u8 get_otp_close_state_nb(void)
@@ -189,8 +191,9 @@ static u8 get_otp_close_state_nb(void)
 	if (IS_ENABLED(CONFIG_STM32MP15X))
 		return ARRAY_SIZE(stm32mp15_close_state_otp);
 
-	if (IS_ENABLED(CONFIG_STM32MP23X) || IS_ENABLED(CONFIG_STM32MP25X))
-		return ARRAY_SIZE(stm32mp25_close_state_otp);
+	if (IS_ENABLED(CONFIG_STM32MP21X) || IS_ENABLED(CONFIG_STM32MP23X) ||
+	    IS_ENABLED(CONFIG_STM32MP25X))
+		return ARRAY_SIZE(stm32mp2x_close_state_otp);
 }
 
 static const struct otp_close *get_otp_close_state(u8 index)
@@ -201,8 +204,9 @@ static const struct otp_close *get_otp_close_state(u8 index)
 	if (IS_ENABLED(CONFIG_STM32MP15X))
 		return &stm32mp15_close_state_otp[index];
 
-	if (IS_ENABLED(CONFIG_STM32MP23X) || IS_ENABLED(CONFIG_STM32MP25X))
-		return &stm32mp25_close_state_otp[index];
+	if (IS_ENABLED(CONFIG_STM32MP21X) || IS_ENABLED(CONFIG_STM32MP23X) ||
+	    IS_ENABLED(CONFIG_STM32MP25X))
+		return &stm32mp2x_close_state_otp[index];
 }
 
 static int get_misc_dev(struct udevice **dev)
@@ -346,14 +350,14 @@ static int post_process_edmk2(struct udevice *dev)
 	int ret;
 	u32 val;
 
-	ret = misc_read(dev, STM32_BSEC_OTP(STM32MP25_OTP_BOOTROM_CONF8), &val, 4);
+	ret = misc_read(dev, STM32_BSEC_OTP(STM32MP2X_OTP_BOOTROM_CONF8), &val, 4);
 	if (ret != 4) {
-		log_err("Error %d failed to read STM32MP25_OTP_BOOTROM_CONF8\n", ret);
+		log_err("Error %d failed to read STM32MP2X_OTP_BOOTROM_CONF8\n", ret);
 		return -EIO;
 	}
 
-	val |= STM32_OTP_STM32MP25X_OEM_KEY2_EN;
-	ret = misc_write(dev, STM32_BSEC_OTP(STM32MP25_OTP_BOOTROM_CONF8), &val, 4);
+	val |= STM32_OTP_STM32MP2X_OEM_KEY2_EN;
+	ret = misc_write(dev, STM32_BSEC_OTP(STM32MP2X_OTP_BOOTROM_CONF8), &val, 4);
 	if (ret != 4) {
 		log_err("Error %d failed to write OEM_KEY2_ENABLE\n", ret);
 		return -EIO;
