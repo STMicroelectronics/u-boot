@@ -82,6 +82,7 @@ config STM32MP25X
 	select ARM64
 	select CLK_STM32MP25
 	select OF_BOARD
+	select OF_BOARD_SETUP
 	select PINCTRL_STM32
 	select STM32_RCC
 	select STM32_RESET

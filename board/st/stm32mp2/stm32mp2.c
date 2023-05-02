@@ -225,6 +225,11 @@ int board_late_init(void)
 	return 0;
 }
 
+int ft_board_setup(void *blob, struct bd_info *bd)
+{
+	return 0;
+}
+
 void board_quiesce_devices(void)
 {
 	setup_led(LEDST_OFF);
