@@ -12,17 +12,26 @@
 #include <env_internal.h>
 #include <fdt_support.h>
 #include <g_dnl.h>
+#include <i2c.h>
 #include <led.h>
 #include <log.h>
 #include <misc.h>
 #include <mmc.h>
 #include <asm/io.h>
 #include <asm/global_data.h>
+#include <asm/gpio.h>
 #include <asm/arch/sys_proto.h>
 #include <dm/device.h>
+#include <dm/device-internal.h>
 #include <dm/ofnode.h>
 #include <dm/uclass.h>
+#include <dt-bindings/gpio/gpio.h>
 #include <linux/delay.h>
+
+#define GOODIX_REG_ID		0x8140
+#define GOODIX_ID_LEN		4
+#define ILITEK_REG_ID		0x40
+#define ILITEK_ID_LEN		7
 
 /*
  * Get a global data pointer
@@ -74,6 +83,187 @@ int g_dnl_bind_fixup(struct usb_device_descriptor *dev, const char *name)
 	return 0;
 }
 #endif /* CONFIG_USB_GADGET_DOWNLOAD */
+
+/* touchscreen driver: only used for pincontrol configuration */
+static const struct udevice_id touchscreen_ids[] = {
+	{ .compatible = "goodix,gt9147", },
+	{ .compatible = "ilitek,ili251x", },
+	{ }
+};
+
+U_BOOT_DRIVER(touchscreen) = {
+	.name		= "touchscreen",
+	.id		= UCLASS_I2C_GENERIC,
+	.of_match	= touchscreen_ids,
+};
+
+static int touchscreen_i2c_read(ofnode node, u16 reg, u8 *buf, int len, uint wlen)
+{
+	ofnode bus_node;
+	struct udevice *dev;
+	struct udevice *bus;
+	struct i2c_msg msgs[2];
+	u32 chip_addr;
+	__be16 wbuf;
+	int ret;
+
+	/* parent should be an I2C bus */
+	bus_node = ofnode_get_parent(node);
+	ret = uclass_get_device_by_ofnode(UCLASS_I2C, bus_node, &bus);
+	if (ret) {
+		log_debug("can't find I2C bus for node %s\n", ofnode_get_name(bus_node));
+		return ret;
+	}
+
+	ret = ofnode_read_u32(node, "reg", &chip_addr);
+	if (ret) {
+		log_debug("can't read I2C address in %s\n", ofnode_get_name(node));
+		return ret;
+	}
+
+	ret = dm_i2c_probe(bus, chip_addr, 0, &dev);
+	if (ret)
+		return false;
+
+	if (wlen == 2)
+		wbuf = cpu_to_be16(reg);
+	else
+		wbuf = reg;
+
+	msgs[0].flags = 0;
+	msgs[0].addr  = chip_addr;
+	msgs[0].len   = wlen;
+	msgs[0].buf   = (u8 *)&wbuf;
+
+	msgs[1].flags = I2C_M_RD;
+	msgs[1].addr  = chip_addr;
+	msgs[1].len   = len;
+	msgs[1].buf   = buf;
+
+	ret = dm_i2c_xfer(dev, msgs, 2);
+
+	return ret;
+}
+
+static bool reset_gpio(ofnode node)
+{
+	struct gpio_desc reset_gpio;
+
+	gpio_request_by_name_nodev(node, "reset-gpios", 0, &reset_gpio, GPIOD_IS_OUT);
+
+	if (!dm_gpio_is_valid(&reset_gpio))
+		return false;
+
+	dm_gpio_set_value(&reset_gpio, true);
+	mdelay(1);
+	dm_gpio_set_value(&reset_gpio, false);
+	mdelay(10);
+
+	dm_gpio_free(NULL, &reset_gpio);
+
+	return true;
+}
+
+/* HELPER: search detected driver */
+struct detect_info_t {
+	bool (*detect)(void);
+	char *compatible;
+};
+
+static const char *detect_device(const struct detect_info_t *info, u8 size)
+{
+	u8 i;
+
+	for (i = 0; i < size; i++) {
+		if (info[i].detect())
+			return info[i].compatible;
+	}
+
+	return NULL;
+}
+
+bool detect_stm32mp25x_rm68200(void)
+{
+	ofnode node;
+	char id[GOODIX_ID_LEN];
+	int ret;
+
+	node = ofnode_by_compatible(ofnode_null(), "raydium,rm68200");
+	if (!ofnode_valid(node))
+		return false;
+
+	if (!reset_gpio(node))
+		return false;
+
+	node = ofnode_by_compatible(ofnode_null(), "goodix,gt9147");
+	if (!ofnode_valid(node))
+		return false;
+
+	mdelay(10);
+
+	ret = touchscreen_i2c_read(node, GOODIX_REG_ID, id, sizeof(id), 2);
+	if (ret)
+		return false;
+
+	if (!strncmp(id, "9147", sizeof(id)))
+		return true;
+
+	return false;
+}
+
+bool detect_stm32mp25x_etml0700zxxdha(void)
+{
+	ofnode node;
+	char id[ILITEK_ID_LEN];
+	int ret;
+
+	node = ofnode_by_compatible(ofnode_null(), "ilitek,ili251x");
+	if (!ofnode_valid(node))
+		return false;
+
+	if (!reset_gpio(node))
+		return false;
+
+	mdelay(200);
+
+	ret = touchscreen_i2c_read(node, ILITEK_REG_ID, id, sizeof(id), 1);
+	if (ret)
+		return false;
+
+	/* FW panel ID is starting at the 4th byte */
+	if (!strncmp(&id[4], "WSV", sizeof(id) - 4))
+		return true;
+
+	return false;
+}
+
+static const struct detect_info_t stm32mp25x_panels[] = {
+	{
+		.detect = detect_stm32mp25x_rm68200,
+		.compatible = "raydium,rm68200",
+	},
+	{
+		.detect = detect_stm32mp25x_etml0700zxxdha,
+		.compatible = "edt,etml0700z9ndha",
+	},
+};
+
+static void board_stm32mp25x_eval_init(void)
+{
+	const char *compatible;
+
+	/* auto detection of connected panels */
+	compatible = detect_device(stm32mp25x_panels, ARRAY_SIZE(stm32mp25x_panels));
+
+	if (!compatible) {
+		/* remove the panel in environment */
+		env_set("panel", "");
+		return;
+	}
+
+	/* save the detected compatible in environment */
+	env_set("panel", compatible);
+}
 
 static int get_led(struct udevice **dev, char *led_string)
 {
@@ -130,6 +320,15 @@ static void check_user_button(void)
 
 	log_notice("entering download mode...\n");
 	clrsetbits_le32(TAMP_BOOT_CONTEXT, TAMP_BOOT_FORCED_MASK, BOOT_STM32PROG);
+}
+
+static bool board_is_stm32mp257_eval(void)
+{
+	if (CONFIG_IS_ENABLED(TARGET_ST_STM32MP25X) &&
+	    (of_machine_is_compatible("st,stm32mp257f-ev1")))
+		return true;
+
+	return false;
 }
 
 /* board dependent setup after realloc */
@@ -204,6 +403,9 @@ int board_late_init(void)
 	char dtb_name[256];
 	int buf_len;
 
+	if (board_is_stm32mp257_eval())
+		board_stm32mp25x_eval_init();
+
 	if (IS_ENABLED(CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG)) {
 		fdt_compat = fdt_getprop(gd->fdt_blob, 0, "compatible",
 					 &fdt_compat_len);
@@ -225,8 +427,76 @@ int board_late_init(void)
 	return 0;
 }
 
+static int fixup_stm32mp257_eval_panel(void *blob)
+{
+	char const *panel = env_get("panel");
+	bool detect_etml0700z9ndha = false;
+	bool detect_rm68200 = false;
+	int nodeoff = 0;
+	enum fdt_status status;
+
+	if (panel) {
+		detect_etml0700z9ndha = !strcmp(panel, "edt,etml0700z9ndha");
+		detect_rm68200 = !strcmp(panel, "raydium,rm68200");
+	}
+
+	/* update LVDS panel "edt,etml0700z9ndha" */
+	status = detect_etml0700z9ndha ? FDT_STATUS_OKAY : FDT_STATUS_DISABLED;
+	nodeoff = fdt_set_status_by_compatible(blob, "edt,etml0700z9ndha", status);
+	if (nodeoff < 0)
+		return nodeoff;
+	nodeoff = fdt_set_status_by_compatible(blob, "ilitek,ili251x", status);
+	if (nodeoff < 0)
+		return nodeoff;
+	nodeoff = fdt_set_status_by_pathf(blob, status, "/panel-lvds-backlight");
+	if (nodeoff < 0)
+		return nodeoff;
+	nodeoff = fdt_set_status_by_compatible(blob, "st,stm32-lvds", status);
+	if (nodeoff < 0)
+		return nodeoff;
+
+	/* update DSI panel "raydium,rm68200" */
+	status = detect_rm68200 ? FDT_STATUS_OKAY : FDT_STATUS_DISABLED;
+	nodeoff = fdt_set_status_by_compatible(blob, "raydium,rm68200", status);
+	if (nodeoff < 0)
+		return nodeoff;
+	nodeoff = fdt_set_status_by_compatible(blob, "goodix,gt9147", status);
+	if (nodeoff < 0)
+		return nodeoff;
+	nodeoff = fdt_set_status_by_pathf(blob, status, "/panel-dsi-backlight");
+	if (nodeoff < 0)
+		return nodeoff;
+
+	nodeoff = fdt_set_status_by_compatible(blob, "st,stm32-dsi", status);
+	if (nodeoff < 0)
+		return nodeoff;
+
+	if (!detect_etml0700z9ndha & !detect_rm68200) {
+		/* without panels activate DSI & adi,adv7535 */
+		nodeoff = fdt_status_okay_by_compatible(blob, "st,stm32-dsi");
+		if (nodeoff < 0)
+			return nodeoff;
+
+		nodeoff = fdt_status_okay_by_compatible(blob, "adi,adv7535");
+		if (nodeoff < 0)
+			return nodeoff;
+	}
+
+	return 0;
+}
+
 int ft_board_setup(void *blob, struct bd_info *bd)
 {
+	int ret;
+
+	fdt_copy_fixed_partitions(blob);
+
+	if (board_is_stm32mp257_eval()) {
+		ret = fixup_stm32mp257_eval_panel(blob);
+		if (ret)
+			log_err("Error during panel fixup ! (%d)\n", ret);
+	}
+
 	return 0;
 }
 
