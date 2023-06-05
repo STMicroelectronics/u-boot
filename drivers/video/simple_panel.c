@@ -253,6 +253,7 @@ static const struct udevice_id simple_panel_ids[] = {
 	  .data = (ulong)&tfc_s9700rtwv43tr_01b_data },
 	{ .compatible = "rocktech,rk043fn48h" },
 	{ .compatible = "panel-dpi" },
+	{ .compatible = "panel-lvds" },
 	{ }
 };
 
