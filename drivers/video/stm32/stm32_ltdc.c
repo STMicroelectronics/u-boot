@@ -267,6 +267,7 @@ static const u32 layer_regs_a2[] = {
 #define HWVER_40100 0x040100
 
 #define SYSCFG_DISPLAYCLKCR 0x5000
+#define DISPLAYCLKCR_LVDS	0x01
 #define DISPLAYCLKCR_DPI	0x02
 
 enum stm32_ltdc_pix_fmt {
@@ -515,7 +516,7 @@ static int stm32_ltdc_probe(struct udevice *dev)
 	ulong rate;
 	int ret;
 
-	if (IS_ENABLED(CONFIG_SYSCON)) {
+	if (IS_ENABLED(CONFIG_SYSCON) && IS_ENABLED(CONFIG_STM32MP25X)) {
 		ret = uclass_get_device_by_phandle(UCLASS_SYSCON, dev, "st,syscon", &syscon);
 		if (ret) {
 			if (ret != -ENOENT) {
@@ -529,6 +530,7 @@ static int stm32_ltdc_probe(struct udevice *dev)
 				return PTR_ERR(regmap);
 			}
 
+			/* Set default pixel clock to enable register access */
 			regmap_write(regmap, SYSCFG_DISPLAYCLKCR, DISPLAYCLKCR_DPI);
 		}
 	}
@@ -627,6 +629,16 @@ static int stm32_ltdc_probe(struct udevice *dev)
 				"No video bridge, or no backlight on bridge\n");
 
 		if (bridge) {
+			/* Set the pixel clock according to the encoder */
+			if (IS_ENABLED(CONFIG_SYSCON) && IS_ENABLED(CONFIG_STM32MP25X)) {
+				if (!strcmp(bridge->name, "stm32-display-dsi"))
+					regmap_write(regmap, SYSCFG_DISPLAYCLKCR,
+						     DISPLAYCLKCR_DPI);
+				else if (!strcmp(bridge->name, "stm32-display-lvds"))
+					regmap_write(regmap, SYSCFG_DISPLAYCLKCR,
+						     DISPLAYCLKCR_LVDS);
+			}
+
 			ret = video_bridge_attach(bridge);
 			if (ret) {
 				dev_err(bridge, "fail to attach bridge\n");
