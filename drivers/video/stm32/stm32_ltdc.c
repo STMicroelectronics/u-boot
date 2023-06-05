@@ -31,6 +31,7 @@ struct stm32_ltdc_plat {
 	struct udevice *bridge;
 	struct udevice *panel;
 	struct reset_ctl rst;
+	struct regmap *regmap;
 	struct clk pclk;
 	struct clk bclk;
 };
@@ -279,6 +280,7 @@ static const u32 layer_regs_a2[] = {
 #define HWVER_40101 0x040101
 
 #define SYSCFG_DISPLAYCLKCR 0x5000
+#define DISPLAYCLKCR_LVDS	0x01
 #define DISPLAYCLKCR_DPI	0x02
 
 enum stm32_ltdc_pix_fmt {
@@ -642,12 +644,11 @@ static int stm32_ltdc_of_to_plat(struct udevice *dev)
 {
 	struct stm32_ltdc_plat *plat = dev_get_plat(dev);
 	struct stm32_ltdc_priv *priv = dev_get_priv(dev);
-	struct regmap *regmap = NULL;
 	struct udevice *syscon;
 	ofnode node, port;
 	int ret;
 
-	if (IS_ENABLED(CONFIG_SYSCON)) {
+	if (IS_ENABLED(CONFIG_SYSCON) && IS_ENABLED(CONFIG_STM32MP25X)) {
 		ret = uclass_get_device_by_phandle(UCLASS_SYSCON, dev, "st,syscon", &syscon);
 		if (ret) {
 			if (ret != -ENOENT) {
@@ -655,13 +656,14 @@ static int stm32_ltdc_of_to_plat(struct udevice *dev)
 				return ret;
 			}
 		} else {
-			regmap = syscon_get_regmap(syscon);
-			if (IS_ERR(regmap)) {
+			plat->regmap = syscon_get_regmap(syscon);
+			if (IS_ERR(plat->regmap)) {
 				dev_err(dev, "Fail to get Syscon regmap\n");
-				return PTR_ERR(regmap);
+				return PTR_ERR(plat->regmap);
 			}
 
-			regmap_write(regmap, SYSCFG_DISPLAYCLKCR, DISPLAYCLKCR_DPI);
+			/* Set default pixel clock to enable register access */
+			regmap_write(plat->regmap, SYSCFG_DISPLAYCLKCR, DISPLAYCLKCR_DPI);
 		}
 	}
 
@@ -786,6 +788,16 @@ static int stm32_ltdc_probe(struct udevice *dev)
 	if (IS_ENABLED(CONFIG_VIDEO_BRIDGE)) {
 		if (plat->bridge) {
 			ret = video_bridge_attach(plat->bridge);
+			/* Set the pixel clock according to the encoder */
+			if (IS_ENABLED(CONFIG_SYSCON) && IS_ENABLED(CONFIG_STM32MP25X)) {
+				if (!strcmp(plat->bridge->name, "stm32-display-dsi"))
+					regmap_write(plat->regmap, SYSCFG_DISPLAYCLKCR,
+						     DISPLAYCLKCR_DPI);
+				else if (!strncmp(plat->bridge->name, "lvds", 4))
+					regmap_write(plat->regmap, SYSCFG_DISPLAYCLKCR,
+						     DISPLAYCLKCR_LVDS);
+			}
+
 			if (ret) {
 				dev_err(plat->bridge, "fail to attach bridge\n");
 				return ret;
