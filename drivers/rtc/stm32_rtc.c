@@ -11,6 +11,7 @@
 #include <rtc.h>
 #include <asm/io.h>
 #include <dm/device_compat.h>
+#include <linux/bitfield.h>
 #include <linux/bitops.h>
 #include <linux/iopoll.h>
 
@@ -59,8 +60,23 @@
 #define RTC_WPR_2ND_KEY		0x53
 #define RTC_WPR_WRONG_KEY	0xFF
 
+/* STM32_RTC_SECCFGR bit fields */
+#define STM32_RTC_SECCFGR		0x20
+#define STM32_RTC_SECCFGR_INIT_SEC	BIT(14)
+#define STM32_RTC_SECCFGR_SEC		BIT(15)
+
+/* STM32_RTC_R5CIDCFGR bit fields */
+#define STM32_RTC_R5CIDCFGR		0x94
+#define STM32_RTC_R5CIDCFGR_CFEN	BIT(0)
+#define STM32_RTC_R5CIDCFGR_CID		GENMASK(6, 4)
+#define STM32_RTC_R5CIDCFGR_CID1	0x1
+
 struct stm32_rtc_priv {
 	fdt_addr_t base;
+};
+
+struct stm32_rtc_data {
+	bool rif_protected;
 };
 
 static int stm32_rtc_get(struct udevice *dev, struct rtc_time *tm)
@@ -205,6 +221,25 @@ static int stm32_rtc_reset(struct udevice *dev)
 	return stm32_rtc_set_time(dev, 0, 0);
 }
 
+static int stm32_rtc_check_rif(struct udevice *dev)
+{
+	struct stm32_rtc_priv *priv = dev_get_priv(dev);
+	u32 rxcidcfgr = readl(priv->base + STM32_RTC_R5CIDCFGR);
+	u32 seccfgr;
+
+	/* Check if RTC available for our CID */
+	if ((rxcidcfgr & STM32_RTC_R5CIDCFGR_CFEN) &&
+	    (FIELD_GET(STM32_RTC_R5CIDCFGR_CID, rxcidcfgr) != STM32_RTC_R5CIDCFGR_CID1))
+		return -EACCES;
+
+	/* Check if RTC available for non-secure world */
+	seccfgr = readl(priv->base + STM32_RTC_SECCFGR);
+	if (seccfgr & (STM32_RTC_SECCFGR_SEC | STM32_RTC_SECCFGR_INIT_SEC))
+		return -EACCES;
+
+	return 0;
+}
+
 static int stm32_rtc_init(struct udevice *dev)
 {
 	struct stm32_rtc_priv *priv = dev_get_priv(dev);
@@ -281,6 +316,7 @@ unlock:
 static int stm32_rtc_probe(struct udevice *dev)
 {
 	struct stm32_rtc_priv *priv = dev_get_priv(dev);
+	const struct stm32_rtc_data *data = (const struct stm32_rtc_data *)dev_get_driver_data(dev);
 	struct clk clk;
 	int ret;
 
@@ -296,6 +332,15 @@ static int stm32_rtc_probe(struct udevice *dev)
 	if (ret)
 		return ret;
 
+	if (data->rif_protected) {
+		ret = stm32_rtc_check_rif(dev);
+		if (ret) {
+			dev_err(dev, "Failed to probe RTC due to RIF configuration\n");
+			clk_disable(&clk);
+			return ret;
+		}
+	}
+
 	ret = stm32_rtc_init(dev);
 
 	if (ret)
@@ -304,6 +349,14 @@ static int stm32_rtc_probe(struct udevice *dev)
 	return ret;
 }
 
+static const struct stm32_rtc_data stm32mp1_data = {
+	.rif_protected = false
+};
+
+static const struct stm32_rtc_data stm32mp25_data = {
+	.rif_protected = true
+};
+
 static const struct rtc_ops stm32_rtc_ops = {
 	.get = stm32_rtc_get,
 	.set = stm32_rtc_set,
@@ -311,7 +364,8 @@ static const struct rtc_ops stm32_rtc_ops = {
 };
 
 static const struct udevice_id stm32_rtc_ids[] = {
-	{ .compatible = "st,stm32mp1-rtc" },
+	{ .compatible = "st,stm32mp1-rtc", .data = (ulong)&stm32mp1_data },
+	{ .compatible = "st,stm32mp25-rtc", .data = (ulong)&stm32mp25_data },
 	{ }
 };
 
