@@ -145,6 +145,7 @@ config STM32MP25X
 	select PINCTRL_STM32
 	select STM32_RCC
 	select STM32_SERIAL
+	select STM32MP_TAMP_NVMEM
 	select SYS_ARCH_TIMER
 	select TFABOOT
 	imply CLK_SCMI
