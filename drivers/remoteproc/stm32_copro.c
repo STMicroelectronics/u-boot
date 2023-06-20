@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <fdtdec.h>
 #include <log.h>
+#include <nvmem.h>
 #include <remoteproc.h>
 #include <rproc_optee.h>
 #include <reset.h>
@@ -16,7 +17,8 @@
 #include <dm/device_compat.h>
 #include <linux/err.h>
 
-#define STM32MP15_M4_FW_ID 0
+#define STM32MP15_M4_FW_ID	0
+#define STM32MP25_M33_FW_ID	1
 
 /* TAMP_COPRO_STATE register values */
 #define TAMP_COPRO_STATE_OFF		0
@@ -36,8 +38,13 @@ struct stm32_copro_privdata {
 	struct reset_ctl reset_ctl;
 	struct reset_ctl hold_boot;
 	ulong rsc_table_addr;
+	ulong rsc_table_size;
+	struct nvmem_cell rsc_t_addr_cell;
+	struct nvmem_cell rsc_t_size_cell;
 	struct rproc_optee trproc;
 };
+
+static int stm32_copro_stop(struct udevice *dev);
 
 /**
  * stm32_copro_probe() - Basic probe
@@ -51,6 +58,16 @@ static int stm32_copro_probe(struct udevice *dev)
 	int ret;
 
 	trproc->fw_id = (u32)dev_get_driver_data(dev);
+
+	if (trproc->fw_id == STM32MP25_M33_FW_ID) {
+		ret = nvmem_cell_get_by_name(dev, "rsc-tbl-addr", &priv->rsc_t_addr_cell);
+		if (ret && ret != -ENODATA)
+			return ret;
+		ret = nvmem_cell_get_by_name(dev, "rsc-tbl-size", &priv->rsc_t_size_cell);
+		if (ret && ret != -ENODATA)
+			return ret;
+	}
+
 	ret = rproc_optee_open(trproc);
 	if (!ret) {
 		dev_info(dev, "delegate the firmware management to OPTEE\n");
@@ -101,18 +118,23 @@ static void *stm32_copro_device_to_virt(struct udevice *dev, ulong da,
 					ulong size)
 {
 	fdt32_t in_addr = cpu_to_be32(da), end_addr;
-	u64 paddr;
+	unsigned int fw_id = (u32)dev_get_driver_data(dev);
+	phys_addr_t paddr;
 
-	paddr = dev_translate_dma_address(dev, &in_addr);
-	if (paddr == OF_BAD_ADDR) {
-		dev_err(dev, "Unable to convert address %ld\n", da);
-		return NULL;
-	}
-
-	end_addr = cpu_to_be32(da + size - 1);
-	if (dev_translate_dma_address(dev, &end_addr) == OF_BAD_ADDR) {
-		dev_err(dev, "Unable to convert address %ld\n", da + size - 1);
-		return NULL;
+	if (fw_id == STM32MP15_M4_FW_ID) {
+		paddr = dev_translate_dma_address(dev, &in_addr);
+		if (paddr == OF_BAD_ADDR) {
+			dev_err(dev, "Unable to convert address %ld\n", da);
+			return NULL;
+		}
+		end_addr = cpu_to_be32(da + size - 1);
+		if (dev_translate_dma_address(dev, &end_addr) == OF_BAD_ADDR) {
+			dev_err(dev, "Unable to convert address %ld\n", da + size - 1);
+			return NULL;
+		}
+	} else {
+		/* No translation */
+		paddr = (phys_addr_t)da;
 	}
 
 	return phys_to_virt(paddr);
@@ -129,7 +151,7 @@ static int stm32_copro_load(struct udevice *dev, ulong addr, ulong size)
 {
 	struct stm32_copro_privdata *priv = dev_get_priv(dev);
 	struct rproc_optee *trproc = &priv->trproc;
-	ulong rsc_table_size;
+	ulong rsc_table_size = 0;
 	int ret;
 
 	if (trproc->tee)
@@ -147,11 +169,17 @@ static int stm32_copro_load(struct udevice *dev, ulong addr, ulong size)
 		return ret;
 	}
 
-	if (rproc_elf32_load_rsc_table(dev, addr, size, &priv->rsc_table_addr,
-				       &rsc_table_size)) {
+	ret = rproc_elf32_load_rsc_table(dev, addr, size, &priv->rsc_table_addr,
+					 &rsc_table_size);
+	if (ret) {
+		if (ret != -ENODATA)
+			return ret;
+
+		dev_dbg(dev, "No resource table for this firmware\n");
 		priv->rsc_table_addr = 0;
-		dev_warn(dev, "No valid resource table for this firmware\n");
 	}
+	priv->rsc_table_size = rsc_table_size;
+
 
 	return rproc_elf32_load_image(dev, addr, size);
 }
@@ -165,14 +193,18 @@ static int stm32_copro_start(struct udevice *dev)
 {
 	struct stm32_copro_privdata *priv = dev_get_priv(dev);
 	struct rproc_optee *trproc = &priv->trproc;
+	unsigned int fw_id = (u32)dev_get_driver_data(dev);
 	phys_size_t rsc_size;
+	phys_addr_t rsc_addr;
 	int ret;
 
 	if (trproc->tee) {
-		ret = rproc_optee_get_rsc_table(trproc, &priv->rsc_table_addr,
-						&rsc_size);
+		ret = rproc_optee_get_rsc_table(trproc, &rsc_addr, &rsc_size);
 		if (ret)
 			return ret;
+
+		priv->rsc_table_size = (ulong)rsc_size;
+		priv->rsc_table_addr = (ulong)rsc_addr;
 
 		ret = rproc_optee_start(trproc);
 		if (ret)
@@ -196,12 +228,29 @@ static int stm32_copro_start(struct udevice *dev)
 				ret);
 	}
 
-	/* indicates that copro is running */
-	writel(TAMP_COPRO_STATE_CRUN, TAMP_COPRO_STATE);
-	/* Store rsc_address in bkp register */
-	writel(priv->rsc_table_addr, TAMP_COPRO_RSC_TBL_ADDRESS);
+	if (fw_id == STM32MP15_M4_FW_ID) {
+		/* Indicates that copro is running */
+		writel(TAMP_COPRO_STATE_CRUN, TAMP_COPRO_STATE);
+
+		/* Store rsc_address in bkp register */
+		writel(priv->rsc_table_addr, TAMP_COPRO_RSC_TBL_ADDRESS);
+	} else if (fw_id == STM32MP25_M33_FW_ID) {
+		/* Store the resource table address and size in 32-bit registers*/
+		ret = nvmem_cell_write(&priv->rsc_t_addr_cell, &priv->rsc_table_addr, sizeof(u32));
+		if (ret)
+			goto error;
+
+		ret = nvmem_cell_write(&priv->rsc_t_size_cell, &priv->rsc_table_size, sizeof(u32));
+		if (ret)
+			goto error;
+	}
 
 	return 0;
+
+error:
+	stm32_copro_stop(dev);
+
+	return ret;
 }
 
 /**
@@ -213,6 +262,7 @@ static int stm32_copro_reset(struct udevice *dev)
 {
 	struct stm32_copro_privdata *priv = dev_get_priv(dev);
 	struct rproc_optee *trproc = &priv->trproc;
+	unsigned int fw_id = (u32)dev_get_driver_data(dev);
 	int ret;
 
 
@@ -236,7 +286,22 @@ static int stm32_copro_reset(struct udevice *dev)
 		}
 	}
 
-	writel(TAMP_COPRO_STATE_OFF, TAMP_COPRO_STATE);
+	/* Clean-up backup registers */
+	priv->rsc_table_addr = 0;
+	priv->rsc_table_size = 0;
+
+	if (fw_id == STM32MP15_M4_FW_ID) {
+		writel(TAMP_COPRO_STATE_OFF, TAMP_COPRO_STATE);
+		writel(priv->rsc_table_addr, TAMP_COPRO_RSC_TBL_ADDRESS);
+	} else if (fw_id == STM32MP25_M33_FW_ID) {
+		ret = nvmem_cell_write(&priv->rsc_t_addr_cell, &priv->rsc_table_addr, sizeof(u32));
+		if (ret)
+			return ret;
+
+		ret = nvmem_cell_write(&priv->rsc_t_size_cell, &priv->rsc_table_size, sizeof(u32));
+		if (ret)
+			return ret;
+	}
 
 	return 0;
 }
@@ -258,7 +323,12 @@ static int stm32_copro_stop(struct udevice *dev)
  */
 static int stm32_copro_is_running(struct udevice *dev)
 {
-	return (readl(TAMP_COPRO_STATE) == TAMP_COPRO_STATE_OFF);
+	unsigned int fw_id = (u32)dev_get_driver_data(dev);
+
+	if (fw_id == STM32MP15_M4_FW_ID)
+		return (readl(TAMP_COPRO_STATE) == TAMP_COPRO_STATE_OFF);
+	else
+		return -EOPNOTSUPP;
 }
 
 static const struct dm_rproc_ops stm32_copro_ops = {
@@ -272,11 +342,12 @@ static const struct dm_rproc_ops stm32_copro_ops = {
 
 static const struct udevice_id stm32_copro_ids[] = {
 	{ .compatible = "st,stm32mp1-m4", .data = STM32MP15_M4_FW_ID },
+	{ .compatible = "st,stm32mp2-m33", .data = STM32MP25_M33_FW_ID },
 	{}
 };
 
 U_BOOT_DRIVER(stm32_copro) = {
-	.name = "stm32_m4_proc",
+	.name = "stm32_copro",
 	.of_match = stm32_copro_ids,
 	.id = UCLASS_REMOTEPROC,
 	.ops = &stm32_copro_ops,
