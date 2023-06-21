@@ -32,6 +32,8 @@
 #define GOODIX_ID_LEN		4
 #define ILITEK_REG_ID		0x40
 #define ILITEK_ID_LEN		7
+#define ADV7511_REG_CHIP_REVISION	0x00
+#define ADV7511_CHIP_REVISION_LEN	256
 
 /*
  * Get a global data pointer
@@ -97,7 +99,7 @@ U_BOOT_DRIVER(touchscreen) = {
 	.of_match	= touchscreen_ids,
 };
 
-static int touchscreen_i2c_read(ofnode node, u16 reg, u8 *buf, int len, uint wlen)
+static int i2c_read(ofnode node, u16 reg, u8 *buf, int len, uint wlen)
 {
 	ofnode bus_node;
 	struct udevice *dev;
@@ -201,7 +203,7 @@ bool detect_stm32mp25x_rm68200(void)
 
 	mdelay(10);
 
-	ret = touchscreen_i2c_read(node, GOODIX_REG_ID, id, sizeof(id), 2);
+	ret = i2c_read(node, GOODIX_REG_ID, id, sizeof(id), 2);
 	if (ret)
 		return false;
 
@@ -226,12 +228,35 @@ bool detect_stm32mp25x_etml0700zxxdha(void)
 
 	mdelay(200);
 
-	ret = touchscreen_i2c_read(node, ILITEK_REG_ID, id, sizeof(id), 1);
+	ret = i2c_read(node, ILITEK_REG_ID, id, sizeof(id), 1);
 	if (ret)
 		return false;
 
 	/* FW panel ID is starting at the 4th byte */
 	if (!strncmp(&id[4], "WSV", sizeof(id) - 4))
+		return true;
+
+	return false;
+}
+
+bool detect_stm32mp25x_adv7535(void)
+{
+	ofnode node;
+	char id[ADV7511_CHIP_REVISION_LEN];
+	int ret;
+
+	node = ofnode_by_compatible(ofnode_null(),  "adi,adv7535");
+	if (!ofnode_valid(node))
+		return false;
+
+	if (!reset_gpio(node))
+		return false;
+
+	mdelay(10);
+
+	ret = i2c_read(node, ADV7511_REG_CHIP_REVISION, id, sizeof(id), 1);
+
+	if (id[0] == 0x14)
 		return true;
 
 	return false;
@@ -248,6 +273,14 @@ static const struct detect_info_t stm32mp25x_panels[] = {
 	},
 };
 
+static const struct detect_info_t stm32mp25x_bridges[] = {
+	{
+		.detect = detect_stm32mp25x_adv7535,
+		.compatible = "adi,adv7535",
+	},
+
+};
+
 static void board_stm32mp25x_eval_init(void)
 {
 	const char *compatible;
@@ -255,14 +288,22 @@ static void board_stm32mp25x_eval_init(void)
 	/* auto detection of connected panels */
 	compatible = detect_device(stm32mp25x_panels, ARRAY_SIZE(stm32mp25x_panels));
 
-	if (!compatible) {
+	if (!compatible)
 		/* remove the panel in environment */
 		env_set("panel", "");
-		return;
-	}
+	else
+		/* save the detected compatible in environment */
+		env_set("panel", compatible);
 
-	/* save the detected compatible in environment */
-	env_set("panel", compatible);
+	/* auto detection of connected hdmi bridge */
+	compatible = detect_device(stm32mp25x_bridges, ARRAY_SIZE(stm32mp25x_bridges));
+
+	if (!compatible)
+		/* remove the hdmi bridge in environment */
+		env_set("hdmi", "");
+	else
+		/* save the detected compatible in environment */
+		env_set("hdmi", compatible);
 }
 
 static int get_led(struct udevice **dev, char *led_string)
@@ -444,8 +485,10 @@ int board_late_init(void)
 static int fixup_stm32mp257_eval_panel(void *blob)
 {
 	char const *panel = env_get("panel");
+	char const *hdmi = env_get("hdmi");
 	bool detect_etml0700z9ndha = false;
 	bool detect_rm68200 = false;
+	bool detect_adv7535 = false;
 	int nodeoff = 0;
 	enum fdt_status status;
 
@@ -453,6 +496,9 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 		detect_etml0700z9ndha = !strcmp(panel, "edt,etml0700z9ndha");
 		detect_rm68200 = !strcmp(panel, "raydium,rm68200");
 	}
+
+	if (hdmi)
+		detect_adv7535 = !strcmp(hdmi, "adi,adv7535");
 
 	/* update LVDS panel "edt,etml0700z9ndha" */
 	status = detect_etml0700z9ndha ? FDT_STATUS_OKAY : FDT_STATUS_DISABLED;
@@ -481,17 +527,14 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 	if (nodeoff < 0)
 		return nodeoff;
 
-	nodeoff = fdt_set_status_by_compatible(blob, "st,stm32-dsi", status);
+	/* update HDMI bridge "adi,adv7535" */
+	status = detect_adv7535 ? FDT_STATUS_OKAY : FDT_STATUS_DISABLED;
+	nodeoff = fdt_set_status_by_compatible(blob, "adi,adv7535", status);
 	if (nodeoff < 0)
 		return nodeoff;
 
-	if (!detect_etml0700z9ndha & !detect_rm68200) {
-		/* without panels activate DSI & adi,adv7535 */
+	if (detect_rm68200 | detect_adv7535) {
 		nodeoff = fdt_status_okay_by_compatible(blob, "st,stm32-dsi");
-		if (nodeoff < 0)
-			return nodeoff;
-
-		nodeoff = fdt_status_okay_by_compatible(blob, "adi,adv7535");
 		if (nodeoff < 0)
 			return nodeoff;
 	}
