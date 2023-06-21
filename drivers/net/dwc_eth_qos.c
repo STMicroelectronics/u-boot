@@ -1785,6 +1785,17 @@ static const struct eqos_config __maybe_unused eqos_stm32mp13_config = {
 	.ops = &eqos_stm32_ops
 };
 
+static const struct eqos_config eqos_stm32mp25_config = {
+	.reg_access_always_ok = false,
+	.mdio_wait = 10000,
+	.swr_wait = 50,
+	.config_mac = EQOS_MAC_RXQ_CTRL0_RXQ0EN_ENABLED_DCB,
+	.config_mac_mdio = EQOS_MAC_MDIO_ADDRESS_CR_250_300,
+	.axi_bus_width = EQOS_AXI_WIDTH_64,
+	.interface = dev_read_phy_mode,
+	.ops = &eqos_stm32_ops
+};
+
 static const struct udevice_id eqos_ids[] = {
 #if IS_ENABLED(CONFIG_DWC_ETH_QOS_TEGRA186)
 	{
@@ -1800,6 +1811,10 @@ static const struct udevice_id eqos_ids[] = {
 	{
 		.compatible = "st,stm32mp13-dwmac",
 		.data = (ulong)&eqos_stm32mp13_config
+	},
+	{
+		.compatible = "st,stm32mp25-dwmac",
+		.data = (ulong)&eqos_stm32mp25_config
 	},
 #endif
 #if IS_ENABLED(CONFIG_DWC_ETH_QOS_IMX)
