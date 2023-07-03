@@ -39,9 +39,19 @@ struct wdt_priv {
 	bool running;
 	/* autostart */
 	bool autostart;
+	/* Force start */
+	bool force_start;
 
 	struct cyclic_info *cyclic;
 };
+
+int wdt_set_force_start(struct udevice *dev)
+{
+	struct wdt_priv *priv;
+	priv = dev_get_uclass_priv(dev);
+	priv->force_start = true;
+	return 0;
+}
 
 static void wdt_cyclic(void *ctx)
 {
@@ -72,7 +82,8 @@ static void init_watchdog_dev(struct udevice *dev)
 			       dev->name);
 	}
 
-	if (!priv->autostart) {
+	if (!priv->force_start &&
+	    (!IS_ENABLED(CONFIG_WATCHDOG_AUTOSTART) || !priv->autostart)) {
 		printf("WDT:   Not starting %s\n", dev->name);
 		return;
 	}
