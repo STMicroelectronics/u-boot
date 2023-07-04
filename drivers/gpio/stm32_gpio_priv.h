@@ -90,6 +90,7 @@ enum stm32_gpio_delay {
 
 #define STM32_GPIO_FLAG_SEC_CTRL	BIT(0)
 #define STM32_GPIO_FLAG_IO_SYNC_CTRL	BIT(1)
+#define STM32_GPIO_FLAG_RIF_CTRL	BIT(2)
 
 struct stm32_gpio_dsc {
 	u8	port;
@@ -127,11 +128,17 @@ struct stm32_gpio_regs {
 	u32 rfu4;	/* Reserved */
 	u32 delayr[2];	/* GPIO port delay */
 	u32 advcfgr[2];	/* GPIO port PIO control */
+	struct {
+		u32 cidcfgr;	/* GPIO RIF CID configuration */
+		u32 semcr;	/* GPIO RIF semaphore */
+	} rif[16];
 };
 
 struct stm32_gpio_priv {
 	struct stm32_gpio_regs *regs;
 	unsigned int gpio_range;
 };
+
+bool stm32_gpio_rif_valid(struct stm32_gpio_regs *regs, unsigned int offset);
 
 #endif /* _STM32_GPIO_PRIV_H_ */
