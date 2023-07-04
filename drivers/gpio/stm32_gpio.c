@@ -15,6 +15,7 @@
 #include <asm/gpio.h>
 #include <asm/io.h>
 #include <dm/device_compat.h>
+#include <linux/bitfield.h>
 #include <linux/bitops.h>
 #include <linux/errno.h>
 #include <linux/io.h>
@@ -35,6 +36,16 @@
 
 #define SECCFG_BITS(gpio_pin)		(gpio_pin)
 #define SECCFG_MSK			1
+
+#define STM32_GPIO_CID1			1
+
+#define STM32_GPIO_CIDCFGR_CFEN		BIT(0)
+#define STM32_GPIO_CIDCFGR_SEMEN	BIT(1)
+#define STM32_GPIO_CIDCFGR_SCID_MASK	GENMASK(5, 4)
+#define STM32_GPIO_CIDCFGR_SEMWL_CID1	BIT(16 + STM32_GPIO_CID1)
+
+#define STM32_GPIO_SEMCR_SEM_MUTEX	BIT(0)
+#define STM32_GPIO_SEMCR_SEMCID_MASK	GENMASK(5, 4)
 
 static void stm32_gpio_set_moder(struct stm32_gpio_regs *regs,
 				 int idx,
@@ -93,6 +104,43 @@ static bool stm32_gpio_is_mapped(struct udevice *dev, int offset)
 	return !!(priv->gpio_range & BIT(offset));
 }
 
+bool stm32_gpio_rif_valid(struct stm32_gpio_regs *regs, unsigned int offset)
+{
+	u32 cid, sem;
+
+	cid = readl(&regs->rif[offset].cidcfgr);
+
+	if (!(cid & STM32_GPIO_CIDCFGR_CFEN))
+		return true;
+
+	if (!(cid & STM32_GPIO_CIDCFGR_SEMEN)) {
+		if (FIELD_GET(STM32_GPIO_CIDCFGR_SCID_MASK, cid) == STM32_GPIO_CID1)
+			return true;
+
+		return false;
+	}
+
+	if (!(cid & STM32_GPIO_CIDCFGR_SEMWL_CID1))
+		return false;
+
+	sem = readl(&regs->rif[offset].semcr);
+
+	if (sem & STM32_GPIO_SEMCR_SEM_MUTEX) {
+		if (FIELD_GET(STM32_GPIO_SEMCR_SEMCID_MASK, sem) == STM32_GPIO_CID1)
+			return true;
+
+		return false;
+	}
+
+	writel(STM32_GPIO_SEMCR_SEM_MUTEX, &regs->rif[offset].semcr);
+	sem = readl(&regs->rif[offset].semcr);
+	if (sem & STM32_GPIO_SEMCR_SEM_MUTEX &&
+	    FIELD_GET(STM32_GPIO_SEMCR_SEMCID_MASK, sem) == STM32_GPIO_CID1)
+		return true;
+
+	return false;
+}
+
 static int stm32_gpio_request(struct udevice *dev, unsigned offset, const char *label)
 {
 	struct stm32_gpio_priv *priv = dev_get_priv(dev);
@@ -107,6 +155,14 @@ static int stm32_gpio_request(struct udevice *dev, unsigned offset, const char *
 	if ((drv_data & STM32_GPIO_FLAG_SEC_CTRL) &&
 	    ((readl(&regs->seccfgr) >> SECCFG_BITS(offset)) & SECCFG_MSK)) {
 		dev_err(dev, "Failed to get secure IO %s %d @ %p\n",
+			uc_priv->bank_name, offset, regs);
+		return -EACCES;
+	}
+
+	/* Deny request access if IO RIF semaphore is not available */
+	if ((drv_data & STM32_GPIO_FLAG_RIF_CTRL) &&
+	    !stm32_gpio_rif_valid(regs, offset)) {
+		dev_err(dev, "Failed to take RIF semaphore on IO %s %d @ %p\n",
 			uc_priv->bank_name, offset, regs);
 		return -EACCES;
 	}
@@ -182,6 +238,11 @@ static int stm32_gpio_get_function(struct udevice *dev, unsigned int offset)
 	/* Return 'protected' if the IO is secured */
 	if ((drv_data & STM32_GPIO_FLAG_SEC_CTRL) &&
 	    ((readl(&regs->seccfgr) >> SECCFG_BITS(offset)) & SECCFG_MSK))
+		return GPIOF_PROTECTED;
+
+	/* Return 'protected' if the IO RIF semaphore is not available */
+	if ((drv_data & STM32_GPIO_FLAG_RIF_CTRL) &&
+	    !stm32_gpio_rif_valid(regs, offset))
 		return GPIOF_PROTECTED;
 
 	bits_index = MODE_BITS(offset);

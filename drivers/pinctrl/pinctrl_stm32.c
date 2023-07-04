@@ -50,6 +50,7 @@ struct stm32_gpio_bank {
 struct stm32_pinctrl_data {
 	bool secure_control;
 	bool io_sync_control;
+	bool rif_control;
 };
 
 static int stm32_pinctrl_get_access(struct udevice *gpio_dev, unsigned int gpio_idx);
@@ -284,6 +285,11 @@ static int stm32_pinctrl_get_access(struct udevice *gpio_dev, unsigned int gpio_
 	    ((readl(&regs->seccfgr) >> gpio_idx) & SECCFG_MSK))
 		return -EACCES;
 
+	/* Deny request access if IO RIF semaphore is not available */
+	if ((drv_data & STM32_GPIO_FLAG_RIF_CTRL) &&
+	    !stm32_gpio_rif_valid(regs, gpio_idx))
+		return -EACCES;
+
 	return 0;
 }
 
@@ -513,6 +519,8 @@ static int stm32_pinctrl_bind(struct udevice *dev)
 		gpio_data |= STM32_GPIO_FLAG_SEC_CTRL;
 	if (drv_data->io_sync_control)
 		gpio_data |= STM32_GPIO_FLAG_IO_SYNC_CTRL;
+	if (drv_data->rif_control)
+		gpio_data |= STM32_GPIO_FLAG_RIF_CTRL;
 
 	dev_for_each_subnode(node, dev) {
 		dev_dbg(dev, "bind %s\n", ofnode_get_name(node));
@@ -595,16 +603,19 @@ static struct pinctrl_ops stm32_pinctrl_ops = {
 static const struct stm32_pinctrl_data stm32_pinctrl_base = {
 	.secure_control = false,
 	.io_sync_control = false,
+	.rif_control = false,
 };
 
 static const struct stm32_pinctrl_data stm32_pinctrl_sec = {
 	.secure_control = true,
 	.io_sync_control = false,
+	.rif_control = false,
 };
 
 static const struct stm32_pinctrl_data stm32_pinctrl_sec_iosync = {
 	.secure_control = true,
 	.io_sync_control = true,
+	.rif_control = true,
 };
 
 static const struct udevice_id stm32_pinctrl_ids[] = {
