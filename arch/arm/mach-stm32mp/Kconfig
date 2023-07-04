@@ -73,6 +73,7 @@ config STM32MP15X
 	select PINCTRL_STM32
 	select STM32_RCC
 	select STM32_SERIAL
+	select STM32MP_TAMP_NVMEM
 	select SUPPORT_SPL
 	select SYS_ARCH_TIMER
 	imply CMD_NVEDIT_INFO
