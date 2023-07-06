@@ -353,6 +353,10 @@ static int stm32_ospi_claim_bus(struct udevice *dev)
 	if (prescaler == priv->prescaler[priv->cs_used])
 		return 0;
 
+	ret = stm32_omi_dlyb_stop(priv->omi_dev);
+	if (ret)
+		return ret;
+
 	priv->prescaler[priv->cs_used] = prescaler;
 	bus_freq = ospi_clk / (prescaler + 1);
 
@@ -362,6 +366,11 @@ static int stm32_ospi_claim_bus(struct udevice *dev)
 		if (ret) {
 			dev_info(dev->parent, "Set flash frequency to a safe value (%d Hz)\n",
 				 STM32_DLYB_FREQ_THRESHOLD);
+
+			ret = stm32_omi_dlyb_stop(priv->omi_dev);
+			if (ret)
+				return ret;
+
 			ret = stm32_ospi_set_speed(dev->parent, STM32_DLYB_FREQ_THRESHOLD);
 		}
 	}
