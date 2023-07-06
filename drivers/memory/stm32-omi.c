@@ -228,9 +228,9 @@ int stm32_omi_dlyb_stop(struct udevice *dev)
 	int ret;
 
 	/* disable delay block */
-	ret = regmap_update_bits(omi_plat->regmap,
-				 omi_plat->dlyb_base + SYSCFG_DLYBOS_CR,
-				 DLYBOS_CR_EN, 0);
+	ret = regmap_write(omi_plat->regmap,
+			   omi_plat->dlyb_base + SYSCFG_DLYBOS_CR,
+			   0x0);
 
 	if (ret)
 		dev_err(dev, "Error when stopping delay block\n");
