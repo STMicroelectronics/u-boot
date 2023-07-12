@@ -54,7 +54,7 @@ static int stm32_omi_dlyb_set_tap(struct udevice *dev, u8 tap, bool rx_tap)
 	return ret;
 }
 
-int stm32_omi_dlyb_find_tap(struct udevice *dev, bool rx_only)
+int stm32_omi_dlyb_find_tap(struct udevice *dev, bool rx_only, u8 *window_len)
 {
 	struct stm32_omi_priv *omi_priv = dev_get_priv(dev);
 	struct stm32_tap_window rx_tap_w[DLYBOS_TAPSEL_NB];
@@ -119,6 +119,7 @@ int stm32_omi_dlyb_find_tap(struct udevice *dev, bool rx_only)
 		}
 
 		rx_tap = rx_window_end - rx_window_len / 2;
+		*window_len = rx_window_len;
 		dev_dbg(dev, "RX_TAP_SEL set to %d\n", rx_tap);
 
 		return stm32_omi_dlyb_set_tap(dev, rx_tap, true);
@@ -152,6 +153,39 @@ int stm32_omi_dlyb_find_tap(struct udevice *dev, bool rx_only)
 	dev_dbg(dev, "TX_TAP_SEL set to %d\n", best_tx_tap);
 
 	return stm32_omi_dlyb_set_tap(dev, best_tx_tap, false);
+}
+
+int stm32_omi_dlyb_set_cr(struct udevice *dev, u32 dlyb_cr)
+{
+	bool bypass_mode = false;
+	int ret;
+	u16 period_ps;
+	u8 rx_tap, tx_tap;
+
+	period_ps = FIELD_GET(DLYBOS_BYP_CMD_MASK, dlyb_cr);
+	if (dlyb_cr & DLYBOS_BYP_EN)
+		bypass_mode = true;
+
+	ret = stm32_omi_dlyb_configure(dev, bypass_mode, period_ps);
+	if (ret)
+		return ret;
+
+	/* restore Rx and TX tap */
+	rx_tap = FIELD_GET(DLYBOS_CR_RXTAPSEL_MASK, dlyb_cr);
+	ret = stm32_omi_dlyb_set_tap(dev, rx_tap, true);
+	if (ret)
+		return ret;
+
+	tx_tap = FIELD_GET(DLYBOS_CR_TXTAPSEL_MASK, dlyb_cr);
+	return stm32_omi_dlyb_set_tap(dev, tx_tap, false);
+}
+
+void stm32_omi_dlyb_get_cr(struct udevice *dev, u32 *dlyb_cr)
+{
+	struct stm32_omi_plat *omi_plat = dev_get_plat(dev);
+
+	regmap_read(omi_plat->regmap, omi_plat->dlyb_base + SYSCFG_DLYBOS_CR,
+		    dlyb_cr);
 }
 
 /* ½ memory clock period in pico second */

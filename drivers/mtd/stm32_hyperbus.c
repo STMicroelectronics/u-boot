@@ -146,6 +146,7 @@ static int stm32_hb_calibrate(struct stm32_hb_priv *priv)
 	struct stm32_omi_plat *omi_plat = dev_get_plat(priv->omi_dev);
 	u32 prescaler;
 	u16 period_ps = 0;
+	u8 window_len = 0;
 	int ret;
 	bool bypass_mode = false;
 
@@ -165,10 +166,10 @@ static int stm32_hb_calibrate(struct stm32_hb_priv *priv)
 
 	if (bypass_mode || prescaler)
 		/* perform only RX TAP selection */
-		ret = stm32_omi_dlyb_find_tap(priv->omi_dev, true);
+		ret = stm32_omi_dlyb_find_tap(priv->omi_dev, true, &window_len);
 	else
 		/* perform RX/TX TAP selection */
-		ret = stm32_omi_dlyb_find_tap(priv->omi_dev, false);
+		ret = stm32_omi_dlyb_find_tap(priv->omi_dev, false, &window_len);
 
 	if (ret) {
 		dev_err(priv->omi_dev, "Calibration failed\n");

@@ -22,7 +22,6 @@ struct stm32_ospi_priv {
 	struct udevice *omi_dev;
 	int cs_used;
 	u64 idcode;
-	u32 prescaler[OSPI_MAX_CHIP];
 };
 
 static int stm32_ospi_mm(struct udevice *omi_dev,
@@ -232,9 +231,6 @@ static int stm32_ospi_probe(struct udevice *bus)
 	reset_deassert_bulk(&omi_plat->rst_ctl);
 
 	priv->cs_used = -1;
-	memset(priv->prescaler, -1, OSPI_MAX_CHIP * sizeof(u32));
-
-	setbits_le32(regs_base + OSPI_TCR, OSPI_TCR_SSHIFT);
 
 	/* Set dcr devsize to max address */
 	setbits_le32(regs_base + OSPI_DCR1, OSPI_DCR1_DEVSIZE_MASK);
@@ -289,7 +285,11 @@ static int stm32_ospi_set_speed(struct udevice *bus, uint speed)
 static int stm32_ospi_calibration(struct udevice *bus, uint freq)
 {
 	struct stm32_ospi_priv *priv = dev_get_priv(bus);
-	int ret;
+	struct stm32_omi_plat *omi_plat = dev_get_plat(priv->omi_dev);
+	phys_addr_t regs_base = omi_plat->regs_base;
+	u32 dlyb_cr;
+	u8 window_len_tcr0 = 0, window_len_tcr1 = 0;
+	int ret, ret_tcr0, ret_tcr1;
 
 	/*
 	 * Set memory device at low frequency (50MHz) and sent
@@ -313,12 +313,39 @@ static int stm32_ospi_calibration(struct udevice *bus, uint freq)
 	if (ret)
 		return ret;
 
-	/* perform only RX TAP selection */
-	ret = stm32_omi_dlyb_find_tap(priv->omi_dev, true);
-	if (ret)
-		dev_info(bus, "Calibration phase failed\n");
+	ret_tcr0 = stm32_omi_dlyb_find_tap(priv->omi_dev, true, &window_len_tcr0);
+	if (!ret_tcr0)
+		stm32_omi_dlyb_get_cr(priv->omi_dev, &dlyb_cr);
 
-	return ret;
+	ret = stm32_omi_dlyb_stop(priv->omi_dev);
+	if (ret)
+		return ret;
+
+	ret = stm32_omi_dlyb_configure(priv->omi_dev, false, 0);
+	if (ret)
+		return ret;
+
+	setbits_le32(regs_base + OSPI_TCR, OSPI_TCR_SSHIFT);
+
+	ret_tcr1 = stm32_omi_dlyb_find_tap(priv->omi_dev, true, &window_len_tcr1);
+	if (ret_tcr0 && ret_tcr1) {
+		dev_info(bus, "Calibration phase failed\n");
+		return ret_tcr0;
+	}
+
+	if (window_len_tcr0 >= window_len_tcr1) {
+		clrbits_le32(regs_base + OSPI_TCR, OSPI_TCR_SSHIFT);
+
+		ret = stm32_omi_dlyb_stop(priv->omi_dev);
+		if (ret)
+			return ret;
+
+		ret = stm32_omi_dlyb_set_cr(priv->omi_dev, dlyb_cr);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
 }
 
 static int stm32_ospi_claim_bus(struct udevice *dev)
@@ -331,7 +358,7 @@ static int stm32_ospi_claim_bus(struct udevice *dev)
 	u32 dcr2, prescaler;
 	int slave_cs = slave_plat->cs;
 	uint bus_freq;
-	int ret = 0;
+	int ret;
 
 	if (slave_cs >= OSPI_MAX_CHIP)
 		return -ENODEV;
@@ -343,21 +370,17 @@ static int stm32_ospi_claim_bus(struct udevice *dev)
 
 	priv->cs_used = slave_cs;
 
-	/* Set chip select */
-	clrsetbits_le32(regs_base + OSPI_CR, OSPI_CR_CSSEL,
-			priv->cs_used ? OSPI_CR_CSSEL : 0);
-
-	dcr2 = readl(regs_base + OSPI_DCR2);
-	prescaler = (dcr2 & OSPI_DCR2_PRESC_MASK) >> OSPI_DCR2_PRESC_SHIFT;
-
-	if (prescaler == priv->prescaler[priv->cs_used])
-		return 0;
-
 	ret = stm32_omi_dlyb_stop(priv->omi_dev);
 	if (ret)
 		return ret;
 
-	priv->prescaler[priv->cs_used] = prescaler;
+	/* Set chip select */
+	clrsetbits_le32(regs_base + OSPI_CR, OSPI_CR_CSSEL,
+			priv->cs_used ? OSPI_CR_CSSEL : 0);
+	clrbits_le32(regs_base + OSPI_TCR, OSPI_TCR_SSHIFT);
+
+	dcr2 = readl(regs_base + OSPI_DCR2);
+	prescaler = (dcr2 & OSPI_DCR2_PRESC_MASK) >> OSPI_DCR2_PRESC_SHIFT;
 	bus_freq = ospi_clk / (prescaler + 1);
 
 	/* calibration needed above 50MHz */
@@ -371,6 +394,7 @@ static int stm32_ospi_claim_bus(struct udevice *dev)
 			if (ret)
 				return ret;
 
+			clrbits_le32(regs_base + OSPI_TCR, OSPI_TCR_SSHIFT);
 			ret = stm32_ospi_set_speed(dev->parent, STM32_DLYB_FREQ_THRESHOLD);
 		}
 	}
