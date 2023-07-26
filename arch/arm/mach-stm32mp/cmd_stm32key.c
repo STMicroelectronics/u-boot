@@ -24,6 +24,9 @@
 #define STM32MP25_OTP_CLOSE_ID		18
 #define STM32_OTP_STM32MP25X_CLOSE_MASK	0xF
 
+#define STM32MP25_OTP_BOOTROM_CONF8	17
+#define STM32_OTP_STM32MP25X_OEM_KEY2_EN	BIT(8)
+
 /* PKH is the first element of the key list */
 #define STM32KEY_PKH 0
 
@@ -32,6 +35,7 @@ struct stm32key {
 	char *desc;
 	u16 start;
 	u8 size;
+	int (*post_process)(struct udevice *dev);
 };
 
 const struct stm32key stm32mp13_list[] = {
@@ -58,6 +62,8 @@ const struct stm32key stm32mp15_list[] = {
 	}
 };
 
+static int post_process_edmk2(struct udevice *dev);
+
 const struct stm32key stm32mp25_list[] = {
 	[STM32KEY_PKH] = {
 		.name = "PKHTH",
@@ -72,10 +78,17 @@ const struct stm32key stm32mp25_list[] = {
 		.size = 8,
 	},
 	{
-		.name = "EDMK",
-		.desc = "Encryption/Decryption Master Key",
+		.name = "EDMK1",
+		.desc = "Encryption/Decryption Master Key for FSBLA or M",
 		.start = 364,
 		.size = 4,
+	},
+	{
+		.name = "EDMK2",
+		.desc = "Encryption/Decryption Master Key for FSBLM",
+		.start = 360,
+		.size = 4,
+		.post_process = post_process_edmk2,
 	}
 };
 
@@ -230,6 +243,27 @@ static int read_close_status(struct udevice *dev, bool print, bool *closed)
 		printf("OTP %d: closed status: %d lock : %08x\n", word, status, lock);
 
 	return result;
+}
+
+static int post_process_edmk2(struct udevice *dev)
+{
+	int ret;
+	u32 val;
+
+	ret = misc_read(dev, STM32_BSEC_OTP(STM32MP25_OTP_BOOTROM_CONF8), &val, 4);
+	if (ret != 4) {
+		log_err("Error %d failed to read STM32MP25_OTP_BOOTROM_CONF8\n", ret);
+		return -EIO;
+	}
+
+	val |= STM32_OTP_STM32MP25X_OEM_KEY2_EN;
+	ret = misc_write(dev, STM32_BSEC_OTP(STM32MP25_OTP_BOOTROM_CONF8), &val, 4);
+	if (ret != 4) {
+		log_err("Error %d failed to write OEM_KEY2_ENABLE\n", ret);
+		return -EIO;
+	}
+
+	return 0;
 }
 
 static int fuse_key_value(struct udevice *dev, const struct stm32key *key, u32 addr, bool print)
@@ -407,6 +441,13 @@ static int do_stm32key_fuse(struct cmd_tbl *cmdtp, int flag, int argc, char *con
 
 	if (fuse_key_value(dev, key, addr, !yes))
 		return CMD_RET_FAILURE;
+
+	if (key->post_process) {
+		if (key->post_process(dev)) {
+			printf("Error: %s for post process\n", key->name);
+			return CMD_RET_FAILURE;
+		}
+	}
 
 	printf("%s updated !\n", key->name);
 
