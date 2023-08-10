@@ -289,16 +289,10 @@ static int stm32_hb_of_to_plat(struct udevice *dev)
 	return 0;
 }
 
-static const struct udevice_id stm32_hb_ids[] = {
-	{ .compatible = "st,stm32mp25-hyperbus" },
-	{}
-};
-
 U_BOOT_DRIVER(stm32_hyperbus) = {
 	.name		= "stm32_hyperbus",
 	.id		= UCLASS_MTD,
 	.bind		= dm_scan_fdt_dev,
-	.of_match	= stm32_hb_ids,
 	.of_to_plat	= stm32_hb_of_to_plat,
 	.plat_auto	= sizeof(struct stm32_hb_plat),
 	.priv_auto	= sizeof(struct stm32_hb_priv),
