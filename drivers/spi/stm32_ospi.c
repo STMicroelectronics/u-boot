@@ -470,15 +470,9 @@ static const struct dm_spi_ops stm32_ospi_ops = {
 	.mem_ops	= &stm32_ospi_mem_ops,
 };
 
-static const struct udevice_id stm32_ospi_ids[] = {
-	{ .compatible = "st,stm32mp25-ospi" },
-	{ }
-};
-
 U_BOOT_DRIVER(stm32_ospi) = {
 	.name = "stm32_ospi",
 	.id = UCLASS_SPI,
-	.of_match = stm32_ospi_ids,
 	.ops = &stm32_ospi_ops,
 	.priv_auto = sizeof(struct stm32_ospi_priv),
 	.probe = stm32_ospi_probe,
