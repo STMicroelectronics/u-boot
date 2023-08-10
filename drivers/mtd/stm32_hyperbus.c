@@ -175,7 +175,7 @@ static int stm32_hb_calibrate(struct stm32_hb_priv *priv)
 		dev_err(priv->omi_dev, "Calibration failed\n");
 		if (!bypass_mode)
 			/* stop delay block when configured in lock mode */
-			ret = stm32_omi_dlyb_stop(priv->omi_dev);
+			stm32_omi_dlyb_stop(priv->omi_dev);
 	}
 
 	return ret;

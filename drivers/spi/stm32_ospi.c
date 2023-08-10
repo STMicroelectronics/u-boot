@@ -317,9 +317,7 @@ static int stm32_ospi_calibration(struct udevice *bus, uint freq)
 	if (!ret_tcr0)
 		stm32_omi_dlyb_get_cr(priv->omi_dev, &dlyb_cr);
 
-	ret = stm32_omi_dlyb_stop(priv->omi_dev);
-	if (ret)
-		return ret;
+	stm32_omi_dlyb_stop(priv->omi_dev);
 
 	ret = stm32_omi_dlyb_configure(priv->omi_dev, false, 0);
 	if (ret)
@@ -336,9 +334,7 @@ static int stm32_ospi_calibration(struct udevice *bus, uint freq)
 	if (window_len_tcr0 >= window_len_tcr1) {
 		clrbits_le32(regs_base + OSPI_TCR, OSPI_TCR_SSHIFT);
 
-		ret = stm32_omi_dlyb_stop(priv->omi_dev);
-		if (ret)
-			return ret;
+		stm32_omi_dlyb_stop(priv->omi_dev);
 
 		ret = stm32_omi_dlyb_set_cr(priv->omi_dev, dlyb_cr);
 		if (ret)
@@ -370,9 +366,7 @@ static int stm32_ospi_claim_bus(struct udevice *dev)
 
 	priv->cs_used = slave_cs;
 
-	ret = stm32_omi_dlyb_stop(priv->omi_dev);
-	if (ret)
-		return ret;
+	stm32_omi_dlyb_stop(priv->omi_dev);
 
 	/* Set chip select */
 	clrsetbits_le32(regs_base + OSPI_CR, OSPI_CR_CSSEL,
@@ -381,6 +375,7 @@ static int stm32_ospi_claim_bus(struct udevice *dev)
 
 	dcr2 = readl(regs_base + OSPI_DCR2);
 	prescaler = (dcr2 & OSPI_DCR2_PRESC_MASK) >> OSPI_DCR2_PRESC_SHIFT;
+	stm32_omi_dlyb_stop(priv->omi_dev);
 	bus_freq = ospi_clk / (prescaler + 1);
 
 	/* calibration needed above 50MHz */
@@ -390,9 +385,7 @@ static int stm32_ospi_claim_bus(struct udevice *dev)
 			dev_info(dev->parent, "Set flash frequency to a safe value (%d Hz)\n",
 				 STM32_DLYB_FREQ_THRESHOLD);
 
-			ret = stm32_omi_dlyb_stop(priv->omi_dev);
-			if (ret)
-				return ret;
+			stm32_omi_dlyb_stop(priv->omi_dev);
 
 			clrbits_le32(regs_base + OSPI_TCR, OSPI_TCR_SSHIFT);
 			ret = stm32_ospi_set_speed(dev->parent, STM32_DLYB_FREQ_THRESHOLD);

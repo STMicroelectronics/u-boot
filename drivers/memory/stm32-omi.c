@@ -222,20 +222,14 @@ static u32 stm32_omi_find_byp_cmd(u16 period_ps)
 		return FIELD_PREP(DLYBOS_BYP_CMD_MASK, max + 1);
 }
 
-int stm32_omi_dlyb_stop(struct udevice *dev)
+void stm32_omi_dlyb_stop(struct udevice *dev)
 {
 	struct stm32_omi_plat *omi_plat = dev_get_plat(dev);
-	int ret;
 
 	/* disable delay block */
-	ret = regmap_write(omi_plat->regmap,
-			   omi_plat->dlyb_base + SYSCFG_DLYBOS_CR,
-			   0x0);
-
-	if (ret)
-		dev_err(dev, "Error when stopping delay block\n");
-
-	return ret;
+	regmap_write(omi_plat->regmap,
+		     omi_plat->dlyb_base + SYSCFG_DLYBOS_CR,
+		     0x0);
 }
 
 int stm32_omi_dlyb_configure(struct udevice *dev,
@@ -243,7 +237,7 @@ int stm32_omi_dlyb_configure(struct udevice *dev,
 {
 	struct stm32_omi_plat *omi_plat = dev_get_plat(dev);
 	u32 sr, mask;
-	int ret, err;
+	int ret;
 
 	if (!omi_plat->regmap || !omi_plat->dlyb_base)
 		return -EINVAL;
@@ -268,9 +262,7 @@ int stm32_omi_dlyb_configure(struct udevice *dev,
 				       STM32_DLYBOS_TIMEOUT_MS);
 	if (ret) {
 		dev_err(dev, "Delay Block lock timeout\n");
-		err = stm32_omi_dlyb_stop(dev);
-		if (err)
-			return err;
+		stm32_omi_dlyb_stop(dev);
 	}
 
 	return ret;

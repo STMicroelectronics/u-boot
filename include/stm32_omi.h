@@ -169,7 +169,7 @@ int stm32_omi_dlyb_configure(struct udevice *dev,
 int stm32_omi_dlyb_find_tap(struct udevice *dev, bool rx_only, u8 *window_len);
 int stm32_omi_dlyb_set_cr(struct udevice *dev, u32 dlyb_cr);
 void stm32_omi_dlyb_get_cr(struct udevice *dev, u32 *dlyb_cr);
-int stm32_omi_dlyb_stop(struct udevice *dev);
+void stm32_omi_dlyb_stop(struct udevice *dev);
 int stm32_omi_tx_poll(struct udevice *dev, u8 *buf, u32 len, bool read);
 int stm32_omi_wait_cmd(struct udevice *dev);
 int stm32_omi_wait_for_not_busy(struct udevice *dev);
