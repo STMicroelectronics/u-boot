@@ -67,6 +67,7 @@ int stm32_omi_dlyb_find_tap(struct udevice *dev, bool rx_only, u8 *window_len)
 	tx_len = 0;
 	tx_window_len = 0;
 	tx_window_end = 0;
+	omi_priv->is_calibrating = true;
 
 	for (tx_tap = 0;
 	     tx_tap < (rx_only ? 1 : DLYBOS_TAPSEL_NB);
@@ -86,6 +87,10 @@ int stm32_omi_dlyb_find_tap(struct udevice *dev, bool rx_only, u8 *window_len)
 
 			ret = omi_priv->check_transfer(dev);
 			if (ret) {
+				if ((!rx_only && ret == -ETIMEDOUT) ||
+				    ret == -EOPNOTSUPP)
+					break;
+
 				rx_len = 0;
 			} else {
 				rx_len++;
@@ -95,6 +100,9 @@ int stm32_omi_dlyb_find_tap(struct udevice *dev, bool rx_only, u8 *window_len)
 				}
 			}
 		}
+
+		if (ret == -EOPNOTSUPP)
+			break;
 
 		rx_tap_w[tx_tap].end = rx_window_end;
 		rx_tap_w[tx_tap].length = rx_window_len;
@@ -108,8 +116,16 @@ int stm32_omi_dlyb_find_tap(struct udevice *dev, bool rx_only, u8 *window_len)
 				tx_window_end = tx_tap;
 			}
 		}
+
 		dev_dbg(dev, "rx_tap_w[%02d].end = %d rx_tap_w[%02d].length = %d\n",
 			tx_tap, rx_tap_w[tx_tap].end, tx_tap, rx_tap_w[tx_tap].length);
+	}
+
+	omi_priv->is_calibrating = false;
+
+	if (ret == -EOPNOTSUPP) {
+		dev_err(dev, "Calibration can not be done on this device\n");
+		return ret;
 	}
 
 	if (rx_only) {
@@ -284,6 +300,7 @@ static void stm32_omi_write_fifo(u8 *val, phys_addr_t addr)
 int stm32_omi_tx_poll(struct udevice *dev, u8 *buf, u32 len, bool read)
 {
 	struct stm32_omi_plat *omi_plat = dev_get_plat(dev);
+	struct stm32_omi_priv *omi_priv = dev_get_priv(dev);
 	phys_addr_t regs_base = omi_plat->regs_base;
 	void (*fifo)(u8 *val, phys_addr_t addr);
 	u32 sr;
@@ -299,8 +316,9 @@ int stm32_omi_tx_poll(struct udevice *dev, u8 *buf, u32 len, bool read)
 					 sr & OSPI_SR_FTF,
 					 OSPI_FIFO_TIMEOUT_US);
 		if (ret) {
-			dev_err(dev, "fifo timeout (len:%d stat:%#x)\n",
-				len, sr);
+			if (!omi_priv->is_calibrating)
+				dev_err(dev, "fifo timeout (len:%d stat:%#x)\n",
+					len, sr);
 			return ret;
 		}
 

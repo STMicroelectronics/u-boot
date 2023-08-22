@@ -33,6 +33,8 @@
 #define OSPI_DCR1_CSHT_MASK	GENMASK(13, 8)
 #define OSPI_DCR1_DEVSIZE_MASK	GENMASK(20,16)
 #define OSPI_DCR1_MTYP_MASK	GENMASK(26, 24)
+#define OSPI_DCR1_MTYP_SHIFT	24
+#define OSPI_DCR1_MTYP_MX_MODE	1
 #define OSPI_DCR1_MTYP_HP_MEMMODE	4
 /*
  * OCTOSPI device configuration register 2
@@ -72,6 +74,9 @@
 #define OSPI_CCR		0x100
 #define OSPI_CCR_IMODE_SHIFT	0
 #define OSPI_CCR_IMODE_MASK	GENMASK(2, 0)
+#define OSPI_CCR_IDTR		BIT(3)
+#define OSPI_CCR_ISIZE_SHIFT	4
+#define OSPI_CCR_ISIZE_MASK	GENMASK(5, 4)
 #define OSPI_CCR_ADMODE_SHIFT	8
 #define OSPI_CCR_ADMODE_MASK	GENMASK(10, 8)
 #define OSPI_CCR_ADMODE_8LINES	4
@@ -157,6 +162,7 @@ struct stm32_omi_plat {
 struct stm32_omi_priv {
 	int (*check_transfer)(struct udevice * omi_dev);
 	struct udevice *dev;
+	bool is_calibrating;
 };
 
 struct stm32_tap_window {
