@@ -50,6 +50,7 @@
  * struct stm32_rng_data - RNG compat data
  *
  * @max_clock_rate:	Max RNG clock frequency, in Hertz
+ * @nb_clock:		Number of clock to handle
  * @cr:			Entropy source configuration
  * @nscr:		Noice sources control configuration
  * @htcr:		Health tests configuration
@@ -58,6 +59,7 @@
  */
 struct stm32_rng_data {
 	uint max_clock_rate;
+	uint nb_clock;
 	u32 cr;
 	u32 nscr;
 	u32 htcr;
@@ -67,6 +69,7 @@ struct stm32_rng_data {
 struct stm32_rng_plat {
 	fdt_addr_t base;
 	struct clk clk;
+	struct clk bus_clk;
 	struct reset_ctl rst;
 	const struct stm32_rng_data *data;
 	bool ced;
@@ -260,6 +263,14 @@ static int stm32_rng_init(struct stm32_rng_plat *pdata)
 	if (err)
 		return err;
 
+	if (pdata->data->nb_clock > 1) {
+		err = clk_enable(&pdata->bus_clk);
+		if (err) {
+			clk_disable(&pdata->clk);
+			return err;
+		}
+	}
+
 	cr = readl(pdata->base + RNG_CR);
 
 	/*
@@ -322,7 +333,15 @@ static int stm32_rng_init(struct stm32_rng_plat *pdata)
 
 static int stm32_rng_cleanup(struct stm32_rng_plat *pdata)
 {
+	int err;
+
 	writel(0, pdata->base + RNG_CR);
+
+	if (pdata->data->nb_clock > 1) {
+		err = clk_disable(&pdata->bus_clk);
+		if (err)
+			return err;
+	}
 
 	return clk_disable(&pdata->clk);
 }
@@ -330,8 +349,6 @@ static int stm32_rng_cleanup(struct stm32_rng_plat *pdata)
 static int stm32_rng_probe(struct udevice *dev)
 {
 	struct stm32_rng_plat *pdata = dev_get_plat(dev);
-
-	pdata->data = (struct stm32_rng_data *)dev_get_driver_data(dev);
 
 	reset_assert(&pdata->rst);
 	udelay(20);
@@ -356,9 +373,21 @@ static int stm32_rng_of_to_plat(struct udevice *dev)
 	if (!pdata->base)
 		return -ENOMEM;
 
-	err = clk_get_by_index(dev, 0, &pdata->clk);
-	if (err)
-		return err;
+	pdata->data = (struct stm32_rng_data *)dev_get_driver_data(dev);
+
+	if (pdata->data->nb_clock > 1) {
+		err = clk_get_by_name(dev, "rng_clk", &pdata->clk);
+		if (err)
+			return err;
+
+		err = clk_get_by_name(dev, "rng_hclk", &pdata->bus_clk);
+		if (err)
+			return err;
+	} else {
+		err = clk_get_by_index(dev, 0, &pdata->clk);
+		if (err)
+			return err;
+	}
 
 	err = reset_get_by_index(dev, 0, &pdata->rst);
 	if (err)
@@ -373,9 +402,19 @@ static const struct dm_rng_ops stm32_rng_ops = {
 	.read = stm32_rng_read,
 };
 
+static const struct stm32_rng_data stm32mp25_rng_data = {
+	.has_cond_reset = true,
+	.max_clock_rate = 48000000,
+	.nb_clock = 2,
+	.htcr = 0x969D,
+	.nscr = 0x2B5BB,
+	.cr = 0xF00D00,
+};
+
 static const struct stm32_rng_data stm32mp13_rng_data = {
 	.has_cond_reset = true,
 	.max_clock_rate = 48000000,
+	.nb_clock = 1,
 	.htcr = 0x969D,
 	.nscr = 0x2B5BB,
 	.cr = 0xF00D00,
@@ -384,13 +423,11 @@ static const struct stm32_rng_data stm32mp13_rng_data = {
 static const struct stm32_rng_data stm32_rng_data = {
 	.has_cond_reset = false,
 	.max_clock_rate = 3000000,
-	/* Not supported */
-	.htcr = 0,
-	.nscr = 0,
-	.cr = 0,
+	.nb_clock = 1,
 };
 
 static const struct udevice_id stm32_rng_match[] = {
+	{.compatible = "st,stm32mp25-rng", .data = (ulong)&stm32mp25_rng_data},
 	{.compatible = "st,stm32mp13-rng", .data = (ulong)&stm32mp13_rng_data},
 	{.compatible = "st,stm32-rng", .data = (ulong)&stm32_rng_data},
 	{},
