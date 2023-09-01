@@ -141,6 +141,19 @@ bool stm32_gpio_rif_valid(struct stm32_gpio_regs *regs, unsigned int offset)
 	return false;
 }
 
+static void stm32_gpio_rif_release(struct stm32_gpio_regs *regs, unsigned int offset)
+{
+	u32 cid;
+
+	cid = readl(&regs->rif[offset].cidcfgr);
+
+	if (!(cid & STM32_GPIO_CIDCFGR_CFEN))
+		return;
+
+	if (cid & STM32_GPIO_CIDCFGR_SEMEN && cid & STM32_GPIO_CIDCFGR_SEMWL_CID1)
+		writel(0, &regs->rif[offset].semcr);
+}
+
 static int stm32_gpio_request(struct udevice *dev, unsigned offset, const char *label)
 {
 	struct stm32_gpio_priv *priv = dev_get_priv(dev);
@@ -166,6 +179,18 @@ static int stm32_gpio_request(struct udevice *dev, unsigned offset, const char *
 			uc_priv->bank_name, offset, regs);
 		return -EACCES;
 	}
+
+	return 0;
+}
+
+static int stm32_gpio_rfree(struct udevice *dev, unsigned int offset)
+{
+	struct stm32_gpio_priv *priv = dev_get_priv(dev);
+	struct stm32_gpio_regs *regs = priv->regs;
+	ulong drv_data = dev_get_driver_data(dev);
+
+	if (drv_data & STM32_GPIO_FLAG_RIF_CTRL)
+		stm32_gpio_rif_release(regs, offset);
 
 	return 0;
 }
@@ -331,6 +356,7 @@ static int stm32_gpio_get_flags(struct udevice *dev, unsigned int offset,
 
 static const struct dm_gpio_ops gpio_stm32_ops = {
 	.request		= stm32_gpio_request,
+	.rfree			= stm32_gpio_rfree,
 	.direction_input	= stm32_gpio_direction_input,
 	.direction_output	= stm32_gpio_direction_output,
 	.get_value		= stm32_gpio_get_value,
@@ -401,11 +427,39 @@ static int gpio_stm32_probe(struct udevice *dev)
 	return 0;
 }
 
+static int gpio_stm32_remove(struct udevice *dev)
+{
+	struct stm32_gpio_priv *priv = dev_get_priv(dev);
+	struct stm32_gpio_regs *regs = priv->regs;
+	ulong drv_data = dev_get_driver_data(dev);
+	unsigned int offset;
+	u32 seccfgr = 0;
+
+	if (!(drv_data & STM32_GPIO_FLAG_RIF_CTRL))
+		return 0;
+
+	if (drv_data & STM32_GPIO_FLAG_SEC_CTRL)
+		seccfgr = readl(&regs->seccfgr);
+
+	for (offset = 0; offset < STM32_GPIOS_PER_BANK; offset++) {
+		if (!stm32_gpio_is_mapped(dev, offset))
+			continue;
+
+		if ((seccfgr >> SECCFG_BITS(offset)) & SECCFG_MSK)
+			continue;
+
+		stm32_gpio_rif_release(regs, offset);
+	}
+
+	return 0;
+}
+
 U_BOOT_DRIVER(gpio_stm32) = {
 	.name	= "gpio_stm32",
 	.id	= UCLASS_GPIO,
 	.probe	= gpio_stm32_probe,
+	.remove	= gpio_stm32_remove,
 	.ops	= &gpio_stm32_ops,
-	.flags	= DM_UC_FLAG_SEQ_ALIAS,
+	.flags	= DM_UC_FLAG_SEQ_ALIAS | DM_FLAG_OS_PREPARE,
 	.priv_auto	= sizeof(struct stm32_gpio_priv),
 };
