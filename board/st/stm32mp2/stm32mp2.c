@@ -459,6 +459,12 @@ enum env_location env_get_location(enum env_operation op, int prio)
 		else
 			return ENVL_NOWHERE;
 
+	case BOOT_FLASH_HYPERFLASH:
+		if (CONFIG_IS_ENABLED(ENV_IS_IN_FLASH))
+			return ENVL_FLASH;
+		else
+			return ENVL_NOWHERE;
+
 	default:
 		return ENVL_NOWHERE;
 	}
