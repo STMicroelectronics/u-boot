@@ -10,6 +10,7 @@
 #include <flash.h>
 #include <malloc.h>
 
+#include <asm/io.h>
 #include <linux/errno.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/concat.h>
@@ -71,7 +72,7 @@ static int cfi_mtd_read(struct mtd_info *mtd, loff_t from, size_t len,
 	u_char *f = (u_char*)(fi->start[0]) + from;
 
 	if (dma_memcpy(buf, f, len) < 0)
-		memcpy(buf, f, len);
+		memcpy_fromio(buf, f, len);
 	*retlen = len;
 
 	return 0;
