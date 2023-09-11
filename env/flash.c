@@ -73,12 +73,19 @@ static ulong __maybe_unused end_addr_new =
 static int env_flash_init(void)
 {
 	int crc1_ok = 0, crc2_ok = 0;
+	uchar flag1, flag2;
+	ulong addr1, addr2;
 
-	uchar flag1 = flash_addr->flags;
-	uchar flag2 = flash_addr_new->flags;
+	if (!is_flash_available()) {
+		gd->env_valid = ENV_INVALID;
+		return 0;
+	}
 
-	ulong addr1 = (ulong)&(flash_addr->data);
-	ulong addr2 = (ulong)&(flash_addr_new->data);
+	flag1 = flash_addr->flags;
+	flag2 = flash_addr_new->flags;
+
+	addr1 = (ulong)&(flash_addr->data);
+	addr2 = (ulong)&(flash_addr_new->data);
 
 	crc1_ok = crc32(0, flash_addr->data, ENV_SIZE) == flash_addr->crc;
 	crc2_ok =
@@ -222,7 +229,8 @@ done:
 #ifdef INITENV
 static int env_flash_init(void)
 {
-	if (crc32(0, env_ptr->data, ENV_SIZE) == env_ptr->crc) {
+	if (is_flash_available() &&
+	    crc32(0, env_ptr->data, ENV_SIZE) == env_ptr->crc) {
 		gd->env_addr	= (ulong)&(env_ptr->data);
 		gd->env_valid	= ENV_VALID;
 		return 0;
