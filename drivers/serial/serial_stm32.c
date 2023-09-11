@@ -28,6 +28,7 @@
  * 10 bits are needed for worst case (8 bits + 1 start + 1 stop) = 86.806 us
  */
 #define ONE_BYTE_B115200_US		87
+#define STM32_USART_FIFO_TMO_US		(16 * ONE_BYTE_B115200_US)
 
 static void _stm32_serial_setbrg(void __iomem *base,
 				 struct stm32_uart_info *uart_info,
@@ -216,8 +217,8 @@ static int stm32_serial_probe(struct udevice *dev)
 	 * before uart initialization, wait for TC bit (Transmission Complete)
 	 * in case there is still chars from previous bootstage to transmit
 	 */
-	ret = read_poll_timeout(readl, isr, isr & USART_ISR_TC, 50,
-				16 * ONE_BYTE_B115200_US, plat->base + ISR_OFFSET(stm32f4));
+	ret = read_poll_timeout(readl, isr, isr & USART_ISR_TC, 50, STM32_USART_FIFO_TMO_US,
+				plat->base + ISR_OFFSET(stm32f4));
 	if (ret)
 		dev_dbg(dev, "FIFO not empty, some character can be lost (%d)\n", ret);
 
