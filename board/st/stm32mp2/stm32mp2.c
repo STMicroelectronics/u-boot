@@ -615,8 +615,17 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 	/* update HDMI bridge "adi,adv7535" */
 	status = detect_adv7535 ? FDT_STATUS_OKAY : FDT_STATUS_DISABLED;
 	nodeoff = fdt_set_status_by_compatible(blob, "adi,adv7535", status);
-	if (nodeoff < 0)
-		return nodeoff;
+	/* Do not force disable status for sound card. Keep default status instead */
+	if (status == FDT_STATUS_OKAY) {
+		if (nodeoff < 0)
+			return nodeoff;
+		nodeoff = fdt_set_status_by_compatible(blob, "st,stm32mp25-i2s", status);
+		if (nodeoff < 0)
+			return nodeoff;
+		nodeoff = fdt_set_status_by_pathf(blob, status, "/sound");
+		if (nodeoff < 0)
+			return nodeoff;
+	}
 
 	if (detect_rm68200 | detect_adv7535) {
 		nodeoff = fdt_status_okay_by_compatible(blob, "st,stm32-dsi");
