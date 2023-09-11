@@ -28,7 +28,9 @@
  * 10 bits are needed for worst case (8 bits + 1 start + 1 stop) = 86.806 us
  */
 #define ONE_BYTE_B115200_US		87
-#define STM32_USART_FIFO_TMO_US		(16 * ONE_BYTE_B115200_US)
+
+/* This is used to compute a timeout, take the worst possible case: STM32MP2 */
+#define STM32_USART_FIFO_TMO_US		(64 * ONE_BYTE_B115200_US)
 
 static void _stm32_serial_setbrg(void __iomem *base,
 				 struct stm32_uart_info *uart_info,
