@@ -184,7 +184,7 @@ U_BOOT_DRIVER(scmi_regulator) = {
 	.probe = scmi_regulator_probe,
 	.of_to_plat = scmi_regulator_of_to_plat,
 	.plat_auto = sizeof(struct scmi_regulator_platdata),
-	.priv_auto = sizeof(struct scmi_regulator_priv *),
+	.priv_auto = sizeof(struct scmi_regulator_priv),
 };
 
 static int scmi_regulator_bind(struct udevice *dev)
