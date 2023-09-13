@@ -93,5 +93,5 @@ U_BOOT_DRIVER(scmi_reset_domain) = {
 	.id = UCLASS_RESET,
 	.ops = &scmi_reset_domain_ops,
 	.probe = scmi_reset_probe,
-	.priv_auto = sizeof(struct scmi_reset_priv *),
+	.priv_auto = sizeof(struct scmi_reset_priv),
 };
