@@ -205,5 +205,5 @@ U_BOOT_DRIVER(scmi_clock) = {
 	.id = UCLASS_CLK,
 	.ops = &scmi_clk_ops,
 	.probe = scmi_clk_probe,
-	.priv_auto = sizeof(struct scmi_clk_priv *),
+	.priv_auto = sizeof(struct scmi_clk_priv),
 };
