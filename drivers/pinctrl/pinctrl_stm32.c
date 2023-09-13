@@ -29,12 +29,12 @@
 #define OTYPE_MSK			1
 #define AFR_MASK			0xF
 #define SECCFG_MSK			1
-#define PIOCFGR_MASK			0xF
+#define ADVCFGR_MASK			0xF
 #define DELAYR_MASK			0xF
-#define PIOCFGR_DELAY_PATH_POS		0
-#define PIOCFGR_CLK_EDGE_POS		1
-#define PIOCFGR_CLK_TYPE_POS		2
-#define PIOCFGR_RETIME_POS		3
+#define ADVCFGR_DLYPATH_POS		0
+#define ADVCFGR_DE_POS			1
+#define ADVCFGR_INVCLK_POS		2
+#define ADVCFGR_RET_POS			3
 
 struct stm32_pinctrl_priv {
 	struct hwspinlock hws;
@@ -312,7 +312,7 @@ static int stm32_gpio_config(ofnode node,
 	struct stm32_gpio_regs *regs = priv->regs;
 	struct stm32_pinctrl_priv *ctrl_priv;
 	int ret;
-	u32 index, io_sync, piocfg;
+	u32 index, io_sync, advcfg;
 
 	/* Check access protection */
 	ret = stm32_pinctrl_get_access(desc->dev, desc->offset);
@@ -357,13 +357,13 @@ static int stm32_gpio_config(ofnode node,
 
 	if (io_sync) {
 		index = (desc->offset & 0x07) * 4;
-		piocfg = (ctl->delay_path << PIOCFGR_DELAY_PATH_POS) |
-			 (ctl->clk_edge << PIOCFGR_CLK_EDGE_POS) |
-			 (ctl->clk_type << PIOCFGR_CLK_TYPE_POS) |
-			 (ctl->retime << PIOCFGR_RETIME_POS);
+		advcfg = (ctl->delay_path << ADVCFGR_DLYPATH_POS) |
+			 (ctl->clk_edge << ADVCFGR_DE_POS) |
+			 (ctl->clk_type << ADVCFGR_INVCLK_POS) |
+			 (ctl->retime << ADVCFGR_RET_POS);
 
-		clrsetbits_le32(&regs->piocfgr[desc->offset >> 3],
-				PIOCFGR_MASK << index, piocfg << index);
+		clrsetbits_le32(&regs->advcfgr[desc->offset >> 3],
+				ADVCFGR_MASK << index, advcfg << index);
 
 		clrsetbits_le32(&regs->delayr[desc->offset >> 3],
 				DELAYR_MASK << index, ctl->delay << index);

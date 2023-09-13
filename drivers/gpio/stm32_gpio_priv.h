@@ -126,7 +126,7 @@ struct stm32_gpio_regs {
 	u32 rfu3;	/* Reserved (rcfglock) */
 	u32 rfu4;	/* Reserved */
 	u32 delayr[2];	/* GPIO port delay */
-	u32 piocfgr[2];	/* GPIO port PIO control */
+	u32 advcfgr[2];	/* GPIO port PIO control */
 };
 
 struct stm32_gpio_priv {
