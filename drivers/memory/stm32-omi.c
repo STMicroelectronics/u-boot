@@ -236,24 +236,26 @@ int stm32_omi_dlyb_configure(struct udevice *dev,
 			     bool bypass_mode, u16 period_ps)
 {
 	struct stm32_omi_plat *omi_plat = dev_get_plat(dev);
-	u32 sr, mask;
+	u32 sr, mask, val;
 	int ret;
 
 	if (!omi_plat->regmap || !omi_plat->dlyb_base)
 		return -EINVAL;
 
 	if (bypass_mode) {
-		mask = DLYBOS_BYP_EN;
-		mask |= stm32_omi_find_byp_cmd(period_ps);
+		val = DLYBOS_BYP_EN | stm32_omi_find_byp_cmd(period_ps);
+		mask = DLYBOS_BYP_EN | DLYBOS_BYP_CMD_MASK;
 	} else {
+		val = DLYBOS_CR_EN;
 		mask = DLYBOS_CR_EN;
 	}
 
 	regmap_update_bits(omi_plat->regmap,
 			  omi_plat->dlyb_base + SYSCFG_DLYBOS_CR,
-			  mask, mask);
+			  mask, val);
+
 	if (bypass_mode)
-		return ret;
+		return 0;
 
 	/* in lock mode, wait for lock status bit */
 	ret = regmap_read_poll_timeout(omi_plat->regmap,
