@@ -15,6 +15,7 @@
 #include <env_internal.h>
 #include <log.h>
 #include <asm/global_data.h>
+#include <asm/io.h>
 #include <linux/stddef.h>
 #include <malloc.h>
 #include <search.h>
@@ -75,21 +76,32 @@ static int env_flash_init(void)
 	int crc1_ok = 0, crc2_ok = 0;
 	uchar flag1, flag2;
 	ulong addr1, addr2;
+	env_t *tmp_env1, *tmp_env2;
 
-	if (!is_flash_available()) {
-		gd->env_valid = ENV_INVALID;
+	gd->env_valid = ENV_INVALID;
+
+	if (!is_flash_available())
 		return 0;
+
+	tmp_env1 = (env_t *)malloc(CONFIG_ENV_SIZE);
+	tmp_env2 = (env_t *)malloc(CONFIG_ENV_SIZE);
+
+	if (!tmp_env1 || !tmp_env2) {
+		env_set_default("malloc() failed", 0);
+		return -EIO;
 	}
 
-	flag1 = flash_addr->flags;
-	flag2 = flash_addr_new->flags;
+	memcpy_fromio(tmp_env1, flash_addr, CONFIG_ENV_SIZE);
+	memcpy_fromio(tmp_env2, flash_addr_new, CONFIG_ENV_SIZE);
+
+	flag1 = tmp_env1->flags;
+	flag2 = tmp_env2->flags;
 
 	addr1 = (ulong)&(flash_addr->data);
 	addr2 = (ulong)&(flash_addr_new->data);
 
-	crc1_ok = crc32(0, flash_addr->data, ENV_SIZE) == flash_addr->crc;
-	crc2_ok =
-		crc32(0, flash_addr_new->data, ENV_SIZE) == flash_addr_new->crc;
+	crc1_ok = crc32(0, tmp_env1->data, ENV_SIZE) == tmp_env1->crc;
+	crc2_ok = crc32(0, tmp_env2->data, ENV_SIZE) == tmp_env2->crc;
 
 	if (crc1_ok && !crc2_ok) {
 		gd->env_addr	= addr1;
@@ -117,6 +129,9 @@ static int env_flash_init(void)
 		gd->env_addr	= addr2;
 		gd->env_valid	= ENV_REDUND;
 	}
+
+	free(tmp_env1);
+	free(tmp_env2);
 
 	return 0;
 }
@@ -229,14 +244,28 @@ done:
 #ifdef INITENV
 static int env_flash_init(void)
 {
-	if (is_flash_available() &&
-	    crc32(0, env_ptr->data, ENV_SIZE) == env_ptr->crc) {
-		gd->env_addr	= (ulong)&(env_ptr->data);
-		gd->env_valid	= ENV_VALID;
-		return 0;
-	}
+	env_t *tmp_env;
 
 	gd->env_valid = ENV_INVALID;
+
+	if (!is_flash_available())
+		return 0;
+
+	tmp_env = malloc(CONFIG_ENV_SIZE);
+	if (!tmp_env) {
+		env_set_default("malloc() failed", 0);
+		return -EIO;
+	}
+
+	memcpy_fromio(tmp_env, env_ptr, CONFIG_ENV_SIZE);
+
+	if (crc32(0, tmp_env->data, ENV_SIZE) == tmp_env->crc) {
+		gd->env_addr = (ulong)&(env_ptr->data);
+		gd->env_valid = ENV_VALID;
+	}
+
+	free(tmp_env);
+
 	return 0;
 }
 #endif
@@ -314,6 +343,17 @@ done:
 #ifdef LOADENV
 static int env_flash_load(void)
 {
+	env_t *tmp_env;
+	int ret;
+
+	tmp_env = malloc(CONFIG_ENV_SIZE);
+	if (!tmp_env) {
+		env_set_default("malloc() failed", 0);
+		return -EIO;
+	}
+
+	memcpy_fromio(tmp_env, flash_addr, CONFIG_ENV_SIZE);
+
 #ifdef CONFIG_ENV_ADDR_REDUND
 	if (gd->env_addr != (ulong)&(flash_addr->data)) {
 		env_t *etmp = flash_addr;
@@ -327,7 +367,7 @@ static int env_flash_load(void)
 	}
 
 	if (flash_addr_new->flags != ENV_REDUND_OBSOLETE &&
-	    crc32(0, flash_addr_new->data, ENV_SIZE) == flash_addr_new->crc) {
+	    crc32(0, tmp_env->data, ENV_SIZE) == tmp_env->crc) {
 		char flag = ENV_REDUND_OBSOLETE;
 
 		gd->env_valid = ENV_REDUND;
@@ -355,7 +395,10 @@ static int env_flash_load(void)
 		     "reading environment; recovered successfully\n\n");
 #endif /* CONFIG_ENV_ADDR_REDUND */
 
-	return env_import((char *)flash_addr, 1, H_EXTERNAL);
+	ret = env_import((char *)tmp_env, 1, H_EXTERNAL);
+	free(tmp_env);
+
+	return ret;
 }
 #endif /* LOADENV */
 
