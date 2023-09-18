@@ -20,6 +20,15 @@
 
 	chosen {
 		stdout-path = "serial0:115200n8";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		framebuffer {
+			compatible = "simple-framebuffer";
+			clocks = <&rcc CK_BUS_LTDC>;
+			status = "disabled";
+		};
 	};
 
 	memory@80000000 {
