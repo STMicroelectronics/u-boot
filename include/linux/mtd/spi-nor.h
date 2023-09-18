@@ -315,6 +315,7 @@ enum spi_nor_option_flags {
 	SNOR_F_HAS_STACKED	= 0,
 	SNOR_F_HAS_PARALLEL	= 0,
 #endif
+	SNOR_F_SWAP16		= BIT(11),
 };
 
 struct spi_nor;
