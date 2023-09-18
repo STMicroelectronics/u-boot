@@ -168,6 +168,7 @@ struct sfdp_header {
 #define BFPT_DWORD18_CMD_EXT_INV		(0x1UL << 29) /* Invert */
 #define BFPT_DWORD18_CMD_EXT_RES		(0x2UL << 29) /* Reserved */
 #define BFPT_DWORD18_CMD_EXT_16B		(0x3UL << 29) /* 16-bit opcode */
+#define BFPT_DWORD18_BYTE_ORDER_SWAPPED		BIT(31) /* Byte order of 16-bit words */
 
 /* xSPI Profile 1.0 table (from JESD216D.01). */
 #define PROFILE1_DWORD1_RD_FAST_CMD		GENMASK(15, 8)
@@ -2410,6 +2411,10 @@ static int spi_nor_parse_bfpt(struct spi_nor *nor,
 		dev_err(nor->dev, "16-bit opcodes not supported\n");
 		return -ENOTSUPP;
 	}
+
+	/* Byte order in 8D-8D-8D mode */
+	if (bfpt.dwords[BFPT_DWORD(18)] & BFPT_DWORD18_BYTE_ORDER_SWAPPED)
+		nor->flags |= SNOR_F_DTR_SWAB16;
 
 	return spi_nor_post_bfpt_fixups(nor, bfpt_header, &bfpt, params);
 }
