@@ -4160,6 +4160,8 @@ int spi_nor_scan(struct spi_nor *nor)
 	if (spi_nor_protocol_is_dtr(nor->read_proto)) {
 		 /* Always use 4-byte addresses in DTR mode. */
 		nor->addr_width = 4;
+		if (info->flags & SPI_NOR_4B_OPCODES)
+			spi_nor_set_4byte_opcodes(nor, info);
 	} else if (nor->addr_width) {
 		/* already configured from SFDP */
 	} else if (info->addr_width) {
