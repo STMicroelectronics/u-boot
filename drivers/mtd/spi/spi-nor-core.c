@@ -273,6 +273,8 @@ void spi_nor_setup_op(const struct spi_nor *nor,
 		 */
 		op->cmd.dtr = op->addr.dtr = op->dummy.dtr =
 			op->data.dtr = true;
+		op->data.dtr_swab16 = (proto == SNOR_PROTO_8_8_8_DTR) &&
+				      (nor->flags & SNOR_F_DTR_SWAB16);
 
 		/* 2 bytes per clock cycle in DTR mode. */
 		op->dummy.nbytes *= 2;
