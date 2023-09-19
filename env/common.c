@@ -15,6 +15,7 @@
 #include <log.h>
 #include <sort.h>
 #include <asm/global_data.h>
+#include <asm/io.h>
 #include <linux/stddef.h>
 #include <search.h>
 #include <errno.h>
@@ -172,7 +173,7 @@ static int env_get_from_linear(const char *env, const char *name, char *buf,
 		value = &p[name_len + 1];
 
 		res = end - value;
-		memcpy(buf, value, min(len, res + 1));
+		memcpy_fromio(buf, value, min(len, res + 1));
 
 		if (len <= res) {
 			buf[len - 1] = '\0';
