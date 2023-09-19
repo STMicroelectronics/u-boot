@@ -11,6 +11,7 @@
 #include <dm.h>
 #include <env.h>
 #include <env_internal.h>
+#include <fdt_simplefb.h>
 #include <fdt_support.h>
 #include <g_dnl.h>
 #include <i2c.h>
@@ -602,6 +603,9 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 	int ret;
 
 	fdt_copy_fixed_partitions(blob);
+
+	if (CONFIG_IS_ENABLED(FDT_SIMPLEFB))
+		fdt_simplefb_enable_and_mem_rsv(blob);
 
 	if (board_is_stm32mp257_eval()) {
 		ret = fixup_stm32mp257_eval_panel(blob);
