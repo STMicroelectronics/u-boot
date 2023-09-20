@@ -90,6 +90,7 @@ int flash_sect_roundb(ulong *addr);
 unsigned long flash_sector_size(flash_info_t *info, flash_sect_t sect);
 void flash_cmd_reset(flash_info_t *info);
 void flash_set_verbose(uint v);
+int is_flash_available(void);
 
 /* common/flash.c */
 void flash_protect(int flag, ulong from, ulong to, flash_info_t *info);
