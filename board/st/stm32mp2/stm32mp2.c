@@ -539,3 +539,9 @@ int is_flash_available(void)
 
 	return 1;
 }
+
+/* weak function called from env/sf.c */
+void *env_sf_get_env_addr(void)
+{
+	return NULL;
+}
