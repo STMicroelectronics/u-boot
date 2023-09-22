@@ -47,8 +47,6 @@
 #define ETH_CK_F_50M	50000000
 #define ETH_CK_F_125M	125000000
 
-#define GOODIX_REG_ID		0x8140
-#define GOODIX_ID_LEN		4
 #define ILITEK_REG_ID		0x40
 #define ILITEK_ID_LEN		7
 #define ADV7511_REG_CHIP_REVISION	0x00
@@ -107,7 +105,6 @@ int g_dnl_bind_fixup(struct usb_device_descriptor *dev, const char *name)
 
 /* touchscreen driver: only used for pincontrol configuration */
 static const struct udevice_id touchscreen_ids[] = {
-	{ .compatible = "goodix,gt9147", },
 	{ .compatible = "ilitek,ili251x", },
 	{ }
 };
@@ -203,35 +200,6 @@ static const char *detect_device(const struct detect_info_t *info, u8 size)
 	return NULL;
 }
 
-bool detect_stm32mp25x_rm68200(void)
-{
-	ofnode node;
-	char id[GOODIX_ID_LEN];
-	int ret;
-
-	node = ofnode_by_compatible(ofnode_null(), "raydium,rm68200");
-	if (!ofnode_valid(node))
-		return false;
-
-	if (!reset_gpio(node))
-		return false;
-
-	node = ofnode_by_compatible(ofnode_null(), "goodix,gt9147");
-	if (!ofnode_valid(node))
-		return false;
-
-	mdelay(10);
-
-	ret = i2c_read(node, GOODIX_REG_ID, id, sizeof(id), 2);
-	if (ret)
-		return false;
-
-	if (!strncmp(id, "9147", sizeof(id)))
-		return true;
-
-	return false;
-}
-
 bool detect_stm32mp25x_etml0700zxxdha(void)
 {
 	ofnode node;
@@ -282,10 +250,6 @@ bool detect_stm32mp25x_adv7535(void)
 }
 
 static const struct detect_info_t stm32mp25x_panels[] = {
-	{
-		.detect = detect_stm32mp25x_rm68200,
-		.compatible = "raydium,rm68200",
-	},
 	{
 		.detect = detect_stm32mp25x_etml0700zxxdha,
 		.compatible = "edt,etml0700z9ndha",
@@ -572,15 +536,12 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 	char const *panel = env_get("panel");
 	char const *hdmi = env_get("hdmi");
 	bool detect_etml0700z9ndha = false;
-	bool detect_rm68200 = false;
 	bool detect_adv7535 = false;
 	int nodeoff = 0;
 	enum fdt_status status;
 
-	if (panel) {
+	if (panel)
 		detect_etml0700z9ndha = !strcmp(panel, "edt,etml0700z9ndha");
-		detect_rm68200 = !strcmp(panel, "raydium,rm68200");
-	}
 
 	if (hdmi)
 		detect_adv7535 = !strcmp(hdmi, "adi,adv7535");
@@ -600,18 +561,6 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 	if (nodeoff < 0)
 		return nodeoff;
 
-	/* update DSI panel "raydium,rm68200" */
-	status = detect_rm68200 ? FDT_STATUS_OKAY : FDT_STATUS_DISABLED;
-	nodeoff = fdt_set_status_by_compatible(blob, "raydium,rm68200", status);
-	if (nodeoff < 0)
-		return nodeoff;
-	nodeoff = fdt_set_status_by_compatible(blob, "goodix,gt9147", status);
-	if (nodeoff < 0)
-		return nodeoff;
-	nodeoff = fdt_set_status_by_pathf(blob, status, "/panel-dsi-backlight");
-	if (nodeoff < 0)
-		return nodeoff;
-
 	/* update HDMI bridge "adi,adv7535" */
 	status = detect_adv7535 ? FDT_STATUS_OKAY : FDT_STATUS_DISABLED;
 	nodeoff = fdt_set_status_by_compatible(blob, "adi,adv7535", status);
@@ -625,10 +574,13 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 		nodeoff = fdt_set_status_by_pathf(blob, status, "/sound");
 		if (nodeoff < 0)
 			return nodeoff;
+		nodeoff = fdt_status_okay_by_compatible(blob, "st,stm32-dsi");
+		if (nodeoff < 0)
+			return nodeoff;
 	}
 
-	if (detect_rm68200 | detect_adv7535) {
-		nodeoff = fdt_status_okay_by_compatible(blob, "st,stm32-dsi");
+	if (!detect_adv7535 && !detect_etml0700z9ndha) {
+		nodeoff = fdt_status_disabled_by_compatible(blob, "st,stm32-ltdc");
 		if (nodeoff < 0)
 			return nodeoff;
 	}
