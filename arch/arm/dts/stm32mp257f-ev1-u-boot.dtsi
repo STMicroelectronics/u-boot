@@ -15,6 +15,11 @@
 	};
 };
 
+&dwc3 {
+	dr_mode = "peripheral";
+	/delete-node/ port;
+};
+
 &flash0 {
 	partitions {
 		compatible = "fixed-partitions";
@@ -54,6 +59,11 @@
 			reg = <0x00980000 0x03680000>;
 		};
 	};
+};
+
+
+&i2c_rpmsg {
+       /delete-node/ typec@35;
 };
 
 &usart2 {
