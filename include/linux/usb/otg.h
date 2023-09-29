@@ -18,6 +18,12 @@ enum usb_dr_mode {
 	USB_DR_MODE_OTG,
 };
 
+enum usb_role {
+	USB_ROLE_NONE,
+	USB_ROLE_HOST,
+	USB_ROLE_DEVICE,
+};
+
 /**
  * usb_get_dr_mode() - Get dual role mode for given device
  * @node: ofnode of the given device
