@@ -16,12 +16,6 @@
 #ifndef __LINUX_CDNS3_CORE_H
 #define __LINUX_CDNS3_CORE_H
 
-enum usb_role {
-	USB_ROLE_NONE,
-	USB_ROLE_HOST,
-	USB_ROLE_DEVICE,
-};
-
 struct cdns3;
 
 /**
