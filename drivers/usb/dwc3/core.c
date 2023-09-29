@@ -1036,7 +1036,8 @@ int dwc3_setup_phy(struct udevice *dev, struct phy_bulk *phys)
 			goto err_mode;
 	}
 
-	ret = generic_phy_set_mode_bulk(phys, phymode, 0);
+	ret = generic_phy_set_mode_bulk(phys, phymode, (dr_mode == USB_DR_MODE_HOST) ?
+					USB_ROLE_HOST : USB_ROLE_DEVICE);
 	if (ret)
 		goto err_mode;
 
