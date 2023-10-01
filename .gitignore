@@ -109,3 +109,6 @@ __pycache__
 
 # moveconfig database
 /moveconfig.db
+
+# Clang's compilation database file
+/compile_commands.json
