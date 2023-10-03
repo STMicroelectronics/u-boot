@@ -543,7 +543,7 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 	char const *hdmi = env_get("hdmi");
 	bool detect_etml0700z9ndha = false;
 	bool detect_adv7535 = false;
-	int nodeoff = 0;
+	int nodeoff = 0, ret;
 	enum fdt_status status;
 
 	if (panel)
@@ -574,9 +574,12 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 	if (status == FDT_STATUS_OKAY) {
 		if (nodeoff < 0)
 			return nodeoff;
-		nodeoff = fdt_set_status_by_compatible(blob, "st,stm32mp25-i2s", status);
+		nodeoff = fdt_node_offset_by_compat_reg(blob, "st,stm32mp25-i2s", 0x400b0000);
 		if (nodeoff < 0)
 			return nodeoff;
+		ret = fdt_set_node_status(blob, nodeoff, status);
+		if (ret < 0)
+			return ret;
 		nodeoff = fdt_set_status_by_pathf(blob, status, "/sound");
 		if (nodeoff < 0)
 			return nodeoff;
