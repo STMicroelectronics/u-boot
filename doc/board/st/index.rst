@@ -8,4 +8,5 @@ STMicroelectronics
 
    st-dt
    stm32mp1
+   stm32mp2
    stm32_MCU
