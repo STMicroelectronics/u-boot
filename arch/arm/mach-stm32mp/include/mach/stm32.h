@@ -212,8 +212,10 @@ enum forced_boot_mode {
 #define BSEC_OTP_SERIAL	5
 #define BSEC_OTP_RPN	9
 #define BSEC_OTP_PKG	122
-#define BSEC_OTP_MAC	152
-#define BSEC_OTP_BOARD	255
+
+#define BSEC_OTP_BOARD	246
+#define BSEC_OTP_MAC	247
+
 #endif
 
 #ifndef __ASSEMBLY__
