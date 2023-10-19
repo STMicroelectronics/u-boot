@@ -77,7 +77,7 @@ phys_addr_t board_get_usable_ram_top(phys_size_t total_size)
 	 * make sure U-Boot uses address space below 4GB boundaries even
 	 * if the effective available memory is bigger
 	 */
-	gd->ram_top = clamp_val(gd->ram_top, 0, SZ_4G - 1);
+	gd->ram_top = clamp_val((gd->ram_base + gd->ram_size), 0, SZ_4G - 1);
 
 	/* add 8M for U-Boot reserved memory: display, fdt, gd,... */
 	size = ALIGN(SZ_8M + CONFIG_SYS_MALLOC_LEN + total_size, MMU_SECTION_SIZE);
