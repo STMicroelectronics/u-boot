@@ -4,7 +4,6 @@
  * Author(s): Philippe Cornu <philippe.cornu@st.com> for STMicroelectronics.
  *	      Yannick Fertre <yannick.fertre@st.com> for STMicroelectronics.
  */
-
 #define LOG_CATEGORY UCLASS_VIDEO
 
 #include <common.h>
@@ -20,6 +19,7 @@
 #include <video_bridge.h>
 #include <asm/io.h>
 #include <dm/device-internal.h>
+#include <dm/uclass-internal.h>
 #include <dm/device_compat.h>
 #include <dm/pinctrl.h>
 #include <linux/bitops.h>
@@ -502,6 +502,137 @@ static void stm32_ltdc_set_layer1(struct stm32_ltdc_priv *priv, ulong fb_addr)
 	setbits_le32(priv->regs + LTDC_L1CR, LXCR_LEN);
 }
 
+static int stm32_ltdc_get_panel(struct udevice *dev, struct udevice **panel)
+{
+	ofnode ep_node, node, ports, remote;
+	u32 remote_phandle;
+	int ret = 0;
+
+	if (!dev)
+		return -EINVAL;
+
+	ports = ofnode_find_subnode(dev_ofnode(dev), "ports");
+	if (!ofnode_valid(ports)) {
+		dev_err(dev, "Remote bridge subnode\n");
+		return ret;
+	}
+
+	for (node = ofnode_first_subnode(ports);
+	     ofnode_valid(node);
+	     node = dev_read_next_subnode(node)) {
+		ep_node = ofnode_first_subnode(node);
+		if (!ofnode_valid(ep_node))
+			continue;
+
+		ret = ofnode_read_u32(ep_node, "remote-endpoint", &remote_phandle);
+		if (ret) {
+			dev_err(dev, "%s(%s): Could not find remote-endpoint property\n",
+				__func__, dev_read_name(dev));
+			return ret;
+		}
+
+		remote = ofnode_get_by_phandle(remote_phandle);
+		if (!ofnode_valid(remote))
+			return -EINVAL;
+
+		while (ofnode_valid(remote)) {
+			remote = ofnode_get_parent(remote);
+			if (!ofnode_valid(remote)) {
+				dev_dbg(dev, "%s(%s): no UCLASS_DISPLAY for remote-endpoint\n",
+					__func__, dev_read_name(dev));
+				continue;
+			}
+
+			uclass_find_device_by_ofnode(UCLASS_PANEL, remote, panel);
+			if (*panel)
+				break;
+		};
+	}
+
+	/* Sanity check, we can get out of the loop without having a clean ofnode */
+	if (!(*panel))
+		ret = -EINVAL;
+	else
+		if (!ofnode_valid(dev_ofnode(*panel)))
+			ret = -EINVAL;
+
+	return ret;
+}
+
+static int stm32_ltdc_display_init(struct udevice *dev, ofnode *ep_node,
+				   struct udevice **panel, struct udevice **bridge)
+{
+	ofnode remote;
+	u32 remote_phandle;
+	int ret;
+
+	if (*panel)
+		return -EINVAL;
+
+	if (IS_ENABLED(CONFIG_VIDEO_BRIDGE)) {
+		ret = ofnode_read_u32(*ep_node, "remote-endpoint", &remote_phandle);
+		if (ret) {
+			dev_dbg(dev, "%s(%s): Could not find remote-endpoint property\n",
+				__func__, dev_read_name(dev));
+			return ret;
+		}
+
+		remote = ofnode_get_by_phandle(remote_phandle);
+		if (!ofnode_valid(remote))
+			return -EINVAL;
+
+		while (ofnode_valid(remote)) {
+			remote = ofnode_get_parent(remote);
+			if (!ofnode_valid(remote)) {
+				dev_dbg(dev, "%s(%s): no UCLASS_VIDEO_BRIDGE for remote-endpoint\n",
+					__func__, dev_read_name(dev));
+				return -EINVAL;
+			}
+
+			uclass_find_device_by_ofnode(UCLASS_VIDEO_BRIDGE, remote, bridge);
+			if (*bridge && !ret) {
+				ret = uclass_get_device_by_ofnode(UCLASS_VIDEO_BRIDGE,
+								  remote, bridge);
+				if (ret)
+					dev_dbg(dev,
+						"No video bridge, or no backlight on bridge\n");
+				break;
+			}
+		}
+
+		ret = stm32_ltdc_get_panel(*bridge, panel);
+	} else {
+		/* no bridge , search a panel from display controller node */
+		ret = ofnode_read_u32(*ep_node, "remote-endpoint", &remote_phandle);
+		if (ret) {
+			dev_dbg(dev, "%s(%s): Could not find remote-endpoint property\n",
+				__func__, dev_read_name(dev));
+			return ret;
+		}
+
+		remote = ofnode_get_by_phandle(remote_phandle);
+		if (!ofnode_valid(remote))
+			return -EINVAL;
+
+		while (ofnode_valid(remote)) {
+			remote = ofnode_get_parent(remote);
+			if (!ofnode_valid(remote)) {
+				dev_dbg(dev, "%s(%s): no UCLASS_VIDEO_BRIDGE for remote-endpoint\n",
+					__func__, dev_read_name(dev));
+				return -EINVAL;
+			}
+
+			ret = uclass_find_device_by_ofnode(UCLASS_PANEL, remote, panel);
+			if (*panel && !ret) {
+				ret = uclass_get_device_by_ofnode(UCLASS_PANEL, remote, panel);
+				break;
+			}
+		}
+	}
+
+	return ret;
+}
+
 static int stm32_ltdc_probe(struct udevice *dev)
 {
 	struct video_uc_plat *uc_plat = dev_get_uclass_plat(dev);
@@ -514,6 +645,7 @@ static int stm32_ltdc_probe(struct udevice *dev)
 	struct reset_ctl rst;
 	struct regmap *regmap = NULL;
 	struct udevice *syscon;
+	ofnode node, port;
 	ulong rate;
 	int ret;
 
@@ -569,7 +701,7 @@ static int stm32_ltdc_probe(struct udevice *dev)
 	}
 
 	priv->hw_version = readl(priv->regs + LTDC_IDR);
-	debug("%s: LTDC hardware 0x%x\n", __func__, priv->hw_version);
+	dev_dbg(dev, "%s: LTDC hardware 0x%x\n", __func__, priv->hw_version);
 
 	switch (priv->hw_version) {
 	case HWVER_10200:
@@ -590,12 +722,36 @@ static int stm32_ltdc_probe(struct udevice *dev)
 		return -ENODEV;
 	}
 
-	ret = uclass_first_device_err(UCLASS_PANEL, &panel);
-	if (ret) {
-		if (ret != -ENODEV)
-			dev_err(dev, "panel device error %d\n", ret);
-		return ret;
+	/*
+	 * Try all the ports until one working.
+	 *
+	 * This means that it will search first for the DSI node
+	 * and then for the LVDS.
+	 * This is done in two times. First is checks for the
+	 * UCLASS_VIDEO_BRIDGE available, and then for this bridge
+	 * it scans for a UCLASS_PANEL.
+	 */
+
+	port = dev_read_subnode(dev, "port");
+	if (!ofnode_valid(port)) {
+		dev_err(dev, "%s(%s): 'port' subnode not found\n",
+			__func__, dev_read_name(dev));
+		return -EINVAL;
 	}
+
+	for (node = ofnode_first_subnode(port);
+	     ofnode_valid(node);
+	     node = dev_read_next_subnode(node)) {
+		ret = stm32_ltdc_display_init(dev, &node, &panel, &bridge);
+		if (ret)
+			dev_dbg(dev, "Device failed ret=%d\n", ret);
+		else
+			break;
+	}
+
+	/* Sanity check */
+	if (ret)
+		return ret;
 
 	ret = panel_get_display_timing(panel, &timings);
 	if (ret) {
@@ -625,11 +781,6 @@ static int stm32_ltdc_probe(struct udevice *dev)
 	reset_deassert(&rst);
 
 	if (IS_ENABLED(CONFIG_VIDEO_BRIDGE)) {
-		ret = uclass_get_device(UCLASS_VIDEO_BRIDGE, 0, &bridge);
-		if (ret)
-			dev_dbg(dev,
-				"No video bridge, or no backlight on bridge\n");
-
 		if (bridge) {
 			/* Set the pixel clock according to the encoder */
 			if (IS_ENABLED(CONFIG_SYSCON) && IS_ENABLED(CONFIG_STM32MP25X)) {
@@ -643,7 +794,7 @@ static int stm32_ltdc_probe(struct udevice *dev)
 
 			ret = video_bridge_attach(bridge);
 			if (ret) {
-				dev_err(bridge, "fail to attach bridge\n");
+				dev_dbg(bridge, "fail to attach bridge\n");
 				return ret;
 			}
 
