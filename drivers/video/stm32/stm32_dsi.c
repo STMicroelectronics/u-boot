@@ -804,6 +804,62 @@ static const struct mipi_dsi_phy_ops dsi_stm_phy_141_ops = {
 	.get_timing = dsi_phy_141_get_timing,
 };
 
+static int stm32_dsi_get_panel(struct udevice *dev, struct udevice **panel)
+{
+	ofnode ep_node, node, ports, remote;
+	u32 remote_phandle;
+	int ret;
+
+	ports = ofnode_find_subnode(dev_ofnode(dev), "ports");
+	if (!ofnode_valid(ports)) {
+		dev_dbg(dev, "Remote bridge subnode\n");
+		return ret;
+	}
+
+	for (node = ofnode_first_subnode(ports);
+	     ofnode_valid(node);
+	     node = dev_read_next_subnode(node)) {
+		ep_node = ofnode_first_subnode(node);
+		if (!ofnode_valid(ep_node))
+			continue;
+
+		ret = ofnode_read_u32(ep_node, "remote-endpoint", &remote_phandle);
+		if (ret) {
+			dev_dbg(dev, "%s(%s): Could not find remote-endpoint property\n",
+				__func__, dev_read_name(dev));
+			return ret;
+		}
+
+		remote = ofnode_get_by_phandle(remote_phandle);
+		if (!ofnode_valid(remote)) {
+			dev_dbg(dev, "%s(%s): Remote is not valid\n", __func__, dev_read_name(dev));
+			return -EINVAL;
+		}
+
+		while (ofnode_valid(remote)) {
+			remote = ofnode_get_parent(remote);
+			if (!ofnode_valid(remote)) {
+				dev_dbg(dev, "%s(%s): no UCLASS_DISPLAY for remote-endpoint\n",
+					__func__, dev_read_name(dev));
+				continue;
+			}
+
+			uclass_get_device_by_ofnode(UCLASS_PANEL, remote, panel);
+			if (*panel)
+				break;
+		}
+	}
+
+	/* Sanity check, we can get out of the loop without having a clean ofnode */
+	if (!(*panel))
+		ret = -EINVAL;
+	else
+		if (!ofnode_valid(dev_ofnode(*panel)))
+			ret = -EINVAL;
+
+	return ret;
+}
+
 static int stm32_dsi_attach(struct udevice *dev)
 {
 	struct stm32_dsi_priv *priv = dev_get_priv(dev);
@@ -812,13 +868,18 @@ static int stm32_dsi_attach(struct udevice *dev)
 	struct display_timing timings;
 	int ret;
 
-	ret = uclass_first_device_err(UCLASS_PANEL, &priv->panel);
+	ret = stm32_dsi_get_panel(dev, &priv->panel);
 	if (ret) {
-		dev_err(dev, "panel device error %d\n", ret);
+		dev_err(dev, "No panel found %d\n", ret);
 		return ret;
 	}
 
 	mplat = dev_get_plat(priv->panel);
+
+	/* check that the panel contains platform data */
+	if (!mplat)
+		return -EINVAL;
+
 	mplat->device = &priv->device;
 	device->lanes = mplat->lanes;
 	device->format = mplat->format;
