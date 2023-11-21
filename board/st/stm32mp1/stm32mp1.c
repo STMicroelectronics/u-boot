@@ -867,7 +867,7 @@ int board_late_init(void)
 	char dtb_name[256];
 	int buf_len;
 
-	if (board_is_stm32mp15x_ev1())
+	if (IS_ENABLED(CONFIG_VIDEO_LCD_RAYDIUM_RM68200) && board_is_stm32mp15x_ev1())
 		board_stm32mp15x_ev1_init();
 
 	if (board_is_stm32mp15x_dk2())
