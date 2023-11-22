@@ -31,10 +31,12 @@
 #include <asm/io.h>
 #include <asm/byteorder.h>
 #include <asm/unaligned.h>
+#include <dm/device_compat.h>
 #include <dm/of_access.h>
 #include <dm/ofnode.h>
 #include <env_internal.h>
 #include <linux/delay.h>
+#include <linux/ioport.h>
 #include <linux/sizes.h>
 #include <mtd/cfi_flash.h>
 #include <mtd/sfdp_flash.h>
@@ -2682,7 +2684,9 @@ static int cfi_flash_probe(struct udevice *dev)
 {
 	fdt_addr_t addr;
 	fdt_size_t size;
-	int idx;
+	struct ofnode_phandle_args args;
+	struct resource res;
+	int idx, ret;
 
 	/*
 	 * first, check if parent's node has a "status" property
@@ -2691,16 +2695,33 @@ static int cfi_flash_probe(struct udevice *dev)
 	if (!dev_read_enabled(dev_get_parent(dev)))
 		return -ENODEV;
 
-	for (idx = 0; idx < CFI_MAX_FLASH_BANKS; idx++) {
-		addr = dev_read_addr_size_index(dev, idx, &size);
-		if (addr == FDT_ADDR_T_NONE)
-			break;
+	ret = dev_read_phandle_with_args(dev_get_parent(dev), "memory-region", NULL, 0, 0, &args);
+	if (!ret) {
+		for (idx = 0; idx < CFI_MAX_FLASH_BANKS; idx++) {
+			ret = ofnode_read_resource(args.node, idx, &res);
+			if (ret) {
+				dev_err(dev, "Can't get mmap base address(%d)\n", ret);
+				return ret;
+			}
 
-		flash_info[cfi_flash_num_flash_banks].dev = dev;
-		flash_info[cfi_flash_num_flash_banks].base = addr;
-		flash_info[cfi_flash_num_flash_banks].addr_size = size;
-		cfi_flash_num_flash_banks++;
+			flash_info[cfi_flash_num_flash_banks].dev = dev;
+			flash_info[cfi_flash_num_flash_banks].base = res.start;
+			flash_info[cfi_flash_num_flash_banks].addr_size = res.end - res.start + 1;
+			cfi_flash_num_flash_banks++;
+		}
+	} else {
+		for (idx = 0; idx < CFI_MAX_FLASH_BANKS; idx++) {
+			addr = dev_read_addr_size_index(dev, idx, &size);
+			if (addr == FDT_ADDR_T_NONE)
+				break;
+
+			flash_info[cfi_flash_num_flash_banks].dev = dev;
+			flash_info[cfi_flash_num_flash_banks].base = addr;
+			flash_info[cfi_flash_num_flash_banks].addr_size = size;
+			cfi_flash_num_flash_banks++;
+		}
 	}
+
 	gd->bd->bi_flashstart = flash_info[0].base;
 
 	return 0;
