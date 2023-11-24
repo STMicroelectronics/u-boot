@@ -11,6 +11,7 @@ mtd-$(CONFIG_ALTERA_QSPI) += altera_qspi.o
 mtd-$(CONFIG_FLASH_CFI_DRIVER) += cfi_flash.o
 mtd-$(CONFIG_FLASH_CFI_MTD) += cfi_mtd.o
 mtd-$(CONFIG_FLASH_CFI_LEGACY) += jedec_flash.o
+mtd-$(CONFIG_FLASH_CFI_SFDP) += sfdp_flash.o
 mtd-$(CONFIG_STM32_FLASH) += stm32_flash.o
 mtd-$(CONFIG_STM32_HYPERBUS) += stm32_hyperbus.o
 mtd-$(CONFIG_RENESAS_RPC_HF) += renesas_rpc_hf.o

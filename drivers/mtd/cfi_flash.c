@@ -35,7 +35,9 @@
 #include <dm/ofnode.h>
 #include <env_internal.h>
 #include <linux/delay.h>
+#include <linux/sizes.h>
 #include <mtd/cfi_flash.h>
+#include <mtd/sfdp_flash.h>
 #include <watchdog.h>
 
 /*
@@ -601,6 +603,11 @@ static int flash_status_check(flash_info_t *info, flash_sect_t sector,
 	return ERR_OK;
 }
 
+static inline int manufact_match(flash_info_t *info, u32 manu)
+{
+	return info->manufacturer_id == ((manu & FLASH_VENDMASK) >> 16);
+}
+
 /*-----------------------------------------------------------------------
  * Wait for XSR.7 to be set, if it times out print an error, otherwise
  * do a full status check.
@@ -642,6 +649,30 @@ static int flash_full_status_check(flash_info_t *info, flash_sect_t sector,
 		}
 		flash_write_cmd(info, sector, 0, info->cmd_reset);
 		udelay(1);
+		break;
+	case CFI_CMDSET_AMD_STANDARD:
+		if (retcode == ERR_OK && manufact_match(info, CY_MANUFACT)) {
+			ushort st;
+
+			flash_write_cmd(info, sector, info->addr_unlock1,
+					FLASH_CMD_READ_STATUS);
+			st = flash_read_word(info, 0);
+
+			if (st & (FLASH_STATUS_ECLBS | FLASH_STATUS_PSLBS)) {
+				if (st & FLASH_STATUS_ECLBS) {
+					puts("Block Erase Error.\n");
+					retcode = ERR_NOT_ERASED;
+				} else if (st & FLASH_STATUS_VPENS) {
+					puts("Write Buffer Abort.\n");
+					retcode = ERR_ABORTED;
+				} else {
+					puts("Program Error.\n");
+					retcode = ERR_PROG_ERROR;
+				}
+				flash_write_cmd(info, 0, info->addr_unlock1,
+						FLASH_CMD_CLEAR_ERROR_STATUS);
+			}
+		}
 		break;
 	default:
 		break;
@@ -996,6 +1027,11 @@ static int flash_write_cfibuffer(flash_info_t *info, ulong dest, uchar *cp,
 #ifdef CONFIG_FLASH_SPANSION_S29WS_N
 		offset = ((unsigned long)dst - info->start[sector]) >> shift;
 #endif
+		if (manufact_match(info, CY_MANUFACT) &&
+		    flash_sector_size(info, sector) != SZ_256K)
+			offset = (((unsigned long)dst - info->start[sector]) &
+				  ~(SZ_4K - 1)) >> shift;
+
 		flash_write_cmd(info, sector, offset, AMD_CMD_WRITE_TO_BUFFER);
 		cnt = len >> shift;
 		flash_write_cmd(info, sector, offset, cnt - 1);
@@ -1030,7 +1066,10 @@ static int flash_write_cfibuffer(flash_info_t *info, ulong dest, uchar *cp,
 			goto out_unmap;
 		}
 
-		flash_write_cmd(info, sector, 0, AMD_CMD_WRITE_BUFFER_CONFIRM);
+		if (!manufact_match(info, CY_MANUFACT))
+			offset = 0;
+
+		flash_write_cmd(info, sector, offset, AMD_CMD_WRITE_BUFFER_CONFIRM);
 		if (use_flash_status_poll(info))
 			retcode = flash_status_poll(info, src - (1 << shift),
 						    dst - (1 << shift),
@@ -1052,6 +1091,29 @@ out_unmap:
 	return retcode;
 }
 #endif /* CONFIG_SYS_FLASH_USE_BUFFER_WRITE */
+
+static int flash_blank_check(flash_info_t *info, int sect)
+{
+	int retcode;
+
+	/* Issue Blank Check command */
+	flash_write_cmd(info, sect, info->addr_unlock1, 0x33);
+
+	/* Wait till ready */
+	retcode = flash_status_check(info, sect, info->erase_blk_tout,
+				     "blkchk");
+	if (retcode)
+		return 0; /* Not erased in any error cases */
+
+	/* Read status again to check erase status */
+	flash_write_cmd(info, sect, info->addr_unlock1, FLASH_CMD_READ_STATUS);
+	if (flash_isset(info, sect, 0, FLASH_STATUS_ECLBS)) {
+		flash_write_cmd(info, 0, info->addr_unlock1, 0x71);
+		return 0;
+	}
+
+	return 1; /* erased */
+}
 
 /*-----------------------------------------------------------------------
  */
@@ -1089,32 +1151,41 @@ int flash_erase(flash_info_t *info, int s_first, int s_last)
 		}
 
 		if (info->protect[sect] == 0) { /* not protected */
-#ifdef CONFIG_SYS_FLASH_CHECK_BLANK_BEFORE_ERASE
-			int k;
-			int size;
-			int erased;
-			u32 *flash;
+			if (IS_ENABLED(CONFIG_SYS_FLASH_CHECK_BLANK_BEFORE_ERASE)) {
+				int k;
+				int size;
+				int erased;
+				u32 *flash;
 
-			/*
-			 * Check if whole sector is erased
-			 */
-			size = flash_sector_size(info, sect);
-			erased = 1;
-			flash = (u32 *)info->start[sect];
-			/* divide by 4 for longword access */
-			size = size >> 2;
-			for (k = 0; k < size; k++) {
-				if (flash_read32(flash++) != 0xffffffff) {
-					erased = 0;
-					break;
+				if (manufact_match(info, CY_MANUFACT) &&
+				    flash_blank_check(info, sect)) {
+					if (flash_verbose)
+						putc(',');
+					continue;
+				}
+
+				/*
+				 * Check if whole sector is erased
+				 */
+				size = flash_sector_size(info, sect);
+				erased = 1;
+				flash = (u32 *)info->start[sect];
+				/* divide by 4 for longword access */
+				size = size >> 2;
+				for (k = 0; k < size; k++) {
+					if (flash_read32(flash++) != 0xffffffff) {
+						erased = 0;
+						break;
+					}
+				}
+
+				if (erased) {
+					if (flash_verbose)
+						putc(',');
+					continue;
 				}
 			}
-			if (erased) {
-				if (flash_verbose)
-					putc(',');
-				continue;
-			}
-#endif
+
 			switch (info->vendor) {
 			case CFI_CMDSET_INTEL_PROG_REGIONS:
 			case CFI_CMDSET_INTEL_STANDARD:
@@ -1187,6 +1258,9 @@ static int sector_erased(flash_info_t *info, int i)
 	int k;
 	int size;
 	u32 *flash;
+
+	if (manufact_match(info, CY_MANUFACT))
+		return flash_blank_check(info, i);
 
 	/*
 	 * Check if whole sector is erased
@@ -1434,11 +1508,6 @@ int write_buff(flash_info_t *info, uchar *src, ulong addr, ulong cnt)
 		flash_add_byte(info, &cword, flash_read8(p + i));
 
 	return flash_write_cfiword(info, wp, cword);
-}
-
-static inline int manufact_match(flash_info_t *info, u32 manu)
-{
-	return info->manufacturer_id == ((manu & FLASH_VENDMASK) >> 16);
 }
 
 /*-----------------------------------------------------------------------
@@ -1866,6 +1935,115 @@ static inline int flash_detect_legacy(phys_addr_t base, int banknum)
 	return 0; /* use CFI */
 }
 #endif
+
+#define S26_CMD_READ_VCR1	0xC7
+#define S26_CMD_READ_VCR2	0xC9
+#define S26_CFR1V_UNIFORM	BIT(9)
+#define S26_CFR1V_TP4KBS	BIT(8)
+#define S26_CFR2V_SP4KBS	BIT(2)
+#define S26_MAX_ERASE_REGIONS	(5)
+
+struct erase_info {
+	uint size;
+	uint blocks;
+};
+
+static struct erase_info regions[S26_MAX_ERASE_REGIONS];
+
+static void flash_add_erase_info(struct erase_info **region, uint size, uint blocks)
+{
+	(*region)->size = size;
+	(*region)->blocks = blocks;
+	(*region)++;
+}
+
+static void flash_fixup_s26(flash_info_t *info, ulong base)
+{
+	struct erase_info *r = regions;
+	ushort cfr1v, cfr2v;
+	uchar btm4ks, top4ks;
+	int i, j, sect_cnt;
+
+	flash_unlock_seq(info, 0);
+	flash_write_cmd(info, 0, info->addr_unlock1, S26_CMD_READ_VCR1);
+	cfr1v = flash_read_word(info, 0);
+
+	flash_unlock_seq(info, 0);
+	flash_write_cmd(info, 0, info->addr_unlock1, S26_CMD_READ_VCR2);
+	cfr2v = flash_read_word(info, 0);
+
+	if (cfr1v & S26_CFR1V_UNIFORM) {
+		btm4ks = 0;
+		top4ks = 0;
+	} else if (cfr2v & S26_CFR2V_SP4KBS) {
+		btm4ks = 16;
+		top4ks = 16;
+	} else if (cfr1v & S26_CFR1V_TP4KBS) {
+		btm4ks = 0;
+		top4ks = 32;
+	} else {
+		btm4ks = 32;
+		top4ks = 0;
+	}
+
+	if (btm4ks) {
+		flash_add_erase_info(&r, SZ_4K, btm4ks);
+		flash_add_erase_info(&r, SZ_256K - SZ_4K * btm4ks, 1);
+	}
+
+	flash_add_erase_info(&r, SZ_256K, info->size / SZ_256K - !!(btm4ks) - !!(top4ks));
+
+	if (top4ks) {
+		flash_add_erase_info(&r, SZ_256K - SZ_4K * top4ks, 1);
+		flash_add_erase_info(&r, SZ_4K, top4ks);
+	}
+
+	sect_cnt = 0;
+	for (i = 0; i < r - regions; i++) {
+		for (j = 0; j < regions[i].blocks; j++) {
+			if (sect_cnt >= CONFIG_SYS_MAX_FLASH_SECT) {
+				printf("ERROR: too many flash sectors\n");
+				break;
+			}
+			info->start[sect_cnt] = base;
+			base += regions[i].size;
+			sect_cnt++;
+		}
+	}
+	info->sector_count = sect_cnt;
+}
+
+static void flash_fixup_sfdp(flash_info_t *info, ulong base)
+{
+	if (manufact_match(info, CY_MANUFACT))
+		flash_fixup_s26(info, base);
+}
+
+static int flash_detect_sfdp(phys_addr_t base, int banknum)
+{
+	flash_info_t *info = &flash_info[banknum];
+	void *addr;
+	int ret;
+
+	if (!IS_ENABLED(CONFIG_FLASH_CFI_SFDP))
+		return 0;
+
+	info->start[0] = (ulong)map_physmem(base, 0, MAP_NOCACHE);
+	info->portwidth = FLASH_CFI_16BIT;
+	info->chipwidth = FLASH_CFI_BY16;
+	info->chip_lsb = 0;
+
+	flash_write_cmd(info, 0, FLASH_OFFSET_CFI_ALT, FLASH_CMD_CFI);
+	addr = flash_map(info, 0, 0);
+	ret = sfdp_flash_scan(info, addr);
+	flash_unmap(info, 0, 0, addr);
+	flash_cmd_reset(info);
+
+	if (ret)
+		flash_fixup_sfdp(info, info->start[0]);
+
+	return ret;
+}
 
 /*-----------------------------------------------------------------------
  * detect if flash is compatible with the Common Flash Interface (CFI)
@@ -2429,7 +2607,8 @@ unsigned long flash_init(void)
 		cfi_flash_set_config_reg(cfi_flash_bank_addr(i),
 					 cfi_flash_config_reg(i));
 
-		if (!flash_detect_legacy(cfi_flash_bank_addr(i), i))
+		if (!flash_detect_legacy(cfi_flash_bank_addr(i), i) &&
+		    !flash_detect_sfdp(cfi_flash_bank_addr(i), i))
 			flash_get_size(cfi_flash_bank_addr(i), i);
 		size += flash_info[i].size;
 		if (flash_info[i].flash_id == FLASH_UNKNOWN) {
@@ -2530,6 +2709,7 @@ static int cfi_flash_probe(struct udevice *dev)
 static const struct udevice_id cfi_flash_ids[] = {
 	{ .compatible = "cfi-flash" },
 	{ .compatible = "jedec-flash" },
+	{ .compatible = "sfdp-flash" },
 	{}
 };
 

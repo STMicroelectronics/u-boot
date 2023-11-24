@@ -134,6 +134,13 @@ config FLASH_CFI_MTD
 	  in the drivers directory. The driver exports CFI flash
 	  to the MTD layer.
 
+ config FLASH_CFI_SFDP
+	bool "Enable SFDP parsing"
+	depends on FLASH_CFI_DRIVER
+	help
+	  This option enables the SFDP parsing which allows
+	  to support SEMPER flashes.
+
 config SYS_FLASH_PROTECTION
 	bool "Use hardware flash protection"
 	depends on FLASH_CFI_DRIVER
