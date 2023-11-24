@@ -20,6 +20,13 @@
 #define READ	1
 #define NSEC_PER_SEC		1000000000L
 
+/* HyperBus Commands */
+#define HYPERBUS_ADDR_UNLOCK1	0x555
+#define HYPERBUS_ADDR_UNLOCK2	0x2AA
+#define HYPERBUS_CMD_UNLOCK1	0xAA
+#define HYPERBUS_CMD_UNLOCK2	0x55
+#define HYPERBUS_CMD_RDSFDP	0x90
+
 struct stm32_hb_priv {
 	struct udevice *dev;
 	struct udevice *omi_dev;
@@ -117,6 +124,32 @@ void flash_write16(u16 value, void *addr)
 		dev_err(priv->dev, "%s failed, ret=%i\n", __func__, ret);
 };
 
+static int stm32_hb_test_sfdp(struct udevice *omi_dev)
+{
+	struct stm32_omi_plat *omi_plat = dev_get_plat(omi_dev);
+	phys_addr_t mm_base = omi_plat->mm_base;
+	int ret = -EIO;
+	u16 sfdp[2];
+
+	/* Reset */
+	flash_write16(AMD_CMD_RESET, (void *)mm_base);
+	flash_write16(HYPERBUS_CMD_UNLOCK1, (void *)mm_base + (HYPERBUS_ADDR_UNLOCK1 << 1));
+	flash_write16(HYPERBUS_CMD_UNLOCK2, (void *)mm_base + (HYPERBUS_ADDR_UNLOCK2 << 1));
+	flash_write16(HYPERBUS_CMD_RDSFDP, (void *)mm_base + (HYPERBUS_ADDR_UNLOCK1 << 1));
+
+	sfdp[0] = readw(mm_base);
+	sfdp[1] = readw(mm_base + 0x2);
+
+	/* compare with "SF" & "DP" */
+	if (sfdp[0] == 0x4653 && sfdp[1] == 0x5044)
+		ret = 0;
+
+	/* Reset CFI */
+	flash_write16(AMD_CMD_RESET, (void *)mm_base);
+
+	return ret;
+}
+
 static int stm32_hb_test_cfi(struct udevice *omi_dev)
 {
 	struct stm32_omi_plat *omi_plat = dev_get_plat(omi_dev);
@@ -139,6 +172,16 @@ static int stm32_hb_test_cfi(struct udevice *omi_dev)
 	flash_write16(FLASH_CMD_RESET, (void *)mm_base);
 
 	return ret;
+}
+
+static int stm32_hb_check_transfer(struct udevice *omi_dev)
+{
+	struct stm32_omi_plat *omi_plat = dev_get_plat(omi_dev);
+
+	if (omi_plat->jedec_flash)
+		return stm32_hb_test_sfdp(omi_dev);
+	else
+		return stm32_hb_test_cfi(omi_dev);
 }
 
 static int stm32_hb_calibrate(struct stm32_hb_priv *priv)
@@ -266,7 +309,7 @@ static int stm32_hb_probe(struct udevice *dev)
 	udelay(2);
 	reset_deassert_bulk(&omi_plat->rst_ctl);
 
-	omi_priv->check_transfer = stm32_hb_test_cfi;
+	omi_priv->check_transfer = stm32_hb_check_transfer;
 	stm32_hb_init(dev);
 
 	return stm32_hb_calibrate(priv);
