@@ -10,3 +10,7 @@
 		u-boot,mmc-env-partition = "u-boot-env";
 	};
 };
+
+&dwc3 {
+	dr_mode = "peripheral";
+};
