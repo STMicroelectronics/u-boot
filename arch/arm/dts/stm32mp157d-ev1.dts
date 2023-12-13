@@ -495,6 +495,8 @@
 		panel = <&panel_dsi>;
 		pinctrl-0 = <&goodix_pins>;
 		pinctrl-names = "default";
+		AVDD28-supply = <&v3v3>;
+		VDDIO-supply = <&v3v3>;
 		status = "okay";
 
 		interrupts = <14 IRQ_TYPE_EDGE_RISING>;
@@ -667,7 +669,7 @@
 	status = "disabled";
 };
 
-&sram {
+&sram4 {
 	dcmi_pool: dcmi_pool@0 {
 		reg = <0x0 0x8000>;
 		pool;

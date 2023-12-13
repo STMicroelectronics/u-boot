@@ -6,7 +6,7 @@
 #include "stm32mp253.dtsi"
 
 / {
-	soc {
+	soc@0 {
 		rifsc: rifsc@42080000 {
 			vdec: vdec@480d0000 {
 				compatible = "st,stm32mp25-vdec";
@@ -17,6 +17,7 @@
 				clock-names = "vdec-clk";
 				clocks = <&rcc CK_BUS_VDEC>;
 				feature-domains = <&rifsc STM32MP25_RIFSC_VDEC_ID>;
+				power-domains = <&CLUSTER_PD>;
 			};
 			venc: venc@480e0000 {
 				compatible = "st,stm32mp25-venc";
@@ -28,6 +29,7 @@
 				clock-names = "venc-clk";
 				clocks = <&rcc CK_BUS_VENC>;
 				feature-domains = <&rifsc STM32MP25_RIFSC_VENC_ID>;
+				power-domains = <&CLUSTER_PD>;
 			};
 
 			gpu: gpu@48280000 {

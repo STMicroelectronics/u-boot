@@ -6,7 +6,7 @@
 #include "stm32mp255.dtsi"
 
 / {
-	soc {
+	soc@0 {
 		rifsc: rifsc@42080000 {
 			switch0: ttt-sw@4c000000 {
 				#address-cells  = <1>;

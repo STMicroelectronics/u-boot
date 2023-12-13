@@ -3,6 +3,7 @@
  * Copyright (C) STMicroelectronics 2023 - All Rights Reserved
  * Author: Alexandre Torgue <alexandre.torgue@foss.st.com> for STMicroelectronics.
  */
+#include <dt-bindings/bus/stm32mp25_sys_bus.h>
 
 &rifsc {
 	cryp1: crypto@42030000 {
@@ -15,6 +16,7 @@
 		       <&hpdma 5 0x43 0x3012 0x0>;
 		dma-names = "in", "out";
 		feature-domains = <&rifsc STM32MP25_RIFSC_CRYP1_ID>;
+		power-domains = <&CLUSTER_PD>;
 		status = "disabled";
 	};
 };

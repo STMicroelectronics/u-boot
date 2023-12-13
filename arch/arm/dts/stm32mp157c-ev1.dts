@@ -9,7 +9,6 @@
 #include "stm32mp157c-ev1-scmi.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
-#include <dt-bindings/media/video-interfaces.h>
 
 / {
 	model = "STMicroelectronics STM32MP157C eval daughter on eval mother";
@@ -193,7 +192,7 @@
 	port {
 		dcmi_0: endpoint {
 			remote-endpoint = <&ov5640_0>;
-			bus-type = <MEDIA_BUS_TYPE_PARALLEL>;
+			bus-type = <5>;
 			bus-width = <8>;
 			hsync-active = <0>;
 			vsync-active = <0>;
@@ -315,7 +314,26 @@
 	#size-cells = <0>;
 	status = "okay";
 
-	panel_dsi: panel@0 {
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			dsi_in: endpoint {
+				remote-endpoint = <&ltdc_ep0_out>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			dsi_out: endpoint {
+				remote-endpoint = <&dsi_panel_in>;
+			};
+		};
+	};
+
+	panel_dsi: panel-dsi@0 {
 		compatible = "raydium,rm68200";
 		reg = <0>;
 		reset-gpios = <&gpiof 15 GPIO_ACTIVE_LOW>;
@@ -331,14 +349,6 @@
 	};
 };
 
-&dsi_in {
-	remote-endpoint = <&ltdc_ep0_out>;
-};
-
-&dsi_out {
-	remote-endpoint = <&dsi_panel_in>;
-};
-
 &ethernet0 {
 	status = "okay";
 	pinctrl-0 = <&ethernet0_rgmii_pins_a>;
@@ -348,7 +358,7 @@
 	max-speed = <1000>;
 	phy-handle = <&phy0>;
 
-	mdio {
+	mdio0 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "snps,dwmac-mdio";
@@ -433,9 +443,7 @@
 		reg = <0x3c>;
 		clocks = <&clk_ext_camera>;
 		clock-names = "xclk";
-		AVDD-supply = <&v2v8>;
 		DOVDD-supply = <&v2v8>;
-		DVDD-supply = <&v2v8>;
 		powerdown-gpios = <&stmfx_pinctrl 18 (GPIO_ACTIVE_HIGH | GPIO_PUSH_PULL)>;
 		reset-gpios = <&stmfx_pinctrl 19 (GPIO_ACTIVE_LOW | GPIO_PUSH_PULL)>;
 		rotation = <180>;
@@ -487,6 +495,8 @@
 		panel = <&panel_dsi>;
 		pinctrl-0 = <&goodix_pins>;
 		pinctrl-names = "default";
+		AVDD28-supply = <&v3v3>;
+		VDDIO-supply = <&v3v3>;
 		status = "okay";
 
 		interrupts = <14 IRQ_TYPE_EDGE_RISING>;
@@ -659,7 +669,7 @@
 	status = "disabled";
 };
 
-&sram {
+&sram4 {
 	dcmi_pool: dcmi_pool@0 {
 		reg = <0x0 0x8000>;
 		pool;
@@ -671,6 +681,9 @@
 	/delete-property/dmas;
 	/delete-property/dma-names;
 	status = "disabled";
+	counter {
+		status = "okay";
+	};
 	pwm {
 		pinctrl-0 = <&pwm2_pins_a>;
 		pinctrl-1 = <&pwm2_sleep_pins_a>;
@@ -686,6 +699,9 @@
 	/delete-property/dmas;
 	/delete-property/dma-names;
 	status = "disabled";
+	counter {
+		status = "okay";
+	};
 	pwm {
 		pinctrl-0 = <&pwm8_pins_a>;
 		pinctrl-1 = <&pwm8_sleep_pins_a>;
@@ -701,6 +717,9 @@
 	/delete-property/dmas;
 	/delete-property/dma-names;
 	status = "disabled";
+	counter {
+		status = "okay";
+	};
 	pwm {
 		pinctrl-0 = <&pwm12_pins_a>;
 		pinctrl-1 = <&pwm12_sleep_pins_a>;
@@ -770,7 +789,6 @@
 	st,tune-squelch-level = <3>;
 	st,tune-hs-rx-offset = <2>;
 	st,no-lsfs-sc;
-
 	connector {
 		compatible = "usb-a-connector";
 		vbus-supply = <&vbus_sw>;

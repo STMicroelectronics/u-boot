@@ -29,7 +29,7 @@
 
 	memory@c0000000 {
 		device_type = "memory";
-		reg = <0xC0000000 0x40000000>;
+		reg = <0xc0000000 0x40000000>;
 	};
 
 	reserved-memory {
@@ -79,6 +79,11 @@
 			no-map;
 		};
 
+		gpu_reserved: gpu@e8000000 {
+			reg = <0xe8000000 0x8000000>;
+			no-map;
+		};
+
 		/* global autoconfigured region for contiguous allocations */
 		linux,cma {
 			compatible = "shared-dma-pool";
@@ -99,7 +104,7 @@
 		};
 	};
 
-	sd_switch: regulator-sd_switch {
+	sd_switch: regulator-sd-switch {
 		compatible = "regulator-gpio";
 		regulator-name = "sd_switch";
 		regulator-min-microvolt = <1800000>;
@@ -184,6 +189,10 @@
 
 &dts {
 	status = "okay";
+};
+
+&gpu {
+	contiguous-area = <&gpu_reserved>;
 };
 
 &hash1 {
@@ -306,7 +315,7 @@
 				interrupts = <IT_CURLIM_LDO6 0>;
 			};
 
-			vref_ddr: vref_ddr {
+			vref_ddr: vref-ddr {
 				regulator-name = "vref_ddr";
 				regulator-always-on;
 			};
@@ -316,16 +325,16 @@
 				interrupts = <IT_OCP_BOOST 0>;
 			};
 
-			vbus_otg: pwr_sw1 {
+			vbus_otg: pwr-sw1 {
 				regulator-name = "vbus_otg";
 				interrupts = <IT_OCP_OTG 0>;
-			 };
+			};
 
-			 vbus_sw: pwr_sw2 {
+			vbus_sw: pwr-sw2 {
 				regulator-name = "vbus_sw";
 				interrupts = <IT_OCP_SWOUT 0>;
 				regulator-active-discharge = <1>;
-			 };
+			};
 		};
 
 		onkey {
