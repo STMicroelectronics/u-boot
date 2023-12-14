@@ -13,6 +13,7 @@
 	config {
 		u-boot,boot-led = "led-blue";
 		u-boot,mmc-env-partition = "u-boot-env";
+		st,stm32prog-gpios = <&gpioc 11 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 	};
 };
 
