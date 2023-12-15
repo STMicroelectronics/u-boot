@@ -124,7 +124,7 @@
 		compatible = "edt,etml0700z9ndha", "panel-lvds";
 		enable-gpios = <&gpioi 4 GPIO_ACTIVE_HIGH>;
 		backlight = <&panel_lvds_backlight>;
-		status = "okay";
+		status = "disabled";
 
 		width-mm = <156>;
 		height-mm = <92>;
@@ -216,7 +216,7 @@
 };
 
 &dsi {
-	status = "okay";
+	status = "disabled";
 
 	ports {
 		#address-cells = <1>;
@@ -430,7 +430,7 @@
 };
 
 &ltdc {
-	status = "okay";
+	status = "disabled";
 
 	port {
 		#address-cells = <1>;
@@ -449,7 +449,7 @@
 };
 
 &lvds {
-	status = "okay";
+	status = "disabled";
 	backlight = <&panel_lvds_backlight>;
 	ports {
 		#address-cells = <1>;
