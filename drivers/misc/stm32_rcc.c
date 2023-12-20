@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright (C) 2017, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2017-2024, STMicroelectronics - All Rights Reserved
  * Author(s): Patrice Chotard, <patrice.chotard@foss.st.com> for STMicroelectronics.
  */
 
@@ -48,6 +48,11 @@ static const struct stm32_rcc stm32_rcc_mp13 = {
 	.drv_name_rst = "stm32mp1_reset",
 };
 
+static const struct stm32_rcc stm32_rcc_mp21 = {
+	.drv_name_clk = "stm32mp21_clk",
+	.drv_name_rst = "stm32mp21_reset",
+};
+
 static const struct stm32_rcc stm32_rcc_mp25 = {
 	.drv_name_clk = "stm32mp25_clk",
 	.drv_name_rst = "stm32mp25_reset",
@@ -92,6 +97,7 @@ static const struct udevice_id stm32_rcc_ids[] = {
 	{.compatible = "st,stm32mp1-rcc", .data = (ulong)&stm32_rcc_mp1 },
 	{.compatible = "st,stm32mp1-rcc-secure", .data = (ulong)&stm32_rcc_mp1 },
 	{.compatible = "st,stm32mp13-rcc", .data = (ulong)&stm32_rcc_mp13 },
+	{.compatible = "st,stm32mp21-rcc", .data = (ulong)&stm32_rcc_mp21 },
 	{.compatible = "st,stm32mp25-rcc", .data = (ulong)&stm32_rcc_mp25 },
 	{ }
 };
