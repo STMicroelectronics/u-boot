@@ -57,9 +57,9 @@ static int stm32_copro_probe(struct udevice *dev)
 	struct rproc_optee *trproc = &priv->trproc;
 	int ret;
 
-	trproc->fw_id = (u32)dev_get_driver_data(dev);
+	trproc->proc_id = (u32)dev_get_driver_data(dev);
 
-	if (trproc->fw_id == STM32MP25_M33_FW_ID) {
+	if (trproc->proc_id == STM32MP25_M33_FW_ID) {
 		ret = nvmem_cell_get_by_name(dev, "rsc-tbl-addr", &priv->rsc_t_addr_cell);
 		if (ret && ret != -ENODATA)
 			return ret;
@@ -118,10 +118,10 @@ static void *stm32_copro_device_to_virt(struct udevice *dev, ulong da,
 					ulong size)
 {
 	fdt32_t in_addr = cpu_to_be32(da), end_addr;
-	unsigned int fw_id = (u32)dev_get_driver_data(dev);
+	unsigned int proc_id = (u32)dev_get_driver_data(dev);
 	phys_addr_t paddr;
 
-	if (fw_id == STM32MP15_M4_FW_ID) {
+	if (proc_id == STM32MP15_M4_FW_ID) {
 		paddr = dev_translate_dma_address(dev, &in_addr);
 		if (paddr == OF_BAD_ADDR) {
 			dev_err(dev, "Unable to convert address %ld\n", da);
@@ -193,7 +193,7 @@ static int stm32_copro_start(struct udevice *dev)
 {
 	struct stm32_copro_privdata *priv = dev_get_priv(dev);
 	struct rproc_optee *trproc = &priv->trproc;
-	unsigned int fw_id = (u32)dev_get_driver_data(dev);
+	unsigned int proc_id = (u32)dev_get_driver_data(dev);
 	phys_size_t rsc_size;
 	phys_addr_t rsc_addr;
 	int ret;
@@ -228,13 +228,13 @@ static int stm32_copro_start(struct udevice *dev)
 				ret);
 	}
 
-	if (fw_id == STM32MP15_M4_FW_ID) {
+	if (proc_id == STM32MP15_M4_FW_ID) {
 		/* Indicates that copro is running */
 		writel(TAMP_COPRO_STATE_CRUN, TAMP_COPRO_STATE);
 
 		/* Store rsc_address in bkp register */
 		writel(priv->rsc_table_addr, TAMP_COPRO_RSC_TBL_ADDRESS);
-	} else if (fw_id == STM32MP25_M33_FW_ID) {
+	} else if (proc_id == STM32MP25_M33_FW_ID) {
 		/* Store the resource table address and size in 32-bit registers*/
 		ret = nvmem_cell_write(&priv->rsc_t_addr_cell, &priv->rsc_table_addr, sizeof(u32));
 		if (ret)
@@ -262,7 +262,7 @@ static int stm32_copro_reset(struct udevice *dev)
 {
 	struct stm32_copro_privdata *priv = dev_get_priv(dev);
 	struct rproc_optee *trproc = &priv->trproc;
-	unsigned int fw_id = (u32)dev_get_driver_data(dev);
+	unsigned int proc_id = (u32)dev_get_driver_data(dev);
 	int ret;
 
 
@@ -290,10 +290,10 @@ static int stm32_copro_reset(struct udevice *dev)
 	priv->rsc_table_addr = 0;
 	priv->rsc_table_size = 0;
 
-	if (fw_id == STM32MP15_M4_FW_ID) {
+	if (proc_id == STM32MP15_M4_FW_ID) {
 		writel(TAMP_COPRO_STATE_OFF, TAMP_COPRO_STATE);
 		writel(priv->rsc_table_addr, TAMP_COPRO_RSC_TBL_ADDRESS);
-	} else if (fw_id == STM32MP25_M33_FW_ID) {
+	} else if (proc_id == STM32MP25_M33_FW_ID) {
 		ret = nvmem_cell_write(&priv->rsc_t_addr_cell, &priv->rsc_table_addr, sizeof(u32));
 		if (ret)
 			return ret;
@@ -323,9 +323,9 @@ static int stm32_copro_stop(struct udevice *dev)
  */
 static int stm32_copro_is_running(struct udevice *dev)
 {
-	unsigned int fw_id = (u32)dev_get_driver_data(dev);
+	unsigned int proc_id = (u32)dev_get_driver_data(dev);
 
-	if (fw_id == STM32MP15_M4_FW_ID)
+	if (proc_id == STM32MP15_M4_FW_ID)
 		return (readl(TAMP_COPRO_STATE) == TAMP_COPRO_STATE_OFF);
 	else
 		return -EOPNOTSUPP;
