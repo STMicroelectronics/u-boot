@@ -36,6 +36,7 @@ struct stm32_hb_priv {
 struct stm32_hb_plat {
 	ulong flash_freq;		/* flash max supported frequency */
 	u32 tacc;
+	u32 cs;
 	bool wzl;
 };
 
@@ -236,6 +237,9 @@ static void stm32_hb_init(struct udevice *dev)
 	/* enable IP */
 	setbits_le32(regs_base + OSPI_CR, OSPI_CR_EN);
 
+	clrsetbits_le32(regs_base + OSPI_CR, OSPI_CR_CSSEL,
+			FIELD_PREP(OSPI_CR_CSSEL, plat->cs));
+
 	/* set MTYP to HyperBus memory-map mode */
 	dcr1 = FIELD_PREP(OSPI_DCR1_MTYP_MASK, OSPI_DCR1_MTYP_HP_MEMMODE);
 	/* set DEVSIZE to memory map size */
@@ -319,8 +323,16 @@ static int stm32_hb_of_to_plat(struct udevice *dev)
 {
 	struct stm32_hb_plat *plat = dev_get_plat(dev);
 	ofnode flash_node;
+	int ret;
 
 	flash_node = dev_read_first_subnode(dev);
+
+	ret = ofnode_read_u32(flash_node, "reg", &plat->cs);
+	if (ret) {
+		dev_err(dev, "could not retrieve reg property: %d\n", ret);
+		return ret;
+	}
+
 	plat->flash_freq = ofnode_read_u32_default(flash_node, "st,max-frequency", 0);
 	if (!plat->flash_freq) {
 		dev_err(dev, "Can't find st,max-frequency property\n");
