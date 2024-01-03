@@ -9,12 +9,12 @@
 /**
  * struct rproc_optee - TEE remoteproc structure
  * @tee:	TEE device
- * @fw_id:	Identifier of the target firmware
+ * @proc_id:	Identifier of the target processor
  * @session:	TEE session identifier
  */
 struct rproc_optee {
 	struct udevice *tee;
-	u32 fw_id;
+	u32 proc_id;
 	u32 session;
 };
 

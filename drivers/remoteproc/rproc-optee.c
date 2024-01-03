@@ -76,7 +76,7 @@ static void prepare_args(struct rproc_optee *trproc, int cmd,
 
 	param[0] = (struct tee_param) {
 		.attr = TEE_PARAM_ATTR_TYPE_VALUE_INPUT,
-		.u.value.a = trproc->fw_id,
+		.u.value.a = trproc->proc_id,
 	};
 }
 
@@ -206,7 +206,7 @@ int rproc_optee_open(struct rproc_optee *trproc)
 	tee_optee_ta_uuid_to_octets(arg.uuid, &uuid);
 
 	param.attr = TEE_PARAM_ATTR_TYPE_VALUE_INPUT;
-	param.u.value.a = trproc->fw_id;
+	param.u.value.a = trproc->proc_id;
 
 	rc = tee_open_session(tee, &arg, 1, &param);
 	if (rc < 0 || arg.ret != 0) {
