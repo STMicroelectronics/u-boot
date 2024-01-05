@@ -92,15 +92,19 @@
 #define STM32MP_EXTRA \
 	"env_check=if env info -p -d -q; then env save; fi\0" \
 	"boot_net_usb_start=true\0"
-
+/*
+ * memory layout for 96MB uncompressed/compressed kernel,
+ * 1M fdt, 1M script, 1M pxe and 1M for overlay
+ * and the ramdisk at the end.
+ */
 #define __KERNEL_COMP_ADDR_R	__stringify(0x84000000)
 #define __KERNEL_COMP_SIZE_R	__stringify(0x04000000)
-#define __KERNEL_ADDR_R		__stringify(0x88000000)
-#define __FDT_ADDR_R		__stringify(0x8a000000)
-#define __SCRIPT_ADDR_R		__stringify(0x8a100000)
-#define __PXEFILE_ADDR_R	__stringify(0x8a200000)
-#define __FDTOVERLAY_ADDR_R	__stringify(0x8a300000)
-#define __RAMDISK_ADDR_R	__stringify(0x8a400000)
+#define __KERNEL_ADDR_R		__stringify(0x8a000000)
+#define __FDT_ADDR_R		__stringify(0x90000000)
+#define __SCRIPT_ADDR_R		__stringify(0x90100000)
+#define __PXEFILE_ADDR_R	__stringify(0x90200000)
+#define __FDTOVERLAY_ADDR_R	__stringify(0x90300000)
+#define __RAMDISK_ADDR_R	__stringify(0x90400000)
 
 #define STM32MP_MEM_LAYOUT \
 	"kernel_addr_r=" __KERNEL_ADDR_R "\0" \
