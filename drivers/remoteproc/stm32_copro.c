@@ -113,6 +113,32 @@ static int stm32_copro_remove(struct udevice *dev)
 }
 
 /**
+ * stm32_copro_device_to_phys() - Convert device address to physical address
+ * @dev:	corresponding STM32 remote processor device
+ * @da:		device address
+ * @size:	Size of the memory region @da is pointing to
+ * Return: converted physical address
+ */
+static phys_addr_t stm32_copro_device_to_phys(struct udevice *dev, ulong da,
+					      ulong size)
+{
+	fdt32_t in_addr = cpu_to_be32(da), end_addr;
+	phys_addr_t paddr;
+
+	paddr = dev_translate_dma_address(dev, &in_addr);
+	if (paddr == OF_BAD_ADDR) {
+		dev_err(dev, "Unable to convert address %ld\n", da);
+		return 0;
+	}
+	end_addr = cpu_to_be32(da + size - 1);
+	if (dev_translate_dma_address(dev, &end_addr) == OF_BAD_ADDR) {
+		dev_err(dev, "Unable to convert address %ld\n", da + size - 1);
+		return 0;
+	}
+
+	return paddr;
+}
+/**
  * stm32_copro_device_to_virt() - Convert device address to virtual address
  * @dev:	corresponding STM32 remote processor device
  * @da:		device address
@@ -122,25 +148,11 @@ static int stm32_copro_remove(struct udevice *dev)
 static void *stm32_copro_device_to_virt(struct udevice *dev, ulong da,
 					ulong size)
 {
-	fdt32_t in_addr = cpu_to_be32(da), end_addr;
-	unsigned int proc_id = (u32)dev_get_driver_data(dev);
 	phys_addr_t paddr;
 
-	if (proc_id == STM32MP15_M4_FW_ID) {
-		paddr = dev_translate_dma_address(dev, &in_addr);
-		if (paddr == OF_BAD_ADDR) {
-			dev_err(dev, "Unable to convert address %ld\n", da);
-			return NULL;
-		}
-		end_addr = cpu_to_be32(da + size - 1);
-		if (dev_translate_dma_address(dev, &end_addr) == OF_BAD_ADDR) {
-			dev_err(dev, "Unable to convert address %ld\n", da + size - 1);
-			return NULL;
-		}
-	} else {
-		/* No translation */
-		paddr = (phys_addr_t)da;
-	}
+	paddr = stm32_copro_device_to_phys(dev, da, size);
+	if (!paddr)
+		return NULL;
 
 	return phys_to_virt(paddr);
 }
@@ -157,6 +169,8 @@ static int stm32_copro_load(struct udevice *dev, ulong addr, ulong size)
 	struct stm32_copro_privdata *priv = dev_get_priv(dev);
 	struct rproc_optee *trproc = &priv->trproc;
 	ulong rsc_table_size = 0;
+	ulong rsc_table_addr = 0;
+	phys_addr_t paddr;
 	int ret;
 
 	if (trproc->tee)
@@ -174,17 +188,19 @@ static int stm32_copro_load(struct udevice *dev, ulong addr, ulong size)
 		return ret;
 	}
 
-	ret = rproc_elf32_load_rsc_table(dev, addr, size, &priv->rsc_table_addr,
+	priv->rsc_table_addr = 0;
+	ret = rproc_elf32_load_rsc_table(dev, addr, size, &rsc_table_addr,
 					 &rsc_table_size);
 	if (ret) {
 		if (ret != -ENODATA)
 			return ret;
-
 		dev_dbg(dev, "No resource table for this firmware\n");
-		priv->rsc_table_addr = 0;
 	}
-	priv->rsc_table_size = rsc_table_size;
 
+	paddr = stm32_copro_device_to_phys(dev, rsc_table_addr, rsc_table_size);
+
+	priv->rsc_table_addr = (ulong)paddr;
+	priv->rsc_table_size = rsc_table_size;
 
 	return rproc_elf32_load_image(dev, addr, size);
 }
