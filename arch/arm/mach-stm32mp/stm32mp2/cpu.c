@@ -241,8 +241,37 @@ static void setup_boot_mode(void)
 	clrsetbits_le32(TAMP_BOOT_CONTEXT, TAMP_BOOT_FORCED_MASK, BOOT_NORMAL);
 }
 
+static int setup_serial_number(void)
+{
+	char serial_string[25];
+	u32 otp[3] = {0, 0, 0 };
+	struct udevice *dev;
+	int ret;
+
+	if (env_get("serial#"))
+		return 0;
+
+	ret = uclass_get_device_by_driver(UCLASS_MISC,
+					  DM_DRIVER_GET(stm32mp_bsec),
+					  &dev);
+	if (ret)
+		return ret;
+
+	ret = misc_read(dev, STM32_BSEC_SHADOW(BSEC_OTP_SERIAL),
+			otp, sizeof(otp));
+	if (ret < 0)
+		return ret;
+
+	sprintf(serial_string, "%08X%08X%08X", otp[0], otp[1], otp[2]);
+	env_set("serial#", serial_string);
+
+	return 0;
+}
+
 int arch_misc_init(void)
 {
 	setup_boot_mode();
+	setup_serial_number();
+
 	return 0;
 }
