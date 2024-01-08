@@ -68,22 +68,27 @@ static int stm32_copro_probe(struct udevice *dev)
 			return ret;
 	}
 
-	ret = rproc_optee_open(trproc);
-	if (!ret) {
-		dev_info(dev, "delegate the firmware management to OPTEE\n");
-		return 0;
-	}
+	if (device_is_compatible(dev, "st,stm32mp1-m4-tee") ||
+	    device_is_compatible(dev, "st,stm32mp2-m33-tee")) {
+		ret = rproc_optee_open(trproc);
+		if (ret) {
+			dev_err(dev, "failed to delegate to OP-TEE\n");
+			return ret;
+		}
 
-	ret = reset_get_by_name(dev, "mcu_rst", &priv->reset_ctl);
-	if (ret) {
-		dev_err(dev, "failed to get reset (%d)\n", ret);
-		return ret;
-	}
+		dev_info(dev, "delegate the firmware management to OP-TEE\n");
+	} else {
+		ret = reset_get_by_name(dev, "mcu_rst", &priv->reset_ctl);
+		if (ret) {
+			dev_err(dev, "failed to get reset (%d)\n", ret);
+			return ret;
+		}
 
-	ret = reset_get_by_name(dev, "hold_boot", &priv->hold_boot);
-	if (ret) {
-		dev_err(dev, "failed to get hold boot (%d)\n", ret);
-		return ret;
+		ret = reset_get_by_name(dev, "hold_boot", &priv->hold_boot);
+		if (ret) {
+			dev_err(dev, "failed to get hold boot (%d)\n", ret);
+			return ret;
+		}
 	}
 
 	dev_dbg(dev, "probed\n");
@@ -342,7 +347,8 @@ static const struct dm_rproc_ops stm32_copro_ops = {
 
 static const struct udevice_id stm32_copro_ids[] = {
 	{ .compatible = "st,stm32mp1-m4", .data = STM32MP15_M4_FW_ID },
-	{ .compatible = "st,stm32mp2-m33", .data = STM32MP25_M33_FW_ID },
+	{ .compatible = "st,stm32mp1-m4-tee", .data = STM32MP15_M4_FW_ID },
+	{ .compatible = "st,stm32mp2-m33-tee", .data = STM32MP25_M33_FW_ID },
 	{}
 };
 
