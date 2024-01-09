@@ -290,6 +290,21 @@ static void board_stm32mp25x_eval_init(void)
 		env_set("hdmi", compatible);
 }
 
+static void board_stm32mp25x_disco_init(void)
+{
+	const char *compatible;
+
+	/* auto detection of connected panels */
+	compatible = detect_device(stm32mp25x_panels, ARRAY_SIZE(stm32mp25x_panels));
+
+	if (!compatible)
+		/* remove the panel in environment */
+		env_set("panel", "");
+	else
+		/* save the detected compatible in environment */
+		env_set("panel", compatible);
+}
+
 static int get_led(struct udevice **dev, char *led_string)
 {
 	const char *led_name;
@@ -351,6 +366,15 @@ static bool board_is_stm32mp257_eval(void)
 {
 	if (CONFIG_IS_ENABLED(TARGET_ST_STM32MP25X) &&
 	    (of_machine_is_compatible("st,stm32mp257f-ev1")))
+		return true;
+
+	return false;
+}
+
+static bool board_is_stm32mp257_disco(void)
+{
+	if (CONFIG_IS_ENABLED(TARGET_ST_STM32MP25X) &&
+	    (of_machine_is_compatible("st,stm32mp257f-dk")))
 		return true;
 
 	return false;
@@ -517,6 +541,9 @@ int board_late_init(void)
 	if (board_is_stm32mp257_eval())
 		board_stm32mp25x_eval_init();
 
+	if (board_is_stm32mp257_disco())
+		board_stm32mp25x_disco_init();
+
 	if (IS_ENABLED(CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG)) {
 		fdt_compat = fdt_getprop(gd->fdt_blob, 0, "compatible",
 					 &fdt_compat_len);
@@ -598,6 +625,34 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 	return 0;
 }
 
+static int fixup_stm32mp257_disco_panel(void *blob)
+{
+	char const *panel = env_get("panel");
+	bool detect_etml0700z9ndha = false;
+	int nodeoff = 0;
+	enum fdt_status status;
+
+	if (panel)
+		detect_etml0700z9ndha = !strcmp(panel, "edt,etml0700z9ndha");
+
+	/* update LVDS panel "edt,etml0700z9ndha" */
+	status = detect_etml0700z9ndha ? FDT_STATUS_OKAY : FDT_STATUS_DISABLED;
+	nodeoff = fdt_set_status_by_compatible(blob, "edt,etml0700z9ndha", status);
+	if (nodeoff < 0)
+		return nodeoff;
+	nodeoff = fdt_set_status_by_compatible(blob, "ilitek,ili251x", status);
+	if (nodeoff < 0)
+		return nodeoff;
+	nodeoff = fdt_set_status_by_pathf(blob, status, "/panel-lvds-backlight");
+	if (nodeoff < 0)
+		return nodeoff;
+	nodeoff = fdt_set_status_by_compatible(blob, "st,stm32-lvds", status);
+	if (nodeoff < 0)
+		return nodeoff;
+
+	return 0;
+}
+
 int ft_board_setup(void *blob, struct bd_info *bd)
 {
 	int ret;
@@ -609,6 +664,12 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 
 	if (board_is_stm32mp257_eval()) {
 		ret = fixup_stm32mp257_eval_panel(blob);
+		if (ret)
+			log_err("Error during panel fixup ! (%d)\n", ret);
+	}
+
+	if (board_is_stm32mp257_disco()) {
+		ret = fixup_stm32mp257_disco_panel(blob);
 		if (ret)
 			log_err("Error during panel fixup ! (%d)\n", ret);
 	}
