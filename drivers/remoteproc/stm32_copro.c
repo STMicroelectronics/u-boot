@@ -48,7 +48,7 @@ static int stm32_copro_stop(struct udevice *dev);
 
 /**
  * stm32_copro_probe() - Basic probe
- * @dev:	corresponding STM32 remote processor device
+ * @dev:	remote processor device
  * Return: 0 if all went ok, else corresponding -ve error
  */
 static int stm32_copro_probe(struct udevice *dev)
@@ -98,7 +98,7 @@ static int stm32_copro_probe(struct udevice *dev)
 
 /**
  * stm32_copro_optee_remove() - Close the rproc trusted application session
- * @dev:	corresponding STM32 remote processor device
+ * @dev:	 remote processor device
  * @return 0 if all went ok, else corresponding -ve error
  */
 static int stm32_copro_remove(struct udevice *dev)
@@ -114,7 +114,7 @@ static int stm32_copro_remove(struct udevice *dev)
 
 /**
  * stm32_copro_device_to_phys() - Convert device address to physical address
- * @dev:	corresponding STM32 remote processor device
+ * @dev:	remote processor device
  * @da:		device address
  * @size:	Size of the memory region @da is pointing to
  * Return: converted physical address
@@ -140,7 +140,7 @@ static phys_addr_t stm32_copro_device_to_phys(struct udevice *dev, ulong da,
 }
 /**
  * stm32_copro_device_to_virt() - Convert device address to virtual address
- * @dev:	corresponding STM32 remote processor device
+ * @dev:	remote processor device
  * @da:		device address
  * @size:	Size of the memory region @da is pointing to
  * Return: converted virtual address
@@ -159,7 +159,7 @@ static void *stm32_copro_device_to_virt(struct udevice *dev, ulong da,
 
 /**
  * stm32_copro_load() - Loadup the STM32 remote processor
- * @dev:	corresponding STM32 remote processor device
+ * @dev:	remote processor device
  * @addr:	Address in memory where image is stored
  * @size:	Size in bytes of the image
  * Return: 0 if all went ok, else corresponding -ve error
@@ -207,7 +207,7 @@ static int stm32_copro_load(struct udevice *dev, ulong addr, ulong size)
 
 /**
  * stm32_copro_start() - Start the STM32 remote processor
- * @dev:	corresponding STM32 remote processor device
+ * @dev:	remote processor device
  * Return: 0 if all went ok, else corresponding -ve error
  */
 static int stm32_copro_start(struct udevice *dev)
@@ -276,7 +276,7 @@ error:
 
 /**
  * stm32_copro_reset() - Reset the STM32 remote processor
- * @dev:	corresponding STM32 remote processor device
+ * @dev:	remote processor device
  * Return: 0 if all went ok, else corresponding -ve error
  */
 static int stm32_copro_reset(struct udevice *dev)
@@ -329,7 +329,7 @@ static int stm32_copro_reset(struct udevice *dev)
 
 /**
  * stm32_copro_stop() - Stop the STM32 remote processor
- * @dev:	corresponding STM32 remote processor device
+ * @dev:	remote processor device
  * Return: 0 if all went ok, else corresponding -ve error
  */
 static int stm32_copro_stop(struct udevice *dev)
@@ -339,7 +339,7 @@ static int stm32_copro_stop(struct udevice *dev)
 
 /**
  * stm32_copro_is_running() - Is the STM32 remote processor running
- * @dev:	corresponding STM32 remote processor device
+ * @dev:	remote processor device
  * Return: 0 if the remote processor is running, 1 otherwise
  */
 static int stm32_copro_is_running(struct udevice *dev)
