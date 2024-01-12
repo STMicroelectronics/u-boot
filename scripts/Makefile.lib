@@ -187,6 +187,7 @@ u_boot_dtsi = $(strip $(u_boot_dtsi_options_debug) \
 dtc_cpp_flags  = -Wp,-MD,$(depfile).pre.tmp -nostdinc                    \
 		 $(UBOOTINCLUDE)                                         \
 		 -I$(dir $<)                                             \
+		 -I$(srctree)/arch/$(ARCH)/dts                           \
 		 -I$(srctree)/arch/$(ARCH)/dts/include                   \
 		 -I$(srctree)/include                                    \
 		 -I$(EXT_DTS)                                            \
