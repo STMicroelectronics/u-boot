@@ -139,6 +139,7 @@ struct stm32_dsi_plat {
 	void __iomem *base;
 	struct udevice *panel;
 	struct udevice *vdd_reg;
+	struct udevice *vdda18_reg;
 	struct udevice *dsi_host;
 	struct reset_ctl rst;
 	struct clk pclk;
@@ -991,6 +992,19 @@ static int stm32_dsi_of_to_plat(struct udevice *dev)
 			return ret;
 	}
 
+	ret =  device_get_supply_regulator(dev, "vdda18",
+					   &plat->vdda18_reg);
+	if (ret && ret != -ENOENT) {
+		dev_err(dev, "Unable to get vdda18 supply\n");
+		return ret;
+	}
+
+	if (ret != -ENOENT) {
+		ret = regulator_set_enable(plat->vdda18_reg, true);
+		if (ret)
+			return ret;
+	}
+
 	ret = clk_get_by_name(device->dev, "pclk", &plat->pclk);
 	if (ret) {
 		dev_err(dev, "peripheral clock get error %d\n", ret);
@@ -1044,6 +1058,7 @@ static int stm32_dsi_probe(struct udevice *dev)
 err_clk:
 	clk_disable(&plat->pclk);
 err_reg:
+	regulator_set_enable(plat->vdda18_reg, false);
 	regulator_set_enable(plat->vdd_reg, false);
 
 	return ret;
