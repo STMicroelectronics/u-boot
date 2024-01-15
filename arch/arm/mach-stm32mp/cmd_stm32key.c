@@ -18,11 +18,16 @@
  * STM32MP13x: 0b111111 = 0x3F for OTP_SECURED closed device
  * STM32MP25x: bit 0 of OTP18
  */
-#define STM32MP1_OTP_CLOSE_ID		0
-#define STM32_OTP_STM32MP13X_CLOSE_MASK	0x3F
-#define STM32_OTP_STM32MP15X_CLOSE_MASK	BIT(6)
-#define STM32MP25_OTP_CLOSE_ID		18
-#define STM32_OTP_STM32MP25X_CLOSE_MASK	0xF
+#define STM32MP1_OTP_CLOSE_ID				0
+#define STM32_OTP_STM32MP13X_CLOSE_MASK		GENMASK(5, 0)
+#define STM32_OTP_STM32MP15X_CLOSE_MASK		BIT(6)
+#define STM32MP25_OTP_WORD8				8
+#define STM32_OTP_STM32MP25X_BOOTROM_CLOSE_MASK	GENMASK(7, 0)
+#define STM32MP25_OTP_CLOSE_ID			18
+#define STM32_OTP_STM32MP25X_CLOSE_MASK		GENMASK(3, 0)
+#define STM32_OTP_STM32MP25X_PROVISIONING_DONE_MASK	GENMASK(7, 4)
+#define STM32MP25_OTP_HWCONFIG			124
+#define STM32_OTP_STM32MP25X_DISABLE_SCAN_MASK	BIT(20)
 
 #define STM32MP25_OTP_BOOTROM_CONF8	17
 #define STM32_OTP_STM32MP25X_OEM_KEY2_EN	BIT(8)
@@ -92,6 +97,63 @@ const struct stm32key stm32mp25_list[] = {
 	}
 };
 
+struct otp_close {
+	u32 word;
+	u32 mask_wr;
+	u32 mask_rd;
+	bool (*close_status_ops)(u32 value, u32 mask);
+};
+
+static bool compare_mask_exact(u32 value, u32 mask)
+{
+	return ((value & mask) == mask);
+}
+
+static bool compare_any_bits(u32 value, u32 mask)
+{
+	return ((value & mask) != 0);
+}
+
+const struct otp_close stm32mp13_close_state_otp[] = {
+	{
+		.word = STM32MP1_OTP_CLOSE_ID,
+		.mask_wr = STM32_OTP_STM32MP13X_CLOSE_MASK,
+		.mask_rd = STM32_OTP_STM32MP13X_CLOSE_MASK,
+		.close_status_ops = compare_mask_exact,
+	}
+};
+
+const struct otp_close stm32mp15_close_state_otp[] = {
+	{
+		.word = STM32MP1_OTP_CLOSE_ID,
+		.mask_wr = STM32_OTP_STM32MP15X_CLOSE_MASK,
+		.mask_rd = STM32_OTP_STM32MP15X_CLOSE_MASK,
+		.close_status_ops = compare_mask_exact,
+	}
+};
+
+const struct otp_close stm32mp25_close_state_otp[] = {
+	{
+		.word = STM32MP25_OTP_WORD8,
+		.mask_wr = STM32_OTP_STM32MP25X_BOOTROM_CLOSE_MASK,
+		.mask_rd = 0,
+		.close_status_ops = NULL
+	},
+	{
+		.word = STM32MP25_OTP_CLOSE_ID,
+		.mask_wr = STM32_OTP_STM32MP25X_CLOSE_MASK |
+			   STM32_OTP_STM32MP25X_PROVISIONING_DONE_MASK,
+		.mask_rd = STM32_OTP_STM32MP25X_CLOSE_MASK,
+		.close_status_ops = compare_any_bits
+	},
+	{
+		.word = STM32MP25_OTP_HWCONFIG,
+		.mask_wr = STM32_OTP_STM32MP25X_DISABLE_SCAN_MASK,
+		.mask_rd = 0,
+		.close_status_ops = NULL
+	},
+};
+
 /* index of current selected key in stm32key list, 0 = PKH by default */
 static u8 stm32key_index;
 
@@ -119,25 +181,28 @@ static const struct stm32key *get_key(u8 index)
 		return &stm32mp25_list[index];
 }
 
-static u32 get_otp_close_mask(void)
+static u8 get_otp_close_state_nb(void)
 {
 	if (IS_ENABLED(CONFIG_STM32MP13X))
-		return STM32_OTP_STM32MP13X_CLOSE_MASK;
+		return ARRAY_SIZE(stm32mp13_close_state_otp);
 
 	if (IS_ENABLED(CONFIG_STM32MP15X))
-		return STM32_OTP_STM32MP15X_CLOSE_MASK;
+		return ARRAY_SIZE(stm32mp15_close_state_otp);
 
 	if (IS_ENABLED(CONFIG_STM32MP25X))
-		return STM32_OTP_STM32MP25X_CLOSE_MASK;
+		return ARRAY_SIZE(stm32mp25_close_state_otp);
 }
 
-static int get_otp_close_word(void)
+static const struct otp_close *get_otp_close_state(u8 index)
 {
-	if (IS_ENABLED(CONFIG_STM32MP13X) || IS_ENABLED(CONFIG_STM32MP15X))
-		return STM32MP1_OTP_CLOSE_ID;
+	if (IS_ENABLED(CONFIG_STM32MP13X))
+		return &stm32mp13_close_state_otp[index];
+
+	if (IS_ENABLED(CONFIG_STM32MP15X))
+		return &stm32mp15_close_state_otp[index];
 
 	if (IS_ENABLED(CONFIG_STM32MP25X))
-		return STM32MP25_OTP_CLOSE_ID;
+		return &stm32mp25_close_state_otp[index];
 }
 
 static int get_misc_dev(struct udevice **dev)
@@ -212,30 +277,41 @@ static int read_key_otp(struct udevice *dev, const struct stm32key *key, bool pr
 
 static int read_close_status(struct udevice *dev, bool print, bool *closed)
 {
-	int word, ret, result;
-	u32 val, lock, mask;
-	bool status;
+	int ret, result, i;
+	const struct otp_close *otp_close = NULL;
+	u32 otp_close_nb = get_otp_close_state_nb();
+	u32 val, lock, mask, word = 0;
+	bool status = true;
+	bool tested_once = false;
 
 	result = 0;
-	word = get_otp_close_word();
-	ret = misc_read(dev, STM32_BSEC_OTP(word), &val, 4);
-	if (ret < 0)
-		result = ret;
-	if (ret != 4)
-		val = 0x0;
+	for (i = 0; status && (i < otp_close_nb); i++) {
+		otp_close = get_otp_close_state(i);
 
-	ret = misc_read(dev, STM32_BSEC_LOCK(word), &lock, 4);
-	if (ret < 0)
-		result = ret;
-	if (ret != 4)
-		lock = BSEC_LOCK_ERROR;
+		if (!otp_close->close_status_ops)
+			continue;
 
-	mask = get_otp_close_mask();
+		mask = otp_close->mask_rd;
+		word = otp_close->word;
 
-	if (IS_ENABLED(CONFIG_STM32MP13X) || IS_ENABLED(CONFIG_STM32MP15X))
-		status = (val & mask) == mask;
-	else
-		status = (val & mask) != 0;
+		ret = misc_read(dev, STM32_BSEC_OTP(word), &val, 4);
+		if (ret < 0)
+			result = ret;
+		if (ret != 4)
+			val = 0x0;
+
+		ret = misc_read(dev, STM32_BSEC_LOCK(word), &lock, 4);
+		if (ret < 0)
+			result = ret;
+		if (ret != 4)
+			lock = BSEC_LOCK_ERROR;
+
+		status = otp_close->close_status_ops(val, mask);
+		tested_once = true;
+	}
+
+	if (!tested_once)
+		status = false;
 
 	if (closed)
 		*closed = status;
@@ -243,6 +319,26 @@ static int read_close_status(struct udevice *dev, bool print, bool *closed)
 		printf("OTP %d: closed status: %d lock : %08x\n", word, status, lock);
 
 	return result;
+}
+
+static int write_close_status(struct udevice *dev)
+{
+	int i;
+	u32 val, word, ret;
+	const struct otp_close *otp_close = NULL;
+	u32 otp_num = get_otp_close_state_nb();
+
+	for (i = 0; i < otp_num; i++) {
+		otp_close = get_otp_close_state(i);
+		val = otp_close->mask_wr;
+		word = otp_close->word;
+		ret = misc_write(dev, STM32_BSEC_OTP(word), &val, 4);
+		if (ret != 4) {
+			log_err("Error: can't update OTP %d\n", word);
+			return ret;
+		}
+	}
+	return 0;
 }
 
 static int post_process_edmk2(struct udevice *dev)
@@ -459,7 +555,6 @@ static int do_stm32key_close(struct cmd_tbl *cmdtp, int flag, int argc, char *co
 	const struct stm32key *key;
 	bool yes, lock, closed;
 	struct udevice *dev;
-	u32 val;
 	int ret;
 
 	yes = false;
@@ -495,12 +590,8 @@ static int do_stm32key_close(struct cmd_tbl *cmdtp, int flag, int argc, char *co
 	if (!yes && !confirm_prog())
 		return CMD_RET_FAILURE;
 
-	val = get_otp_close_mask();
-	ret = misc_write(dev, STM32_BSEC_OTP(get_otp_close_word()), &val, 4);
-	if (ret != 4) {
-		printf("Error: can't update OTP %d\n", get_otp_close_word());
+	if (write_close_status(dev))
 		return CMD_RET_FAILURE;
-	}
 
 	printf("Device is closed !\n");
 
