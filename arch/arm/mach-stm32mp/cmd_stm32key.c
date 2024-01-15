@@ -310,7 +310,7 @@ static int confirm_prog(void)
 static void display_key_info(const struct stm32key *key)
 {
 	printf("%s : %s\n", key->name, key->desc);
-	printf("\tOTP%d..%d\n", key->start, key->start + key->size);
+	printf("\tOTP%d..%d\n", key->start, key->start + key->size - 1);
 }
 
 static int do_stm32key_list(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
