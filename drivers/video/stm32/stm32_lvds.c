@@ -21,6 +21,7 @@
 #include <dm/device_compat.h>
 #include <dm/ofnode.h>
 #include <linux/iopoll.h>
+#include <power/regulator.h>
 
 /* LVDS Host registers */
 #define LVDS_CR		0x0000  /* configuration register */
@@ -161,6 +162,8 @@ struct stm32_lvds_plat {
 	struct reset_ctl rst;
 	struct clk pclk;
 	struct clk refclk;
+	struct udevice *vdd_reg;
+	struct udevice *vdda18_reg;
 };
 
 struct stm32_lvds_priv {
@@ -572,35 +575,60 @@ static int stm32_lvds_of_to_plat(struct udevice *dev)
 	const char *data_mapping;
 	int ret;
 
+	ret = device_get_supply_regulator(dev, "vdd", &plat->vdd_reg);
+	if (ret && ret != -ENOENT) {
+		dev_err(dev, "Unable to  get vdd supply\n");
+		return ret;
+	}
+
+	if (ret != -ENOENT) {
+		ret = regulator_set_enable(plat->vdd_reg, true);
+		if (ret)
+			return ret;
+	}
+
+	ret = device_get_supply_regulator(dev, "vdda18", &plat->vdda18_reg);
+	if (ret && ret != -ENOENT) {
+		dev_err(dev, "Unable to  get vdda18 supply\n");
+		goto err_reg;
+	}
+
+	if (ret != -ENOENT) {
+		ret = regulator_set_enable(plat->vdda18_reg, true);
+		if (ret)
+			goto err_reg;
+	}
+
 	plat->base = dev_read_addr_ptr(dev);
 	if ((fdt_addr_t)plat->base == FDT_ADDR_T_NONE) {
 		dev_err(dev, "Unable to read LVDS base address\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto err_reg;
 	}
 
 	ret = clk_get_by_name(dev, "pclk", &plat->pclk);
 	if (ret) {
 		dev_err(dev, "Unable to get peripheral clock: %d\n", ret);
-		return ret;
+		goto err_reg;
 	}
 
 	ret = clk_get_by_name(dev, "ref", &plat->refclk);
 	if (ret) {
 		dev_err(dev, "Unable to get reference clock: %d\n", ret);
-		return ret;
+		goto err_reg;
 	}
 
 	ret = reset_get_by_index(dev, 0, &plat->rst);
 	if (ret) {
 		dev_err(dev, "Failed to get LVDS reset: %d\n", ret);
-		return ret;
+		goto err_reg;
 	}
 
 	ret = uclass_get_device_by_driver(UCLASS_PANEL,
 					  DM_DRIVER_GET(simple_panel), &plat->panel);
 	if (ret) {
 		dev_err(dev, "panel device error %d\n", ret);
-		return ret;
+		goto err_reg;
 	}
 
 	ret = panel_get_display_timing(plat->panel, &priv->timings);
@@ -609,7 +637,7 @@ static int stm32_lvds_of_to_plat(struct udevice *dev)
 						   0, &priv->timings);
 		if (ret) {
 			dev_err(dev, "decode display timing error %d\n", ret);
-			return ret;
+			goto err_reg;
 		}
 	}
 
@@ -622,6 +650,12 @@ static int stm32_lvds_of_to_plat(struct udevice *dev)
 		priv->bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG;
 
 	return 0;
+
+err_reg:
+	regulator_set_enable(plat->vdda18_reg, false);
+	regulator_set_enable(plat->vdd_reg, false);
+
+	return ret;
 }
 
 static int stm32_lvds_probe(struct udevice *dev)
