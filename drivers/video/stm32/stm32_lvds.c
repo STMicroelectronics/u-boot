@@ -22,6 +22,7 @@
 #include <dm/device_compat.h>
 #include <dm/ofnode.h>
 #include <linux/iopoll.h>
+#include <power/regulator.h>
 
 /* LVDS Host registers */
 #define LVDS_CR		0x0000  /* configuration register */
@@ -146,6 +147,8 @@ struct stm32_lvds {
 	u32 refclk;
 	int dual_link;
 	int bus_format;
+	struct udevice *vdd_reg;
+	struct udevice *vdda18_reg;
 };
 
 /*
@@ -563,6 +566,32 @@ static int stm32_lvds_probe(struct udevice *dev)
 	const char *data_mapping;
 	int ret;
 
+	ret =  device_get_supply_regulator(dev, "vdd",
+					   &priv->vdd_reg);
+	if (ret && ret != -ENOENT) {
+		dev_err(dev, "Warning: cannot get vdd supply\n");
+		return ret;
+	}
+
+	if (ret != -ENOENT) {
+		ret = regulator_set_enable(priv->vdd_reg, true);
+		if (ret)
+			return ret;
+	}
+
+	ret =  device_get_supply_regulator(dev, "vdda18",
+					   &priv->vdda18_reg);
+	if (ret && ret != -ENOENT) {
+		dev_err(dev, "Warning: cannot get vdda18 supply\n");
+		return ret;
+	}
+
+	if (ret != -ENOENT) {
+		ret = regulator_set_enable(priv->vdda18_reg, true);
+		if (ret)
+			return ret;
+	}
+
 	priv->base = dev_read_addr_ptr(dev);
 	if ((fdt_addr_t)priv->base == FDT_ADDR_T_NONE) {
 		dev_err(dev, "Unable to read LVDS base address\n");
@@ -572,19 +601,19 @@ static int stm32_lvds_probe(struct udevice *dev)
 	ret = clk_get_by_name(dev, "pclk", &pclk);
 	if (ret) {
 		dev_err(dev, "Unable to get peripheral clock: %d\n", ret);
-		return ret;
+		goto err_reg;
 	}
 
 	ret = clk_enable(&pclk);
 	if (ret) {
 		dev_err(dev, "Failed to enable peripheral clock: %d\n", ret);
-		return ret;
+		goto err_reg;
 	}
 
 	ret = clk_get_by_name(dev, "ref", &refclk);
 	if (ret) {
 		dev_err(dev, "Unable to get reference clock: %d\n", ret);
-		goto err_clk;
+		goto err_reg;
 	}
 
 	ret = clk_enable(&refclk);
@@ -649,6 +678,9 @@ err_rst:
 	clk_disable(&refclk);
 err_clk:
 	clk_disable(&pclk);
+err_reg:
+	regulator_set_enable(priv->vdda18_reg, false);
+	regulator_set_enable(priv->vdd_reg, false);
 
 	return ret;
 }
