@@ -371,6 +371,7 @@ int stm32_omi_wait_cmd(struct udevice *dev)
 
 static int stm32_omi_bind(struct udevice *dev)
 {
+	struct stm32_omi_plat *omi_plat = dev_get_plat(dev);
 	struct driver *drv;
 	const char *name;
 	ofnode flash_node;
@@ -384,9 +385,16 @@ static int stm32_omi_bind(struct udevice *dev)
 	 *        1 HyperFlash					=> supported
 	 *	  All other flash node configuration		=> not supported
 	 */
+	omi_plat->jedec_flash = false;
+
 	dev_for_each_subnode(flash_node, dev) {
 		if (ofnode_device_is_compatible(flash_node, "cfi-flash"))
 			hyperflash_count++;
+
+		if (ofnode_device_is_compatible(flash_node, "jedec-flash")) {
+			hyperflash_count++;
+			omi_plat->jedec_flash = true;
+		}
 
 		if (ofnode_device_is_compatible(flash_node, "jedec,spi-nor") ||
 		    ofnode_device_is_compatible(flash_node, "spi-nand"))

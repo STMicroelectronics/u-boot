@@ -157,6 +157,7 @@ struct stm32_omi_plat {
 	struct reset_ctl_bulk rst_ctl;
 	ulong clock_rate;
 	u32 dlyb_base;
+	bool jedec_flash;
 };
 
 struct stm32_omi_priv {
