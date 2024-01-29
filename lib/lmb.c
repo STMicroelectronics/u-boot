@@ -261,14 +261,14 @@ static long lmb_add_region_flags(struct lmb_region *rgn, phys_addr_t base,
 		adjacent = lmb_addrs_adjacent(base, size, rgnbase, rgnsize);
 		if (adjacent > 0) {
 			if (flags != rgnflags)
-				break;
+				continue;
 			rgn->region[i].base -= size;
 			rgn->region[i].size += size;
 			coalesced++;
 			break;
 		} else if (adjacent < 0) {
 			if (flags != rgnflags)
-				break;
+				continue;
 			rgn->region[i].size += size;
 			coalesced++;
 			break;
