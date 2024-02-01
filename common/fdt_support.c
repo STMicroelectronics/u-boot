@@ -1054,9 +1054,10 @@ void fdt_fixup_mtdparts(void *blob, const struct node_info *node_info,
 int fdt_copy_fixed_partitions(void *blob)
 {
 	ofnode node, subnode;
+	const u32 *reg;
 	int off, suboff, res;
 	char path[256];
-	int address_cells, size_cells;
+	int address_cells, size_cells, len;
 	u8 i, j, child_count;
 
 	node = ofnode_by_compatible(ofnode_null(), "fixed-partitions");
@@ -1101,9 +1102,6 @@ int fdt_copy_fixed_partitions(void *blob)
 
 			if (!ofnode_valid(subnode))
 				break;
-
-			const u32 *reg;
-			int len;
 
 			suboff = fdt_find_or_add_subnode(blob, off, ofnode_get_name(subnode));
 			res = fdt_setprop_string(blob, suboff, "label",
