@@ -25,6 +25,7 @@
 		ethernet1 = &eth1;
 		serial0 = &usart2;
 		serial1 = &usart6;
+		serial2 = &lpuart1;
 	};
 
 	chosen {
@@ -35,12 +36,19 @@
 
 		framebuffer {
 			compatible = "simple-framebuffer";
-			clocks = <&rcc CK_BUS_LTDC>;
+			clocks = <&rcc CK_BUS_LTDC>, <&rcc CK_KER_LTDC>,
+				 <&rcc CK_BUS_LVDS>, <&rcc CK_KER_LVDSPHY>;
 			status = "disabled";
 		};
 	};
 
 	clocks {
+		cec_clock: cec-clock {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <12000000>;
+		};
+
 		clk_ext_camera: clk-ext-camera {
 			#clock-cells = <0>;
 			compatible = "fixed-clock";
@@ -61,6 +69,20 @@
 			label = "User-1";
 			linux,code = <BTN_1>;
 			gpios = <&gpiod 2 GPIO_ACTIVE_HIGH>;
+			status = "okay";
+		};
+
+		button-user-2 {
+			label = "User-2";
+			linux,code = <BTN_2>;
+			gpios = <&gpiog 8 GPIO_ACTIVE_HIGH>;
+			status = "okay";
+		};
+
+		button-wake-up {
+			label = "wake-up";
+			linux,code = <KEY_WAKEUP>;
+			interrupts-extended = <&optee 0>;
 			wakeup-source;
 			status = "okay";
 		};
@@ -70,6 +92,7 @@
 		compatible = "gpio-leds";
 
 		led-blue {
+			label = "heartbeat";
 			function = LED_FUNCTION_HEARTBEAT;
 			color = <LED_COLOR_ID_BLUE>;
 			gpios = <&gpioj 7 GPIO_ACTIVE_HIGH>;
@@ -85,22 +108,38 @@
 
 		port {
 			hdmi_connector_in: endpoint {
-				remote-endpoint = <&adv7535_out>;
+				remote-endpoint = <&adv753x_out>;
 			};
 		};
+	};
+
+	imx335_2v9: imx335-2v9 {
+		compatible = "regulator-fixed";
+		regulator-name = "imx335-avdd";
+		regulator-min-microvolt = <2900000>;
+		regulator-max-microvolt = <2900000>;
+		regulator-always-on;
+	};
+
+	imx335_1v8: imx335-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "imx335-ovdd";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+	};
+
+	imx335_1v2: imx335-1v2 {
+		compatible = "regulator-fixed";
+		regulator-name = "imx335-dvdd";
+		regulator-min-microvolt = <1200000>;
+		regulator-max-microvolt = <1200000>;
+		regulator-always-on;
 	};
 
 	memory@80000000 {
 		device_type = "memory";
 		reg = <0x0 0x80000000 0x1 0x0>;
-	};
-
-	panel_dsi_backlight: panel-dsi-backlight {
-		compatible = "gpio-backlight";
-		gpios = <&gpioi 5 GPIO_ACTIVE_LOW>;
-		default-on;
-		default-brightness-level = <0>;
-		status = "disabled";
 	};
 
 	panel_lvds: panel-lvds {
@@ -136,7 +175,7 @@
 		compatible = "gpio-backlight";
 		gpios = <&gpioi 5 GPIO_ACTIVE_HIGH>;
 		default-on;
-		default-brightness-level = <0>;
+		default-brightness-level = <1>;
 		status = "okay";
 	};
 
@@ -146,10 +185,43 @@
 		dais = <&i2s2_port>;
 		status = "disabled";
 	};
+
+	vdiv_ana0: voltage-divider-ana0 {
+		compatible = "voltage-divider";
+		io-channels = <&adc1 0>;
+		output-ohms = <560000>;
+		full-ohms = <1030000>;
+		status = "disabled";
+	};
+};
+
+&adc_12 {
+	/* Don't need a pinctrl for ANA0 dedicated pin e.g. Channel@0 */
+	vdda-supply = <&scmi_v1v8>;
+	vref-supply = <&scmi_v1v8>;
+	status = "disabled";
+	adc1: adc@0 {
+		status = "okay";
+		channel@0 {
+			reg = <0>;
+			st,min-sample-time-ns = <400>;
+		};
+	};
 };
 
 &a35ss_syscfg {
 	status = "okay";
+};
+
+&ahbsr {
+	mbox_client: mailbox-client@1 {
+		compatible = "mbox-cdev";
+		reg = <1 0>;
+		memory-region =  <&ipc_shmem_2>;
+		mboxes = <&ipcc2 0>;
+		mbox-names = "rx-tx";
+		status = "okay";
+	};
 };
 
 &arm_wdt {
@@ -160,6 +232,7 @@
 &combophy {
 	clocks = <&rcc CK_BUS_USB3PCIEPHY>, <&rcc CK_KER_USB3PCIEPHY>, <&pad_clk>;
 	clock-names = "apb-clk", "ker-clk", "pad-clk";
+	st,rx_equalizer = <1>;
 	status = "okay";
 };
 
@@ -171,14 +244,72 @@
 	status = "okay";
 };
 
-&csi2host {
+&cs_cpu_debug0 {
+	status = "okay";
+};
+
+&cs_cpu_debug1 {
+	status = "okay";
+};
+
+&cs_cti0 {
+	status = "okay";
+};
+
+&cs_cti1 {
+	status = "okay";
+};
+
+&cs_cti_cpu0 {
+	status = "okay";
+};
+
+&cs_cti_cpu1 {
+	status = "okay";
+};
+
+&cs_etf {
+	status = "okay";
+};
+
+&cs_etm0 {
+	status = "okay";
+};
+
+&cs_etm1 {
+	status = "okay";
+};
+
+&cs_etr {
+	status = "okay";
+};
+
+&cs_funnel {
+	status = "okay";
+};
+
+&cs_replicator {
+	status = "okay";
+};
+
+&cs_stm {
+	status = "okay";
+};
+
+&cs_tpiu {
+	status = "okay";
+};
+
+&csi {
+	vdd-supply =  <&scmi_vddcore>;
+	vdda18-supply = <&scmi_v1v8>;
 	status = "okay";
 	ports {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		port@0 {
 			reg = <0>;
-			csi2host_sink: endpoint {
+			csi_sink: endpoint {
 				remote-endpoint = <&imx335_ep>;
 				data-lanes = <0 1>;
 				bus-type = <4>;
@@ -186,7 +317,7 @@
 		};
 		port@1 {
 			reg = <1>;
-			csi2host_source: endpoint {
+			csi_source: endpoint {
 				remote-endpoint = <&dcmipp_0>;
 			};
 		};
@@ -197,13 +328,15 @@
 	status = "okay";
 	port {
 		dcmipp_0: endpoint {
-			remote-endpoint = <&csi2host_source>;
+			remote-endpoint = <&csi_source>;
 			bus-type = <4>;
 		};
 	};
 };
 
 &dsi {
+	vdd-supply =  <&scmi_vddcore>;
+	vdda18-supply = <&scmi_v1v8>;
 	status = "disabled";
 
 	ports {
@@ -220,7 +353,7 @@
 		port@1 {
 			reg = <1>;
 			dsi_out1: endpoint {
-				remote-endpoint = <&adv7535_in>;
+				remote-endpoint = <&adv753x_in>;
 			};
 		};
 	};
@@ -235,6 +368,7 @@
 	max-speed = <1000>;
 	phy-handle = <&phy1_eth1>;
 	st,eth-clk-sel;
+	snps,ext-systime;
 
 	mdio1 {
 		#address-cells = <1>;
@@ -309,13 +443,16 @@
 		compatible = "sony,imx335";
 		reg = <0x1a>;
 		clocks = <&clk_ext_camera>;
+		avdd-supply = <&imx335_2v9>;
+		ovdd-supply = <&imx335_1v8>;
+		dvdd-supply = <&imx335_1v2>;
 		reset-gpios = <&gpioi 7 (GPIO_ACTIVE_HIGH | GPIO_PUSH_PULL)>;
 		powerdown-gpios = <&gpioi 0 (GPIO_ACTIVE_HIGH | GPIO_PUSH_PULL)>;
 		status = "okay";
 
 		port {
 			imx335_ep: endpoint {
-				remote-endpoint = <&csi2host_sink>;
+				remote-endpoint = <&csi_sink>;
 				clock-lanes = <0>;
 				data-lanes = <1 2>;
 				link-frequencies = /bits/ 64 <594000000>;
@@ -323,19 +460,27 @@
 		};
 	};
 
-	adv7535: hdmi@3d {
-		compatible = "adi,adv7535";
+	adv753x: hdmi@3d {
+		/*
+		 * With MB1232 board, use "adi,adv7533" (1080p30)
+		 * With MB1752 board, use "adi,adv7535" (1080p60)
+		 */
+		compatible = "adi,adv7533";
 		reg = <0x3d>, <0x3c>, <0x3f>, <0x38>;
 		reg-names = "main", "cec", "edid", "packet";
+		clocks = <&cec_clock>;
+		clock-names = "cec";
+		interrupt-parent = <&gpiod>;
+		interrupts = <10 IRQ_TYPE_EDGE_FALLING>;
 		status = "disabled";
 		adi,dsi-lanes = <4>;
 		reset-gpios = <&gpiog 14 GPIO_ACTIVE_LOW>;
-		avdd-supply = <&scmi_v3v3>;
-		dvdd-supply = <&scmi_v3v3>;
-		pvdd-supply = <&scmi_v3v3>;
-		a2vdd-supply = <&scmi_v3v3>;
+		avdd-supply = <&scmi_v1v8>;
+		dvdd-supply = <&scmi_v1v8>;
+		pvdd-supply = <&scmi_v1v8>;
+		a2vdd-supply = <&scmi_v1v8>;
 		v3p3-supply = <&scmi_v3v3>;
-		v1p2-supply = <&scmi_v3v3>;
+		v1p2-supply = <&scmi_v1v8>;
 
 		ports {
 			#address-cells = <1>;
@@ -343,21 +488,21 @@
 
 			port@0 {
 				reg = <0>;
-				adv7535_in: endpoint {
+				adv753x_in: endpoint {
 					remote-endpoint = <&dsi_out1>;
 				};
 			};
 
 			port@1 {
 				reg = <1>;
-				adv7535_out: endpoint {
+				adv753x_out: endpoint {
 					remote-endpoint = <&hdmi_connector_in>;
 				};
 			};
 
 			port@2 {
 				reg = <2>;
-				adv7535_tx_endpoint: endpoint {
+				adv753x_tx_endpoint: endpoint {
 					remote-endpoint = <&i2s2_endpoint>;
 				};
 			};
@@ -395,7 +540,7 @@
 
 	i2s2_port: port {
 		i2s2_endpoint: endpoint {
-			remote-endpoint = <&adv7535_tx_endpoint>;
+			remote-endpoint = <&adv753x_tx_endpoint>;
 			format = "i2s";
 			mclk-fs = <256>;
 		};
@@ -403,6 +548,10 @@
 };
 
 &ipcc1 {
+	status = "okay";
+};
+
+&ipcc2 {
 	status = "okay";
 };
 
@@ -414,7 +563,19 @@
 	};
 };
 
+&lpuart1 {
+	pinctrl-names = "default", "idle", "sleep";
+	pinctrl-0 = <&lpuart1_pins_a>;
+	pinctrl-1 = <&lpuart1_idle_pins_a>;
+	pinctrl-2 = <&lpuart1_sleep_pins_a>;
+	/delete-property/dmas;
+	/delete-property/dma-names;
+	uart-has-rtscts;
+	status = "disabled";
+};
+
 &ltdc {
+	default-on;
 	rotation-memory = <&ltdc_sec_rotation>;
 	status = "okay";
 
@@ -435,6 +596,9 @@
 };
 
 &lvds {
+	default-on;
+	vdd-supply =  <&scmi_vddcore>;
+	vdda18-supply = <&scmi_v1v8>;
 	status = "okay";
 
 	ports {
@@ -457,12 +621,27 @@
 	};
 };
 
+&m0_rproc {
+	mboxes = <&ipcc2 0>, <&ipcc2 1>, <&ipcc2 2>;
+	mbox-names = "rx", "tx", "shutdown";
+	memory-region = <&cm0_cube_fw>, <&cm0_cube_data>;
+	clocks = <&rcc CK_CPU3>,
+		 <&rcc CK_CPU3_AM>,
+		 <&rcc CK_LPUART1_C3>,
+		 <&rcc CK_KER_LPUART1>,
+		 <&rcc CK_LPUART1_AM>,
+		 <&scmi_clk CK_SCMI_IPCC2>,
+		 <&scmi_clk CK_SCMI_IPCC2_AM>;
+	status = "okay";
+};
+
 &m33_rproc {
 	mboxes = <&ipcc1 0x100>, <&ipcc1 0x101>, <&ipcc1 2>;
 	mbox-names = "vq0", "vq1", "shutdown";
 	memory-region = <&cm33_cube_fw>, <&cm33_cube_data>,
 			<&ipc_shmem_1>, <&vdev0vring0>,
-			<&vdev0vring1>, <&vdev0buffer>;
+			<&vdev0vring1>, <&vdev0buffer>,
+			<&cm33_sram2>;
 	st,syscfg-nsvtor = <&a35ss_syscfg 0xa8 0xffffff80>;
 	status = "okay";
 };
@@ -487,6 +666,7 @@
 		reg = <1 0>;
 		#interrupt-cells = <1>;
 		interrupt-controller;
+		status = "okay";
 	};
 
 	i2c_rpmsg: i2c@2 {
@@ -520,14 +700,12 @@
 	memory-region = <&mm_ospi1>;
 	memory-region-names = "mm_ospi1";
 	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&ospi1_clk_pins_a
-		     &ospi1_io03_pins_a
-		     &ospi1_cs0_pins_a>;
-
-	pinctrl-1 = <&ospi1_clk_sleep_pins_a
-		     &ospi1_io03_sleep_pins_a
-		     &ospi1_cs0_sleep_pins_a>;
-
+	pinctrl-0 = <&ospi_port1_clk_pins_a
+		     &ospi_port1_io03_pins_a
+		     &ospi_port1_cs0_pins_a>;
+	pinctrl-1 = <&ospi_port1_clk_sleep_pins_a
+		     &ospi_port1_io03_sleep_pins_a
+		     &ospi_port1_cs0_sleep_pins_a>;
 	status = "okay";
 
 	spi@40430000 {
@@ -560,6 +738,8 @@
 	pinctrl-1 = <&pcie_init_pins_a>;
 	pinctrl-2 = <&pcie_sleep_pins_a>;
 	reset-gpios = <&gpioj 8 GPIO_ACTIVE_LOW>;
+	wakeup-source;
+	wake-gpios = <&gpioh 5 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 	status = "okay";
 };
 
@@ -572,6 +752,14 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <3300000>;
 	};
+	scmi_vddcore: regulator@11  {
+		reg = <VOLTD_SCMI_STPMIC2_BUCK2>;
+		regulator-name = "vddcore";
+	};
+	scmi_v1v8: regulator@14  {
+		reg = <VOLTD_SCMI_STPMIC2_BUCK5>;
+		regulator-name = "v1v8";
+	};
 	scmi_v3v3: regulator@16 {
 		reg = <VOLTD_SCMI_STPMIC2_BUCK7>;
 		regulator-name = "v3v3";
@@ -579,6 +767,10 @@
 	scmi_vdd_emmc: regulator@18 {
 		reg = <VOLTD_SCMI_STPMIC2_LDO2>;
 		regulator-name = "vdd_emmc";
+	};
+	scmi_vdd3v3_usb: regulator@20 {
+		reg = <VOLTD_SCMI_STPMIC2_LDO4>;
+		regulator-name = "vdd3v3_usb";
 	};
 	scmi_vdd_sdcard: regulator@23 {
 		reg = <VOLTD_SCMI_STPMIC2_LDO7>;
@@ -678,17 +870,30 @@
 };
 
 &usb2_phy1 {
+	vdd33-supply = <&scmi_vdd3v3_usb>;
 	status = "okay";
 };
 
 &usb2_phy2 {
+	vdd33-supply = <&scmi_vdd3v3_usb>;
 	status = "okay";
 };
 
-&usb2h {
+&usbh {
 	status = "okay";
 
-	usb2h_ohci: usb@482e0000 {
+	usbh_ehci: usb@482f0000 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		/* onboard HUB */
+		hub@1 {
+			compatible = "usb424,2514";
+			reg = <1>;
+			vdd-supply = <&scmi_v3v3>;
+		};
+	};
+
+	usbh_ohci: usb@482e0000 {
 		status = "disabled";
 	};
 };

@@ -1,0 +1,97 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause)
+/*
+ * Copyright (C) STMicroelectronics 2024 - All Rights Reserved
+ * Author: Alexandre Torgue <alexandre.torgue@foss.st.com> for STMicroelectronics.
+ */
+#include "stm32mp211.dtsi"
+
+/ {
+	soc@1 {
+		eth2: eth2@482d0000 {
+			compatible = "st,stm32mp25-dwmac", "snps,dwmac-5.10a";
+			reg = <0x482d0000 0x4000>;
+			reg-names = "stmmaceth";
+			interrupts-extended = <&intc GIC_SPI 120 IRQ_TYPE_LEVEL_HIGH>,
+					      <&exti1 70 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "macirq",
+				  "eth_wake_irq";
+			clock-names = "stmmaceth",
+				      "mac-clk-tx",
+				      "mac-clk-rx",
+				      "ptp_ref",
+				      "ethstp",
+				      "eth-ck";
+			clocks = <&rcc CK_ETH2_MAC>,
+				 <&rcc CK_ETH2_TX>,
+				 <&rcc CK_ETH2_RX>,
+				 <&rcc CK_KER_ETH2PTP>,
+				 <&rcc CK_ETH2_STP>,
+				 <&rcc CK_KER_ETH2>;
+			st,syscon = <&syscfg 0x3400 0xffffffff>;
+			snps,mixed-burst;
+			snps,pbl = <2>;
+			snps,txqos = <7>;
+			snps,rxqos = <7>;
+			snps,axi-config = <&stmmac_axi_config_2>;
+			snps,tso;
+			access-controllers = <&rifsc 61>;
+			power-domains = <&CLUSTER_PD>;
+			wakeup-source;
+			status = "disabled";
+			snps,mtl-rx-config = <&mtl_rx_setup_2>;
+			snps,mtl-tx-config = <&mtl_tx_setup_2>;
+
+			stmmac_axi_config_2: stmmac-axi-config {
+				snps,wr_osr_lmt = <0x7>;
+				snps,rd_osr_lmt = <0x7>;
+				snps,blen = <0 0 0 0 16 8 4>;
+			};
+
+			mtl_rx_setup_2: rx-queues-config {
+				snps,rx-queues-to-use = <2>;
+				queue0 {};
+				queue1 {};
+			};
+
+			mtl_tx_setup_2: tx-queues-config {
+				snps,tx-queues-to-use = <4>;
+				queue0 {};
+				queue1 {};
+				queue2 {};
+				queue3 {};
+			};
+		};
+	};
+};
+
+&rifsc {
+	m_can1: can@402d0000 {
+		compatible = "bosch,m_can";
+		reg = <0x402d0000 0x0 0x400>, <0x40310000 0x0 0x1400>;
+		reg-names = "m_can", "message_ram";
+		interrupts = <GIC_SPI 84 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 86 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "int0", "int1";
+		clocks = <&rcc CK_BUS_FDCAN>, <&rcc CK_KER_FDCAN>;
+		clock-names = "hclk", "cclk";
+		bosch,mram-cfg = <0x0 0 0 32 0 0 2 2>;
+		access-controllers = <&rifsc 56>;
+		power-domains = <&CLUSTER_PD>;
+		status = "disabled";
+	};
+
+	m_can2: can@402e0000 {
+		compatible = "bosch,m_can";
+		reg = <0x402e0000 0x0 0x400>, <0x40310000 0x0 0x2800>;
+		reg-names = "m_can", "message_ram";
+		interrupts = <GIC_SPI 85 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 87 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "int0", "int1";
+		clocks = <&rcc CK_BUS_FDCAN>, <&rcc CK_KER_FDCAN>;
+		clock-names = "hclk", "cclk";
+		bosch,mram-cfg = <0x1400 0 0 32 0 0 2 2>;
+		access-controllers = <&rifsc 56>;
+		power-domains = <&CLUSTER_PD>;
+		status = "disabled";
+	};
+};

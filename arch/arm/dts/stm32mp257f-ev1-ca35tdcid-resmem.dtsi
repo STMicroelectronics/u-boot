@@ -62,9 +62,21 @@
 			no-map;
 		};
 
-		/* PCIe reserved memory declaration */
-		pcie_device: pcie-device@10000000 {
-			reg = <0x0 0x10000000 0x0 0x10000000>;
+		cm0_cube_fw: cm0-cube-fw@200C0000 {
+			compatible = "shared-dma-pool";
+			reg = <0x0 0x200C0000 0x0 0x4000>;
+			no-map;
+		};
+
+		cm0_cube_data: cm0-cube-data@200C4000 {
+			compatible = "shared-dma-pool";
+			reg = <0x0 0x200C4000 0x0 0x2000>;
+			no-map;
+		};
+
+		ipc_shmem_2: ipc-shmem-2@200C6000{
+			compatible = "shared-dma-pool";
+			reg = <0x0 0x200C6000 0x0 0x2000>;
 			no-map;
 		};
 

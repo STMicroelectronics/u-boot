@@ -13,7 +13,7 @@
 #include "stm32mp257.dtsi"
 #include "stm32mp25xf.dtsi"
 #include "stm32mp25-pinctrl.dtsi"
-#include "stm32mp25xxal-pinctrl.dtsi"
+#include "stm32mp25xxak-pinctrl.dtsi"
 #include "stm32mp257f-dk-ca35tdcid-resmem.dtsi"
 
 / {
@@ -35,7 +35,8 @@
 
 		framebuffer {
 			compatible = "simple-framebuffer";
-			clocks = <&rcc CK_BUS_LTDC>;
+			clocks = <&rcc CK_BUS_LTDC>, <&rcc CK_KER_LTDC>,
+				 <&rcc CK_BUS_LVDS>, <&rcc CK_KER_LVDSPHY>;
 			status = "disabled";
 		};
 	};
@@ -58,6 +59,7 @@
 		compatible = "dmic-codec";
 		#sound-dai-cells = <1>;
 		sound-name-prefix = "dmic0";
+		status = "okay";
 
 		port {
 			dmic0_endpoint: endpoint {
@@ -70,6 +72,7 @@
 		compatible = "dmic-codec";
 		#sound-dai-cells = <1>;
 		sound-name-prefix = "dmic1";
+		status = "okay";
 
 		port {
 			dmic1_endpoint: endpoint {
@@ -81,10 +84,24 @@
 	gpio-keys {
 		compatible = "gpio-keys";
 
+		button-user-1 {
+			label = "User-1";
+			linux,code = <BTN_1>;
+			gpios = <&gpioc 5 GPIO_ACTIVE_HIGH>;
+			status = "okay";
+		};
+
 		button-user-2 {
 			label = "User-2";
 			linux,code = <BTN_2>;
 			gpios = <&gpioc 11 GPIO_ACTIVE_HIGH>;
+			status = "okay";
+		};
+
+		button-wake-up {
+			label = "wake-up";
+			linux,code = <KEY_WAKEUP>;
+			interrupts-extended = <&optee 0>;
 			status = "okay";
 		};
 	};
@@ -93,7 +110,6 @@
 		compatible = "gpio-leds";
 
 		led-blue {
-			label = "heartbeat";
 			function = LED_FUNCTION_HEARTBEAT;
 			color = <LED_COLOR_ID_BLUE>;
 			gpios = <&gpioh 7 GPIO_ACTIVE_HIGH>;
@@ -115,6 +131,30 @@
 		};
 	};
 
+	imx335_2v9: imx335-2v9 {
+		compatible = "regulator-fixed";
+		regulator-name = "imx335-avdd";
+		regulator-min-microvolt = <2900000>;
+		regulator-max-microvolt = <2900000>;
+		regulator-always-on;
+	};
+
+	imx335_1v8: imx335-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "imx335-ovdd";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+	};
+
+	imx335_1v2: imx335-1v2 {
+		compatible = "regulator-fixed";
+		regulator-name = "imx335-dvdd";
+		regulator-min-microvolt = <1200000>;
+		regulator-max-microvolt = <1200000>;
+		regulator-always-on;
+	};
+
 	memory@80000000 {
 		device_type = "memory";
 		reg = <0x0 0x80000000 0x1 0x0>;
@@ -124,7 +164,8 @@
 		compatible = "edt,etml0700z9ndha", "panel-lvds";
 		enable-gpios = <&gpioi 4 GPIO_ACTIVE_HIGH>;
 		backlight = <&panel_lvds_backlight>;
-		status = "disabled";
+		default-on;
+		status = "okay";
 
 		width-mm = <156>;
 		height-mm = <92>;
@@ -153,18 +194,14 @@
 		compatible = "gpio-backlight";
 		gpios = <&gpioi 7 GPIO_ACTIVE_HIGH>;
 		default-on;
-		default-brightness-level = <0>;
+		default-brightness-level = <1>;
 		status = "okay";
 	};
 
 	sound {
 		compatible = "audio-graph-card";
 		label = "STM32MP25-DK";
-		routing =
-			"Playback" , "MCLK",
-			"Capture" , "MCLK",
-			"MICL" , "Mic Bias";
-		dais = <&sai1a_port &sai1b_port &i2s2_port &mdf1_port0 &mdf1_port1>;
+		dais = <&i2s2_port &mdf1_port0 &mdf1_port1>;
 		status = "okay";
 	};
 
@@ -178,19 +215,101 @@
 	status = "okay";
 };
 
+&ahbsr {
+	mbox_client: mailbox-client@1 {
+		compatible = "mbox-cdev";
+		reg = <1 0>;
+		memory-region =  <&ipc_shmem_2>;
+		mboxes = <&ipcc2 0>;
+		mbox-names = "rx-tx";
+		status = "okay";
+	};
+};
+
 &arm_wdt {
 	timeout-sec = <32>;
 	status = "okay";
 };
 
-&csi2host {
+&combophy {
+	st,ssc-on;
+	status = "okay";
+};
+
+&crc {
+	status = "okay";
+};
+
+&cryp1 {
+	status = "okay";
+};
+
+&cs_cpu_debug0 {
+	status = "okay";
+};
+
+&cs_cpu_debug1 {
+	status = "okay";
+};
+
+&cs_cti0 {
+	status = "okay";
+};
+
+&cs_cti1 {
+	status = "okay";
+};
+
+&cs_cti_cpu0 {
+	status = "okay";
+};
+
+&cs_cti_cpu1 {
+	status = "okay";
+};
+
+&cs_etf {
+	status = "okay";
+};
+
+&cs_etm0 {
+	status = "okay";
+};
+
+&cs_etm1 {
+	status = "okay";
+};
+
+&cs_etr {
+	status = "okay";
+};
+
+&cs_funnel {
+	status = "okay";
+};
+
+&cs_replicator {
+	status = "okay";
+};
+
+&cs_stm {
+	status = "okay";
+};
+
+&cs_tpiu {
+	status = "okay";
+};
+
+&csi {
+	vdd-supply =  <&scmi_vddcore>;
+	vdda18-supply = <&scmi_v1v8>;
 	status = "okay";
 	ports {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		port@0 {
 			reg = <0>;
-			csi2host_sink: endpoint {
+			csi_sink: endpoint {
 				remote-endpoint = <&imx335_ep>;
 				data-lanes = <0 1>;
 				bus-type = <4>;
@@ -198,7 +317,7 @@
 		};
 		port@1 {
 			reg = <1>;
-			csi2host_source: endpoint {
+			csi_source: endpoint {
 				remote-endpoint = <&dcmipp_0>;
 			};
 		};
@@ -209,14 +328,16 @@
 	status = "okay";
 	port {
 		dcmipp_0: endpoint {
-			remote-endpoint = <&csi2host_source>;
+			remote-endpoint = <&csi_source>;
 			bus-type = <4>;
 		};
 	};
 };
 
 &dsi {
-	status = "disabled";
+	vdd-supply =  <&scmi_vddcore>;
+	vdda18-supply = <&scmi_v1v8>;
+	status = "okay";
 
 	ports {
 		#address-cells = <1>;
@@ -241,7 +362,8 @@
 &eth1 {
 	status = "okay";
 	pinctrl-0 = <&eth1_rgmii_pins_b>;
-	pinctrl-names = "default";
+	pinctrl-1 = <&eth1_rgmii_sleep_pins_b>;
+	pinctrl-names = "default", "sleep";
 	phy-mode = "rgmii-id";
 	max-speed = <1000>;
 	phy-handle = <&phy1_eth1>;
@@ -255,7 +377,7 @@
 			compatible = "ethernet-phy-id001c.c916";
 			reset-gpios =  <&gpioa 2 GPIO_ACTIVE_LOW>;
 			reset-assert-us = <10000>;
-			reset-deassert-us = <300>;
+			reset-deassert-us = <80000>;
 			realtek,eee-disable;
 			reg = <1>;
 		};
@@ -283,9 +405,9 @@
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&i2c2_pins_b>;
 	pinctrl-1 = <&i2c2_sleep_pins_b>;
-	i2c-scl-rising-time-ns = <185>;
-	i2c-scl-falling-time-ns = <20>;
-	clock-frequency = <100000>;
+	i2c-scl-rising-time-ns = <108>;
+	i2c-scl-falling-time-ns = <12>;
+	clock-frequency = <400000>;
 	status = "okay";
 	/* spare dmas for other usage */
 	/delete-property/dmas;
@@ -295,13 +417,16 @@
 		compatible = "sony,imx335";
 		reg = <0x1a>;
 		clocks = <&clk_ext_camera>;
+		avdd-supply = <&imx335_2v9>;
+		ovdd-supply = <&imx335_1v8>;
+		dvdd-supply = <&imx335_1v2>;
 		reset-gpios = <&gpiob 1 (GPIO_ACTIVE_HIGH | GPIO_PUSH_PULL)>;
 		powerdown-gpios = <&gpiob 11 (GPIO_ACTIVE_HIGH | GPIO_PUSH_PULL)>;
 		status = "okay";
 
 		port {
 			imx335_ep: endpoint {
-				remote-endpoint = <&csi2host_sink>;
+				remote-endpoint = <&csi_sink>;
 				clock-lanes = <0>;
 				data-lanes = <1 2>;
 				link-frequencies = /bits/ 64 <594000000>;
@@ -362,39 +487,6 @@
 		reset-gpios = <&gpioi 0 GPIO_ACTIVE_LOW>;
 		status = "okay";
 	};
-
-	cs42l51: cs42l51@4a {
-		compatible = "cirrus,cs42l51";
-		reg = <0x4a>;
-		#sound-dai-cells = <0>;
-		VL-supply = <&scmi_v3v3>;
-		VD-supply = <&scmi_v1v8>;
-		VA-supply = <&scmi_v1v8>;
-		VAHP-supply = <&scmi_v1v8>;
-		reset-gpios = <&gpiod 6 GPIO_ACTIVE_LOW>;
-		clocks = <&sai1a>;
-		clock-names = "MCLK";
-		status = "okay";
-
-		cs42l51_port: port {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			cs42l51_tx_endpoint: endpoint@0 {
-				reg = <0>;
-				remote-endpoint = <&sai1a_endpoint>;
-				frame-master = <&cs42l51_tx_endpoint>;
-				bitclock-master = <&cs42l51_tx_endpoint>;
-			};
-
-			cs42l51_rx_endpoint: endpoint@1 {
-				reg = <1>;
-				remote-endpoint = <&sai1b_endpoint>;
-				frame-master = <&cs42l51_rx_endpoint>;
-				bitclock-master = <&cs42l51_rx_endpoint>;
-			};
-		};
-	};
 };
 
 &i2c8 {
@@ -429,8 +521,21 @@
 	status = "okay";
 };
 
+&ipcc2 {
+	status = "okay";
+};
+
+/* use LPTIMER with tick broadcast for suspend mode */
+&lptimer3 {
+	status = "okay";
+	timer {
+		status = "okay";
+	};
+};
+
 &ltdc {
-	status = "disabled";
+	default-on;
+	status = "okay";
 
 	port {
 		#address-cells = <1>;
@@ -449,8 +554,11 @@
 };
 
 &lvds {
-	status = "disabled";
-	backlight = <&panel_lvds_backlight>;
+	default-on;
+	vdd-supply =  <&scmi_vddcore>;
+	vdda18-supply = <&scmi_v1v8>;
+	status = "okay";
+
 	ports {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -471,12 +579,24 @@
 	};
 };
 
+&m0_rproc {
+	mboxes = <&ipcc2 0>, <&ipcc2 1>, <&ipcc2 2>;
+	mbox-names = "rx", "tx", "shutdown";
+	memory-region = <&cm0_cube_fw>, <&cm0_cube_data>;
+	clocks = <&rcc CK_CPU3>,
+		 <&rcc CK_CPU3_AM>,
+		 <&scmi_clk CK_SCMI_IPCC2>,
+		 <&scmi_clk CK_SCMI_IPCC2_AM>;
+	status = "okay";
+};
+
 &m33_rproc {
 	mboxes = <&ipcc1 0x100>, <&ipcc1 0x101>, <&ipcc1 2>;
 	mbox-names = "vq0", "vq1", "shutdown";
 	memory-region = <&cm33_cube_fw>, <&cm33_cube_data>,
 			<&ipc_shmem_1>, <&vdev0vring0>,
-			<&vdev0vring1>, <&vdev0buffer>;
+			<&vdev0vring1>, <&vdev0buffer>,
+			<&cm33_sram2>;
 	st,syscfg-nsvtor = <&a35ss_syscfg 0xa8 0xffffff80>;
 	status = "okay";
 };
@@ -487,7 +607,7 @@
 	pinctrl-1 = <&mdf_cck0_sleep_pins_a>;
 	#clock-cells = <1>;
 	clock-output-names = "cck0";
-	clock-frequency = <2048000>;
+	clock-frequency = <1536000>;
 	status = "okay";
 
 	sitf6: sitf@380 {
@@ -500,15 +620,15 @@
 	};
 
 	filter0: filter@84  {
-		st,cic-mode = <5>;
+		st,cic-mode = <4>;
 		st,sitf = <&sitf6 0>;
+		st,hpf-filter-cutoff-bp = <625>;
 		status = "okay";
 
 		asoc_pdm0: mdf-dai {
 			compatible = "st,stm32mp25-mdf-dai";
 			#sound-dai-cells = <0>;
 			io-channels = <&filter0 0>;
-			st,hpf-filter-cutoff-bp = <625>;
 			power-domains = <&RET_PD>;
 			status = "okay";
 
@@ -521,15 +641,15 @@
 	};
 
 	filter1: filter@104  {
-		st,cic-mode = <5>;
+		st,cic-mode = <4>;
 		st,sitf = <&sitf6 1>;
+		st,hpf-filter-cutoff-bp = <625>;
 		status = "okay";
 
 		asoc_pdm1: mdf-dai {
 			compatible = "st,stm32mp25-mdf-dai";
 			#sound-dai-cells = <0>;
 			io-channels = <&filter1 0>;
-			st,hpf-filter-cutoff-bp = <625>;
 			power-domains = <&RET_PD>;
 			status = "okay";
 
@@ -563,6 +683,16 @@
 			reg = <0x35>;
 			interrupts-extended = <&intc_rpmsg 0>;
 			status = "okay";
+			connector {
+				compatible = "usb-c-connector";
+				label = "USB-C";
+
+				port {
+					typec_ep: endpoint {
+						remote-endpoint = <&dwc3_ep>;
+					};
+				};
+			};
 		};
 	};
 };
@@ -574,51 +704,14 @@
 	status = "okay";
 };
 
-&sai1 {
-	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&sai1a_pins_a>, <&sai1b_pins_a>;
-	pinctrl-1 = <&sai1a_sleep_pins_a>, <&sai1b_sleep_pins_a>;
-	status = "okay";
-
-	sai1a: audio-controller@40290004 {
-		#clock-cells = <0>;
-		dma-names = "tx";
-		status = "okay";
-
-		sai1a_port: port {
-			sai1a_endpoint: endpoint {
-				remote-endpoint = <&cs42l51_tx_endpoint>;
-				format = "i2s";
-				mclk-fs = <256>;
-				dai-tdm-slot-num = <2>;
-				dai-tdm-slot-width = <32>;
-			};
-		};
-	};
-
-	sai1b: audio-controller@40290024 {
-		dma-names = "rx";
-		st,sync = <&sai1a 2>;
-		clocks = <&rcc CK_KER_SAI1>, <&sai1a>;
-		clock-names = "sai_ck", "MCLK";
-		status = "okay";
-
-		sai1b_port: port {
-			sai1b_endpoint: endpoint {
-				remote-endpoint = <&cs42l51_rx_endpoint>;
-				format = "i2s";
-				mclk-fs = <256>;
-				dai-tdm-slot-num = <2>;
-				dai-tdm-slot-width = <32>;
-			};
-		};
-	};
-};
-
 &scmi_regu {
 	scmi_vddio1: regulator@0 {
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <3300000>;
+	};
+	scmi_vddcore: regulator@11  {
+		reg = <VOLTD_SCMI_STPMIC2_BUCK2>;
+		regulator-name = "vddcore";
 	};
 	scmi_v1v8: regulator@14  {
 		reg = <VOLTD_SCMI_STPMIC2_BUCK5>;
@@ -631,6 +724,10 @@
 	scmi_vdd_emmc: regulator@18 {
 		reg = <VOLTD_SCMI_STPMIC2_LDO2>;
 		regulator-name = "vdd_emmc";
+	};
+	scmi_vdd3v3_usb: regulator@20 {
+		reg = <VOLTD_SCMI_STPMIC2_LDO4>;
+		regulator-name = "vdd3v3_usb";
 	};
 	scmi_v5v_hdmi: regulator@21 {
 		reg = <VOLTD_SCMI_STPMIC2_LDO5>;
@@ -648,8 +745,8 @@
 
 &sdmmc1 {
 	pinctrl-names = "default", "opendrain", "sleep";
-	pinctrl-0 = <&sdmmc1_b4_pins_a>;
-	pinctrl-1 = <&sdmmc1_b4_od_pins_a>;
+	pinctrl-0 = <&sdmmc1_b4_pins_b>;
+	pinctrl-1 = <&sdmmc1_b4_od_pins_b>;
 	pinctrl-2 = <&sdmmc1_b4_sleep_pins_a>;
 	cd-gpios = <&gpiod 3 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 	disable-wp;
@@ -678,7 +775,6 @@
 	vmmc-supply = <&scmi_vdd_emmc>;
 	vqmmc-supply = <&scmi_vddio2>;
 	mmc-ddr-1_8v;
-	mmc-hs200-1_8v;
 	status = "okay";
 };
 
@@ -701,7 +797,15 @@
 	brcmf: bcrmf@1 {
 		reg = <1>;
 		compatible = "brcm,bcm4329-fmac";
+		status = "disabled";
 	};
+};
+
+&spi6 {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&spi6_pins_a>;
+	pinctrl-1 = <&spi6_sleep_pins_a>;
+	status = "disabled";
 };
 
 /* Bluetooth */
@@ -742,17 +846,30 @@
 };
 
 &usb2_phy1 {
+	vdd33-supply = <&scmi_vdd3v3_usb>;
 	status = "okay";
 };
 
 &usb2_phy2 {
+	vdd33-supply = <&scmi_vdd3v3_usb>;
 	status = "okay";
 };
 
-&usb2h {
+&usbh {
 	status = "okay";
 
-	usb2h_ohci: usb@482e0000 {
+	usbh_ehci: usb@482f0000 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		/* onboard HUB */
+		hub@1 {
+			compatible = "usb424,2514";
+			reg = <1>;
+			vdd-supply = <&scmi_v3v3>;
+		};
+	};
+
+	usbh_ohci: usb@482e0000 {
 		status = "disabled";
 	};
 };
@@ -761,16 +878,13 @@
 	status = "okay";
 
 	dwc3: usb@48300000 {
-		maximum-speed = "high-speed";
-		role-switch-default-mode = "peripheral";
+		phys            = <&usb2_phy2>, <&combophy PHY_TYPE_USB3>;
+		phy-names       = "usb2-phy", "usb3-phy";
 		usb-role-switch;
-	};
-};
-
-/* use LPTIMER with tick broadcast for suspend mode */
-&lptimer3 {
-	status = "okay";
-	timer {
-		status = "okay";
+		port {
+			dwc3_ep: endpoint {
+				remote-endpoint = <&typec_ep>;
+			};
+		};
 	};
 };

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-3-Clause)
 /*
- * Copyright (C) STMicroelectronics 2022 - All Rights Reserved
+ * Copyright (C) STMicroelectronics 2023 - All Rights Reserved
  * Author: Alexandre Torgue <alexandre.torgue@foss.st.com> for STMicroelectronics.
  */
 /dts-v1/;
@@ -9,6 +9,7 @@
 #include "stm32mp157a-ev1-scmi.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
+#include <dt-bindings/media/video-interfaces.h>
 
 / {
 	model = "STMicroelectronics STM32MP157D eval daughter on eval mother";
@@ -45,6 +46,7 @@
 		compatible = "dmic-codec";
 		#sound-dai-cells = <1>;
 		sound-name-prefix = "dmic0";
+		status = "okay";
 
 		port {
 			dmic0_endpoint: endpoint {
@@ -57,6 +59,7 @@
 		compatible = "dmic-codec";
 		#sound-dai-cells = <1>;
 		sound-name-prefix = "dmic1";
+		status = "okay";
 
 		port {
 			dmic1_endpoint: endpoint {
@@ -69,6 +72,7 @@
 		compatible = "dmic-codec";
 		#sound-dai-cells = <1>;
 		sound-name-prefix = "dmic2";
+		status = "okay";
 
 		port {
 			dmic2_endpoint: endpoint {
@@ -81,6 +85,7 @@
 		compatible = "dmic-codec";
 		#sound-dai-cells = <1>;
 		sound-name-prefix = "dmic3";
+		status = "okay";
 
 		port {
 			dmic3_endpoint: endpoint {
@@ -149,6 +154,7 @@
 	spdif_in: spdif-in {
 		#sound-dai-cells = <0>;
 		compatible = "linux,spdif-dir";
+		status = "okay";
 
 		spdif_in_port: port {
 			spdif_in_endpoint: endpoint {
@@ -160,6 +166,7 @@
 	spdif_out: spdif-out {
 		#sound-dai-cells = <0>;
 		compatible = "linux,spdif-dit";
+		status = "okay";
 
 		spdif_out_port: port {
 			spdif_out_endpoint: endpoint {
@@ -192,7 +199,7 @@
 	port {
 		dcmi_0: endpoint {
 			remote-endpoint = <&ov5640_0>;
-			bus-type = <5>;
+			bus-type = <MEDIA_BUS_TYPE_PARALLEL>;
 			bus-width = <8>;
 			hsync-active = <0>;
 			vsync-active = <0>;
@@ -314,26 +321,7 @@
 	#size-cells = <0>;
 	status = "okay";
 
-	ports {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		port@0 {
-			reg = <0>;
-			dsi_in: endpoint {
-				remote-endpoint = <&ltdc_ep0_out>;
-			};
-		};
-
-		port@1 {
-			reg = <1>;
-			dsi_out: endpoint {
-				remote-endpoint = <&dsi_panel_in>;
-			};
-		};
-	};
-
-	panel_dsi: panel-dsi@0 {
+	panel_dsi: panel@0 {
 		compatible = "raydium,rm68200";
 		reg = <0>;
 		reset-gpios = <&gpiof 15 GPIO_ACTIVE_LOW>;
@@ -349,6 +337,14 @@
 	};
 };
 
+&dsi_in {
+	remote-endpoint = <&ltdc_ep0_out>;
+};
+
+&dsi_out {
+	remote-endpoint = <&dsi_panel_in>;
+};
+
 &ethernet0 {
 	status = "okay";
 	pinctrl-0 = <&ethernet0_rgmii_pins_a>;
@@ -358,7 +354,7 @@
 	max-speed = <1000>;
 	phy-handle = <&phy0>;
 
-	mdio0 {
+	mdio {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "snps,dwmac-mdio";
@@ -417,6 +413,7 @@
 
 		wlf,gpio-cfg = <0x8101 0xa100 0xa100 0xa100 0xa101 0xa101\
 						0xa100 0xa101 0xa101 0xa101 0xa101>;
+		status = "okay";
 
 		ports {
 			#address-cells = <1>;
@@ -443,7 +440,9 @@
 		reg = <0x3c>;
 		clocks = <&clk_ext_camera>;
 		clock-names = "xclk";
+		AVDD-supply = <&v2v8>;
 		DOVDD-supply = <&v2v8>;
+		DVDD-supply = <&v2v8>;
 		powerdown-gpios = <&stmfx_pinctrl 18 (GPIO_ACTIVE_HIGH | GPIO_PUSH_PULL)>;
 		reset-gpios = <&stmfx_pinctrl 19 (GPIO_ACTIVE_LOW | GPIO_PUSH_PULL)>;
 		rotation = <180>;
@@ -594,7 +593,7 @@
 		sai2a_port: port {
 			sai2a_endpoint: endpoint {
 				remote-endpoint = <&wm8994_tx_endpoint>;
-				format = "i2s";
+				dai-format = "i2s";
 				mclk-fs = <256>;
 			};
 		};
@@ -609,7 +608,7 @@
 		sai2b_port: port {
 			sai2b_endpoint: endpoint {
 				remote-endpoint = <&wm8994_rx_endpoint>;
-				format = "i2s";
+				dai-format = "i2s";
 				mclk-fs = <256>;
 			};
 		};
@@ -670,7 +669,7 @@
 };
 
 &sram4 {
-	dcmi_pool: dcmi_pool@0 {
+	dcmi_pool: dcmi-pool@0 {
 		reg = <0x0 0x8000>;
 		pool;
 	};
@@ -780,6 +779,7 @@
 	st,tune-squelch-level = <3>;
 	st,tune-hs-rx-offset = <2>;
 	st,no-lsfs-sc;
+
 	connector {
 		compatible = "usb-a-connector";
 		vbus-supply = <&vbus_sw>;

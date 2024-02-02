@@ -6,21 +6,17 @@
 
 #include "stm32mp15xa.dtsi"
 
-/ {
-	soc {
-		etzpc: etzpc@5c007000 {
-			cryp1: cryp@54001000 {
-				compatible = "st,stm32mp1-cryp";
-				reg = <0x54001000 0x400>;
-				interrupts = <GIC_SPI 79 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&rcc CRYP1>;
-				resets = <&rcc CRYP1_R>;
-				dmas = <&mdma1 29 0x0 0x400202 0x0 0x0>,
-				       <&mdma1 30 0x3 0x400808 0x0 0x0>;
-				dma-names = "in", "out";
-				feature-domains = <&etzpc STM32MP1_ETZPC_CRYP1_ID>;
-				status = "disabled";
-			};
-		};
+&etzpc {
+	cryp1: cryp@54001000 {
+		compatible = "st,stm32mp1-cryp";
+		reg = <0x54001000 0x400>;
+		interrupts = <GIC_SPI 79 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&rcc CRYP1>;
+		resets = <&rcc CRYP1_R>;
+		dmas = <&mdma1 29 0x0 0x400202 0x0 0x0>,
+		       <&mdma1 30 0x3 0x400808 0x0 0x0>;
+		dma-names = "in", "out";
+		access-controllers = <&etzpc 9>;
+		status = "disabled";
 	};
 };

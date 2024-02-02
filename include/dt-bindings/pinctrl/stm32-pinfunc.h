@@ -26,7 +26,7 @@
 #define AF14	0xf
 #define AF15	0x10
 #define ANALOG	0x11
-#define RSVD    0x12
+#define RSVD	0x12
 
 /* define Pins number*/
 #define PIN_NO(port, line)	(((port) - 'A') * 0x10 + (line))
@@ -41,6 +41,9 @@
 #define STM32MP_PKG_AI	0x100
 #define STM32MP_PKG_AK	0x400
 #define STM32MP_PKG_AL	0x800
+#define STM32MP_PKG_AM	0x1000
+#define STM32MP_PKG_AN	0x2000
+#define STM32MP_PKG_AO	0x4000
 
 #endif /* _DT_BINDINGS_STM32_PINFUNC_H */
 

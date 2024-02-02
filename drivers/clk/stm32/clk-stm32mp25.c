@@ -6,7 +6,7 @@
 #include <clk-uclass.h>
 #include <common.h>
 #include <dm.h>
-#include <dt-bindings/clock/stm32mp25-clks.h>
+#include <dt-bindings/clock/st,stm32mp25-rcc.h>
 #include <linux/bitfield.h>
 #include <linux/clk-provider.h>
 #include <linux/io.h>

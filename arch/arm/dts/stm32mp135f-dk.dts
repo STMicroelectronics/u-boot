@@ -9,7 +9,6 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/leds/common.h>
-#include <dt-bindings/regulator/st,stm32mp13-regulator.h>
 #include <dt-bindings/rtc/rtc-stm32.h>
 #include "stm32mp135.dtsi"
 #include "stm32mp13xf.dtsi"
@@ -20,8 +19,8 @@
 	compatible = "st,stm32mp135f-dk", "st,stm32mp135";
 
 	aliases {
-		ethernet0 = &eth1;
-		ethernet1 = &eth2;
+		ethernet0 = &ethernet1;
+		ethernet1 = &ethernet2;
 		serial0 = &uart4;
 		serial1 = &usart1;
 		serial2 = &uart8;
@@ -74,10 +73,16 @@
 	gpio-keys {
 		compatible = "gpio-keys";
 
-		user-pa13 {
+		button-user {
 			label = "User-PA13";
 			linux,code = <BTN_1>;
 			gpios = <&gpioa 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+		};
+
+		button-wakeup {
+			label = "wake-up";
+			linux,code = <KEY_WAKEUP>;
+			interrupts-extended = <&optee 0>;
 		};
 	};
 
@@ -97,12 +102,12 @@
 		compatible = "gpio-backlight";
 		gpios = <&gpioe 12 GPIO_ACTIVE_HIGH>;
 		default-on;
-		default-brightness-level = <0>;
+		default-brightness-level = <1>;
 		status = "okay";
 	};
 
 	panel_rgb: panel-rgb {
-		compatible = "rocktech,rk043fn48h", "panel-dpi";
+		compatible = "panel-dpi";
 		enable-gpios = <&gpioi 7 GPIO_ACTIVE_HIGH>;
 		backlight = <&panel_backlight>;
 		power-supply = <&scmi_v3v3_sw>;
@@ -141,18 +146,6 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		regulator-always-on;
-	};
-
-	wake_up {
-		compatible = "gpio-keys";
-		status = "okay";
-
-		button {
-			label = "wake-up";
-			linux,code = <KEY_WAKEUP>;
-			interrupts-extended = <&optee 0>;
-			status = "okay";
-		};
 	};
 
 	wifi_pwrseq: wifi-pwrseq {
@@ -220,7 +213,7 @@
 	status = "okay";
 };
 
-&eth1 {
+&ethernet1 {
 	status = "okay";
 	pinctrl-0 = <&eth1_rmii_pins_a>;
 	pinctrl-1 = <&eth1_rmii_sleep_pins_a>;
@@ -231,7 +224,7 @@
 	nvmem-cells = <&ethernet_mac1_address>;
 	nvmem-cell-names = "mac-address";
 
-	mdio1 {
+	mdio {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "snps,dwmac-mdio";
@@ -239,13 +232,15 @@
 		phy0_eth1: ethernet-phy@0 {
 			compatible = "ethernet-phy-id0007.c131";
 			reset-gpios =  <&mcp23017 9 GPIO_ACTIVE_LOW>;
+			reset-assert-us = <1000>;
+			reset-deassert-us = <30000>;
 			reg = <0>;
 			wakeup-source;
 		};
 	};
 };
 
-&eth2 {
+&ethernet2 {
 	status = "okay";
 	pinctrl-0 = <&eth2_rmii_pins_a>;
 	pinctrl-1 = <&eth2_rmii_sleep_pins_a>;
@@ -258,13 +253,15 @@
 	nvmem-cells = <&ethernet_mac2_address>;
 	nvmem-cell-names = "mac-address";
 
-	mdio1 {
+	mdio {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "snps,dwmac-mdio";
 		phy0_eth2: ethernet-phy@0 {
 			compatible = "ethernet-phy-id0007.c131";
 			reset-gpios = <&mcp23017 10 GPIO_ACTIVE_LOW>;
+			reset-assert-us = <1000>;
+			reset-deassert-us = <30000>;
 			reg = <0>;
 		};
 	};
@@ -368,9 +365,9 @@
 		compatible = "galaxycore,gc2145";
 		reg = <0x3c>;
 		clocks = <&clk_ext_camera>;
-		IOVDD-supply = <&scmi_v3v3_sw>;
-		AVDD-supply = <&scmi_v3v3_sw>;
-		DVDD-supply = <&scmi_v3v3_sw>;
+		iovdd-supply = <&scmi_v3v3_sw>;
+		avdd-supply = <&scmi_v3v3_sw>;
+		dvdd-supply = <&scmi_v3v3_sw>;
 		powerdown-gpios = <&mcp23017 3 (GPIO_ACTIVE_LOW | GPIO_PUSH_PULL)>;
 		reset-gpios = <&mcp23017 4 (GPIO_ACTIVE_LOW | GPIO_PUSH_PULL)>;
 		status = "okay";
@@ -380,6 +377,7 @@
 				remote-endpoint = <&mipid02_0>;
 				clock-lanes = <0>;
 				data-lanes = <1 2>;
+				link-frequencies = /bits/ 64 <120000000 192000000 240000000>;
 			};
 		};
 	};
@@ -410,7 +408,6 @@
 		pinctrl-0 = <&goodix_pins_a>;
 		interrupt-parent = <&gpiof>;
 		interrupts = <5 IRQ_TYPE_EDGE_FALLING>;
-		reset-gpios = <&gpioh 2 GPIO_ACTIVE_LOW>;
 		AVDD28-supply = <&scmi_v3v3_sw>;
 		VDDIO-supply = <&scmi_v3v3_sw>;
 		touchscreen-size-x = <480>;
@@ -423,6 +420,7 @@
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&ltdc_pins_a>;
 	pinctrl-1 = <&ltdc_sleep_pins_a>;
+	default-on;
 	status = "okay";
 
 	port {
@@ -494,6 +492,7 @@
 	pinctrl-1 = <&sdmmc2_b4_od_pins_a &sdmmc2_clk_pins_a>;
 	pinctrl-2 = <&sdmmc2_b4_sleep_pins_a>;
 	non-removable;
+	cap-sdio-irq;
 	st,neg-edge;
 	bus-width = <4>;
 	vmmc-supply = <&v3v3_ao>;
@@ -505,9 +504,6 @@
 	brcmf: bcrmf@1 {
 		reg = <1>;
 		compatible = "brcm,bcm4329-fmac";
-		interrupt-parent = <&gpiof>;
-		interrupts = <0 IRQ_TYPE_LEVEL_HIGH>; /* WL_HOST_WAKE */
-		interrupt-names = "host-wake";
 	};
 };
 

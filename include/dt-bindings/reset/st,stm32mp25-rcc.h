@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause */
+/* SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause */
 /*
  * Copyright (C) STMicroelectronics 2023 - All Rights Reserved
  * Author(s): Gabriel Fernandez <gabriel.fernandez@foss.st.com>

@@ -14,7 +14,15 @@
 };
 
 &dwc3 {
+	phys = <&usb2_phy2>;
+	phy-names = "usb2-phy";
 	dr_mode = "peripheral";
+	maximum-speed = "high-speed";
+	/delete-node/ port;
+};
+
+&i2c_rpmsg {
+	/delete-node/ typec@35;
 };
 
 &usart2 {

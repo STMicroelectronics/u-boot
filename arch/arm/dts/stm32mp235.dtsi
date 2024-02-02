@@ -1,0 +1,173 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause)
+/*
+ * Copyright (C) STMicroelectronics 2024 - All Rights Reserved
+ * Author: Alexandre Torgue <alexandre.torgue@foss.st.com> for STMicroelectronics.
+ */
+#include <dt-bindings/power/st,stm32mp25-power.h>
+#include "stm32mp233.dtsi"
+
+/ {
+	thermal-zones {
+		cpu-thermal {
+			trips {
+				gpu_alert: gpu-alert {
+					temperature = <110000>;
+					hysteresis = <10000>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map1 {
+					trip = <&gpu_alert>;
+					cooling-device = <&gpu 1 6>;
+				};
+			};
+		};
+	};
+};
+
+&ltdc {
+	clocks = <&rcc CK_BUS_LTDC>, <&rcc CK_KER_LTDC>, <&syscfg 0>, <&lvds 0>;
+	clock-names = "bus", "ref", "lcd", "lvds";
+};
+
+&rcc {
+	clocks =
+		<&scmi_clk CK_SCMI_HSE>,
+		<&scmi_clk CK_SCMI_HSI>,
+		<&scmi_clk CK_SCMI_MSI>,
+		<&scmi_clk CK_SCMI_LSE>,
+		<&scmi_clk CK_SCMI_LSI>,
+		<&scmi_clk CK_SCMI_HSE_DIV2>,
+		<&scmi_clk CK_SCMI_ICN_HS_MCU>,
+		<&scmi_clk CK_SCMI_ICN_LS_MCU>,
+		<&scmi_clk CK_SCMI_ICN_SDMMC>,
+		<&scmi_clk CK_SCMI_ICN_DDR>,
+		<&scmi_clk CK_SCMI_ICN_DISPLAY>,
+		<&scmi_clk CK_SCMI_ICN_HSL>,
+		<&scmi_clk CK_SCMI_ICN_NIC>,
+		<&scmi_clk CK_SCMI_ICN_VID>,
+		<&scmi_clk CK_SCMI_FLEXGEN_07>,
+		<&scmi_clk CK_SCMI_FLEXGEN_08>,
+		<&scmi_clk CK_SCMI_FLEXGEN_09>,
+		<&scmi_clk CK_SCMI_FLEXGEN_10>,
+		<&scmi_clk CK_SCMI_FLEXGEN_11>,
+		<&scmi_clk CK_SCMI_FLEXGEN_12>,
+		<&scmi_clk CK_SCMI_FLEXGEN_13>,
+		<&scmi_clk CK_SCMI_FLEXGEN_14>,
+		<&scmi_clk CK_SCMI_FLEXGEN_15>,
+		<&scmi_clk CK_SCMI_FLEXGEN_16>,
+		<&scmi_clk CK_SCMI_FLEXGEN_17>,
+		<&scmi_clk CK_SCMI_FLEXGEN_18>,
+		<&scmi_clk CK_SCMI_FLEXGEN_19>,
+		<&scmi_clk CK_SCMI_FLEXGEN_20>,
+		<&scmi_clk CK_SCMI_FLEXGEN_21>,
+		<&scmi_clk CK_SCMI_FLEXGEN_22>,
+		<&scmi_clk CK_SCMI_FLEXGEN_23>,
+		<&scmi_clk CK_SCMI_FLEXGEN_24>,
+		<&scmi_clk CK_SCMI_FLEXGEN_25>,
+		<&scmi_clk CK_SCMI_FLEXGEN_26>,
+		<&scmi_clk CK_SCMI_FLEXGEN_27>,
+		<&scmi_clk CK_SCMI_FLEXGEN_28>,
+		<&scmi_clk CK_SCMI_FLEXGEN_29>,
+		<&scmi_clk CK_SCMI_FLEXGEN_30>,
+		<&scmi_clk CK_SCMI_FLEXGEN_31>,
+		<&scmi_clk CK_SCMI_FLEXGEN_32>,
+		<&scmi_clk CK_SCMI_FLEXGEN_33>,
+		<&scmi_clk CK_SCMI_FLEXGEN_34>,
+		<&scmi_clk CK_SCMI_FLEXGEN_35>,
+		<&scmi_clk CK_SCMI_FLEXGEN_36>,
+		<&scmi_clk CK_SCMI_FLEXGEN_37>,
+		<&scmi_clk CK_SCMI_FLEXGEN_38>,
+		<&scmi_clk CK_SCMI_FLEXGEN_39>,
+		<&scmi_clk CK_SCMI_FLEXGEN_40>,
+		<&scmi_clk CK_SCMI_FLEXGEN_41>,
+		<&scmi_clk CK_SCMI_FLEXGEN_42>,
+		<&scmi_clk CK_SCMI_FLEXGEN_43>,
+		<&scmi_clk CK_SCMI_FLEXGEN_44>,
+		<&scmi_clk CK_SCMI_FLEXGEN_45>,
+		<&scmi_clk CK_SCMI_FLEXGEN_46>,
+		<&scmi_clk CK_SCMI_FLEXGEN_47>,
+		<&scmi_clk CK_SCMI_FLEXGEN_48>,
+		<&scmi_clk CK_SCMI_FLEXGEN_49>,
+		<&scmi_clk CK_SCMI_FLEXGEN_50>,
+		<&scmi_clk CK_SCMI_FLEXGEN_51>,
+		<&scmi_clk CK_SCMI_FLEXGEN_52>,
+		<&scmi_clk CK_SCMI_FLEXGEN_53>,
+		<&scmi_clk CK_SCMI_FLEXGEN_54>,
+		<&scmi_clk CK_SCMI_FLEXGEN_55>,
+		<&scmi_clk CK_SCMI_FLEXGEN_56>,
+		<&scmi_clk CK_SCMI_FLEXGEN_57>,
+		<&scmi_clk CK_SCMI_FLEXGEN_58>,
+		<&scmi_clk CK_SCMI_FLEXGEN_59>,
+		<&scmi_clk CK_SCMI_FLEXGEN_60>,
+		<&scmi_clk CK_SCMI_FLEXGEN_61>,
+		<&scmi_clk CK_SCMI_FLEXGEN_62>,
+		<&scmi_clk CK_SCMI_FLEXGEN_63>,
+		<&scmi_clk CK_SCMI_ICN_APB1>,
+		<&scmi_clk CK_SCMI_ICN_APB2>,
+		<&scmi_clk CK_SCMI_ICN_APB3>,
+		<&scmi_clk CK_SCMI_ICN_APB4>,
+		<&scmi_clk CK_SCMI_ICN_APBDBG>,
+		<&scmi_clk CK_SCMI_TIMG1>,
+		<&scmi_clk CK_SCMI_TIMG2>,
+		<&scmi_clk CK_SCMI_PLL3>,
+		<&dsi>,
+		<&scmi_clk CK_SCMI_HSI_KER_CK>,
+		<&scmi_clk CK_SCMI_HSE_KER_CK>,
+		<&scmi_clk CK_SCMI_MSI_KER_CK>;
+};
+
+&rifsc {
+	dsi: dsi@48000000 {
+		compatible = "st,stm32mp25-dsi";
+		reg = <0x48000000 0x800>;
+		#clock-cells = <0>;
+		clocks = <&rcc CK_BUS_DSI>, <&rcc CK_KER_DSIPHY>,
+			 <&rcc CK_KER_LTDC>;
+		clock-names = "pclk", "ref", "px_clk";
+		resets = <&rcc DSI_R>;
+		reset-names = "apb";
+		access-controllers = <&rifsc 81>;
+		power-domains = <&CLUSTER_PD>;
+		status = "disabled";
+	};
+
+	lvds: lvds@48060000 {
+		#clock-cells = <0>;
+		compatible = "st,stm32mp25-lvds";
+		reg = <0x48060000 0x2000>;
+		clocks = <&rcc CK_BUS_LVDS>, <&rcc CK_KER_LVDSPHY>, <&syscfg 0>;
+		clock-names = "pclk", "ref", "pixclk";
+		resets = <&rcc LVDS_R>;
+		access-controllers = <&rifsc 84>;
+		power-domains = <&CLUSTER_PD>;
+		status = "disabled";
+	};
+
+	vdec: vdec@480d0000 {
+		compatible = "st,stm32mp25-vdec";
+		reg = <0x480d0000 0x3c8>;
+		resets = <&rcc VDEC_R>;
+		interrupts = <GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&rcc CK_BUS_VDEC>;
+		access-controllers = <&rifsc 89>;
+		power-domains = <&CLUSTER_PD>;
+	};
+
+	gpu: gpu@48280000 {
+		compatible = "vivante,gc";
+		reg = <0x48280000 0x800>;
+		interrupts = <GIC_SPI 183 IRQ_TYPE_LEVEL_HIGH>;
+		resets = <&rcc GPU_R>;
+		clock-names = "bus", "core";
+		clocks = <&rcc CK_BUS_GPU>, <&rcc CK_KER_GPU>;
+		power-domains = <&scmi_devpd PD_SCMI_GPU>, <&CLUSTER_PD>;
+		access-controllers = <&rifsc 79>;
+		status = "disabled";
+
+		throttle,max_state = <6>;
+		#cooling-cells = <2>;
+	};
+};
