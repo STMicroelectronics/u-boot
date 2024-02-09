@@ -467,7 +467,7 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 	nodeoff = fdt_set_status_by_pathf(blob, status, "/panel-lvds-backlight");
 	if (nodeoff < 0)
 		return nodeoff;
-	nodeoff = fdt_set_status_by_compatible(blob, "st,stm32-lvds", status);
+	nodeoff = fdt_set_status_by_compatible(blob, "st,stm32mp25-lvds", status);
 	if (nodeoff < 0)
 		return nodeoff;
 
@@ -487,7 +487,7 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 		nodeoff = fdt_set_status_by_pathf(blob, status, "/sound");
 		if (nodeoff < 0)
 			return nodeoff;
-		nodeoff = fdt_status_okay_by_compatible(blob, "st,stm32-dsi");
+		nodeoff = fdt_status_okay_by_compatible(blob, "st,stm32mp255-dsi");
 		if (nodeoff < 0)
 			return nodeoff;
 	}
@@ -522,7 +522,7 @@ static int fixup_stm32mp257_disco_panel(void *blob)
 	nodeoff = fdt_set_status_by_pathf(blob, status, "/panel-lvds-backlight");
 	if (nodeoff < 0)
 		return nodeoff;
-	nodeoff = fdt_set_status_by_compatible(blob, "st,stm32-lvds", status);
+	nodeoff = fdt_set_status_by_compatible(blob, "st,stm32mp25-lvds", status);
 	if (nodeoff < 0)
 		return nodeoff;
 
