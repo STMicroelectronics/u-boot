@@ -47,7 +47,6 @@ config STM32MP13X
 	select OF_BOARD_SETUP
 	select PINCTRL_STM32
 	select STM32_RCC
-	select STM32_RESET
 	select STM32_SERIAL
 	select STM32MP_TAMP_NVMEM
 	select SYS_ARCH_TIMER
@@ -67,7 +66,6 @@ config STM32MP15X
 	select OF_BOARD_SETUP
 	select PINCTRL_STM32
 	select STM32_RCC
-	select STM32_RESET
 	select STM32_SERIAL
 	select STM32MP_TAMP_NVMEM
 	select SUPPORT_SPL
@@ -87,7 +85,6 @@ config STM32MP25X
 	select OF_BOARD_SETUP
 	select PINCTRL_STM32
 	select STM32_RCC
-	select STM32_RESET
 	select STM32_SERIAL
 	select STM32MP_TAMP_NVMEM
 	select SYS_ARCH_TIMER
