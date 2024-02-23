@@ -16,9 +16,7 @@ config TARGET_ST_STM32MP15X
 	imply BOOTSTAGE
 	imply CMD_BOOTSTAGE
 	imply CMD_CLS if CMD_BMP
-	imply DISABLE_CONSOLE
 	imply PRE_CONSOLE_BUFFER
-	imply SILENT_CONSOLE
 	help
 		target the STMicroelectronics board with SOC STM32MP15x
 		managed by board/st/stm32mp1:
@@ -35,9 +33,7 @@ config TARGET_MICROGEA_STM32MP1
 	imply BOOTSTAGE
 	imply CMD_BOOTSTAGE
 	imply CMD_CLS if CMD_BMP
-	imply DISABLE_CONSOLE
 	imply PRE_CONSOLE_BUFFER
-	imply SILENT_CONSOLE
 	help
 	  MicroGEA STM32MP1 is a STM32MP157A based Micro SOM.
 
@@ -59,9 +55,7 @@ config TARGET_ICORE_STM32MP1
 	imply BOOTSTAGE
 	imply CMD_BOOTSTAGE
 	imply CMD_CLS if CMD_BMP
-	imply DISABLE_CONSOLE
 	imply PRE_CONSOLE_BUFFER
-	imply SILENT_CONSOLE
 	help
 	  i.Core STM32MP1 is an EDIMM SOM based on STM32MP157A.
 
