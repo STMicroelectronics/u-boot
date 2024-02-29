@@ -545,16 +545,14 @@ static int stm32_ltdc_get_panel(struct udevice *dev, struct udevice **panel)
 
 			uclass_find_device_by_ofnode(UCLASS_PANEL, remote, panel);
 			if (*panel)
-				break;
+				if (ofnode_valid(dev_ofnode(*panel)))
+					return 0;
 		};
 	}
 
 	/* Sanity check, we can get out of the loop without having a clean ofnode */
 	if (!(*panel))
 		ret = -EINVAL;
-	else
-		if (!ofnode_valid(dev_ofnode(*panel)))
-			ret = -EINVAL;
 
 	return ret;
 }
