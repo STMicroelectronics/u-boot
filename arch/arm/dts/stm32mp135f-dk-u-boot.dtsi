@@ -23,7 +23,11 @@
 		led-red {
 			color = <LED_COLOR_ID_RED>;
 			gpios = <&gpioa 13 GPIO_ACTIVE_LOW>;
-			default-state = "off";
+		};
+
+		led-blue {
+			label = "heartbeat";
+			gpios = <&gpioa 14 GPIO_ACTIVE_LOW>;
 		};
 	};
 };
