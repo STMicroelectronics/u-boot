@@ -579,14 +579,13 @@ static int stm32_ltdc_get_panel(struct udevice *dev, struct udevice **panel)
 			continue;
 
 		ret = stm32_ltdc_get_remote_device(dev, ep_node, UCLASS_PANEL, panel);
+		if (!ret && ofnode_valid(dev_ofnode(*panel)))
+			return 0;
 	}
 
 	/* Sanity check, we can get out of the loop without having a clean ofnode */
 	if (!(*panel))
 		ret = -EINVAL;
-	else
-		if (!ofnode_valid(dev_ofnode(*panel)))
-			ret = -EINVAL;
 
 	return ret;
 }
