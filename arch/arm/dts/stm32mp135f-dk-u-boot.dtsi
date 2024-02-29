@@ -11,8 +11,8 @@
 	};
 
 	config {
-		u-boot,boot-led = "led-blue";
-		u-boot,error-led = "led-red";
+		u-boot,boot-led = "heartbeat";
+		u-boot,error-led = "error";
 		u-boot,mmc-env-partition = "u-boot-env";
 		st,adc_usb_pd = <&adc1 6>, <&adc1 12>;
 		st,fastboot-gpios = <&gpioa 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
@@ -21,7 +21,7 @@
 
 	leds {
 		led-red {
-			color = <LED_COLOR_ID_RED>;
+			label = "error";
 			gpios = <&gpioa 13 GPIO_ACTIVE_LOW>;
 		};
 
