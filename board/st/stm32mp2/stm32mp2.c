@@ -617,7 +617,7 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 	}
 
 	if (!detect_adv7535 && !detect_etml0700z9ndha) {
-		nodeoff = fdt_status_disabled_by_compatible(blob, "st,stm32-ltdc");
+		nodeoff = fdt_status_disabled_by_compatible(blob, "st,stm32mp25-ltdc");
 		if (nodeoff < 0)
 			return nodeoff;
 	}
