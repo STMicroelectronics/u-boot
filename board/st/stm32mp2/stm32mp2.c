@@ -9,6 +9,7 @@
 #include <button.h>
 #include <config.h>
 #include <dm.h>
+#include <efi_loader.h>
 #include <env.h>
 #include <env_internal.h>
 #include <fdt_simplefb.h>
@@ -52,6 +53,17 @@
 #define ILITEK_ID_LEN		7
 #define ADV7511_REG_CHIP_REVISION	0x00
 #define ADV7511_CHIP_REVISION_LEN	256
+
+#if CONFIG_IS_ENABLED(EFI_HAVE_CAPSULE_SUPPORT)
+struct efi_fw_image fw_images[1];
+
+struct efi_capsule_update_info update_info = {
+	.num_images = ARRAY_SIZE(fw_images),
+	.images = fw_images,
+};
+
+u8 num_image_type_guids = ARRAY_SIZE(fw_images);
+#endif /* EFI_HAVE_CAPSULE_SUPPORT */
 
 /*
  * Get a global data pointer
@@ -430,6 +442,14 @@ int board_init(void)
 	setup_led(LEDST_ON);
 
 	check_user_button();
+
+#if CONFIG_IS_ENABLED(EFI_HAVE_CAPSULE_SUPPORT)
+	efi_guid_t image_type_guid = STM32MP_FIP_IMAGE_GUID;
+
+	guidcpy(&fw_images[0].image_type_id, &image_type_guid);
+	fw_images[0].fw_name = u"STM32MP-FIP";
+	fw_images[0].image_index = 1;
+#endif
 
 	return 0;
 }
