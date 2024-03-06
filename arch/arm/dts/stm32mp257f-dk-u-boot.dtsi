@@ -11,6 +11,11 @@
 		u-boot,mmc-env-partition = "u-boot-env";
 		st,stm32prog-gpios = <&gpioc 11 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 	};
+
+	fwu-mdata {
+		compatible = "u-boot,fwu-mdata-gpt";
+		fwu-mdata-store = <&sdmmc1>;
+	};
 };
 
 &dwc3 {
