@@ -426,13 +426,16 @@ static void __maybe_unused oem_format(char *cmd_parameter, char *response)
 	char cmdbuf[32];
 	const int mmc_dev = config_opt_enabled(CONFIG_FASTBOOT_FLASH_MMC,
 					       CONFIG_FASTBOOT_FLASH_MMC_DEV, -1);
+	const char *part = env_get("partitions");
 
-	if (!env_get("partitions")) {
+	if (!part) {
 		fastboot_fail("partitions not set", response);
 	} else {
 		sprintf(cmdbuf, "gpt write mmc %x $partitions", mmc_dev);
+		printf("Execute: %s\n", cmdbuf);
+		printf("with partitions: %s\n", part);
 		if (run_command(cmdbuf, 0))
-			fastboot_fail("", response);
+			fastboot_fail("Cannot write GPT", response);
 		else
 			fastboot_okay(NULL, response);
 	}
