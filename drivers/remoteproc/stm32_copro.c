@@ -250,11 +250,15 @@ static int stm32_copro_start(struct udevice *dev)
 	}
 
 	if (proc_id == STM32MP15_M4_FW_ID) {
+#ifdef CONFIG_STM32MP15X
 		/* Indicates that copro is running */
 		writel(TAMP_COPRO_STATE_CRUN, TAMP_COPRO_STATE);
 
 		/* Store rsc_address in bkp register */
 		writel(priv->rsc_table_addr, TAMP_COPRO_RSC_TBL_ADDRESS);
+#else
+		return -EOPNOTSUPP;
+#endif
 	} else if (proc_id == STM32MP25_M33_FW_ID) {
 		/* Store the resource table address and size in 32-bit registers*/
 		ret = nvmem_cell_write(&priv->rsc_t_addr_cell, &priv->rsc_table_addr, sizeof(u32));
@@ -312,8 +316,12 @@ static int stm32_copro_reset(struct udevice *dev)
 	priv->rsc_table_size = 0;
 
 	if (proc_id == STM32MP15_M4_FW_ID) {
+#ifdef CONFIG_STM32MP15X
 		writel(TAMP_COPRO_STATE_OFF, TAMP_COPRO_STATE);
 		writel(priv->rsc_table_addr, TAMP_COPRO_RSC_TBL_ADDRESS);
+#else
+		return -EOPNOTSUPP;
+#endif
 	} else if (proc_id == STM32MP25_M33_FW_ID) {
 		ret = nvmem_cell_write(&priv->rsc_t_addr_cell, &priv->rsc_table_addr, sizeof(u32));
 		if (ret)
@@ -344,12 +352,13 @@ static int stm32_copro_stop(struct udevice *dev)
  */
 static int stm32_copro_is_running(struct udevice *dev)
 {
+#ifdef CONFIG_STM32MP15X
 	unsigned int proc_id = (u32)dev_get_driver_data(dev);
 
 	if (proc_id == STM32MP15_M4_FW_ID)
 		return (readl(TAMP_COPRO_STATE) == TAMP_COPRO_STATE_OFF);
-	else
-		return -EOPNOTSUPP;
+#endif
+	return -EOPNOTSUPP;
 }
 
 static const struct dm_rproc_ops stm32_copro_ops = {
