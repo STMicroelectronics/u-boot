@@ -67,14 +67,21 @@ const struct stm32key stm32mp15_list[] = {
 	}
 };
 
-static int post_process_edmk2(struct udevice *dev);
+static int post_process_oem_key2(struct udevice *dev);
 
 const struct stm32key stm32mp2x_list[] = {
 	[STM32KEY_PKH] = {
-		.name = "PKHTH",
-		.desc = "Hash of the 8 ECC Public Keys Hashes Table (ECDSA is the authentication algorithm)",
+		.name = "OEM-KEY1",
+		.desc = "Hash of the 8 ECC Public Keys Hashes Table (ECDSA is the authentication algorithm) for FSBLA or M",
 		.start = 144,
 		.size = 8,
+	},
+	{
+		.name = "OEM-KEY2",
+		.desc = "Hash of the 8 ECC Public Keys Hashes Table (ECDSA is the authentication algorithm) for FSBLM",
+		.start = 152,
+		.size = 8,
+		.post_process = post_process_oem_key2,
 	},
 	{
 		.name = "FIP-EDMK",
@@ -93,7 +100,6 @@ const struct stm32key stm32mp2x_list[] = {
 		.desc = "Encryption/Decryption Master Key for FSBLM",
 		.start = 360,
 		.size = 4,
-		.post_process = post_process_edmk2,
 	}
 };
 
@@ -345,7 +351,7 @@ static int write_close_status(struct udevice *dev)
 	return 0;
 }
 
-static int post_process_edmk2(struct udevice *dev)
+static int post_process_oem_key2(struct udevice *dev)
 {
 	int ret;
 	u32 val;
