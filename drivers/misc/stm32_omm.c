@@ -27,7 +27,7 @@
 
 #define OMM_CHILD_NB		2
 
-#define NSEC_PER_SEC 1000000000L
+#define NSEC_PER_SEC		1000000000L
 
 struct stm32_omm_plat {
 	struct regmap *omm_regmap;
@@ -58,7 +58,12 @@ static int stm32_omm_set_amcr(struct udevice *dev, bool set)
 	regmap_read(plat->syscfg_regmap, plat->amcr_base, &read_amcr);
 	read_amcr = read_amcr >> (ffs(plat->amcr_mask) - 1);
 
-	return amcr != read_amcr;
+	if (amcr != read_amcr) {
+		dev_err(dev, "AMCR value not coherent with DT memory-map areas\n");
+		return -EINVAL;
+	}
+
+	return 0;
 }
 
 static int stm32_omm_configure(struct udevice *dev)
@@ -103,6 +108,8 @@ static int stm32_omm_configure(struct udevice *dev)
 	regmap_update_bits(plat->omm_regmap, OCTOSPIM_CR,
 			   CR_MUXENMODE_MASK, mux);
 
+	clk_disable(&plat->clk);
+
 	return stm32_omm_set_amcr(dev, true);
 }
 
@@ -140,7 +147,28 @@ clk_free:
 	return ret;
 }
 
+static int stm32_omm_enable_child_clock(struct udevice *dev, ofnode child)
+{
+	struct clk omi_clk;
+	int ret;
+
+	ret = clk_get_by_index_nodev(child, 0, &omi_clk);
+	if (ret) {
+		dev_err(dev, "Failed to get clock for %s\n", ofnode_get_name(child));
+		return ret;
+	}
+
+	ret = clk_enable(&omi_clk);
+	if (ret)
+		dev_err(dev, "Failed to enable clock for %s\n", ofnode_get_name(child));
+
+	clk_free(&omi_clk);
+
+	return ret;
+}
+
 static int stm32_omm_probe(struct udevice *dev) {
+	struct stm32_omm_plat *plat = dev_get_plat(dev);
 	ofnode child_list[OMM_CHILD_NB];
 	ofnode child;
 	int ret;
@@ -160,7 +188,7 @@ static int stm32_omm_probe(struct udevice *dev) {
 		}
 
 		if (!ofnode_device_is_compatible(child, "st,stm32mp25-omi"))
-			continue;
+			return -EINVAL;
 
 		ret = stm32_rifsc_check_access(child);
 		if (ret < 0 && ret != -EACCES)
@@ -176,26 +204,38 @@ static int stm32_omm_probe(struct udevice *dev) {
 		nb_child++;
 	}
 
+	if (nb_child != OMM_CHILD_NB)
+		return -EINVAL;
+
 	/* check if OMM's ressource access is granted */
 	ret = stm32_rifsc_check_access(dev_ofnode(dev));
 	if (ret < 0 && ret != -EACCES)
 		return ret;
 
-	if (!ret) {
-		/* All child's access are granted ? */
-		if (child_access_granted == nb_child) {
-			/* Ensure both OSPI instance are disabled before configuring OMM */
+	/* All child's access are granted ? */
+	if (!ret && child_access_granted == nb_child) {
+		/* Ensure both OSPI instance are disabled before configuring OMM */
+		for (i = 0; i < nb_child; i++) {
+			ret = stm32_omm_disable_child(dev, child_list[i]);
+			if (ret)
+				return ret;
+		}
+
+		ret = stm32_omm_configure(dev);
+		if (ret)
+			return ret;
+
+		if (plat->mux & CR_MUXEN) {
+			/*
+			 * If the mux is enabled, the 2 OSPI clocks have to be
+			 * always enabled
+			 */
+
 			for (i = 0; i < nb_child; i++) {
-				ret = stm32_omm_disable_child(dev, child_list[i]);
+				ret = stm32_omm_enable_child_clock(dev, child_list[i]);
 				if (ret)
 					return ret;
 			}
-
-			ret = stm32_omm_configure(dev);
-			if (ret)
-				return ret;
-		} else {
-			dev_dbg(dev, "Can't disable Octo Memory Manager's child\n");
 		}
 	} else {
 		dev_dbg(dev, "Octo Memory Manager resource's access not granted\n");
@@ -204,14 +244,9 @@ static int stm32_omm_probe(struct udevice *dev) {
 		 * with memory-map areas defined in DT
 		 */
 		ret = stm32_omm_set_amcr(dev, false);
-		if (ret > 0) {
-			dev_err(dev, "AMCR value not coherent with DT memory-map areas\n");
-
-			return -EINVAL;
-		}
 	}
 
-	return 0;
+	return ret;
 }
 
 static int stm32_omm_of_to_plat(struct udevice *dev)
