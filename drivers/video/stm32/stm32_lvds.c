@@ -326,8 +326,7 @@ static int stm32_lvds_pll_enable(struct stm32_lvds *lvds,
 		return ret;
 
 	/* Set PLL parameters */
-	lvds_writel(lvds, LVDS_PxPLLCR2(phy), ndiv << 16);
-	lvds_set(lvds, LVDS_PxPLLCR2(phy), bdiv);
+	lvds_writel(lvds, LVDS_PxPLLCR2(phy), (ndiv << 16) | bdiv);
 	lvds_writel(lvds, LVDS_PxPLLSDCR1(phy), mdiv);
 	lvds_writel(lvds, LVDS_PxPLLTESTCR(phy), TEST_DIV << 16);
 
@@ -382,8 +381,10 @@ static int stm32_lvds_enable(struct udevice *dev,
 			     const struct display_timing *timings)
 {
 	struct stm32_lvds *lvds = dev_get_priv(dev);
-	u32 lvds_cdl1cr, lvds_cdl2cr;
-	u32 lvds_dmlcr, lvds_dmmcr;
+	u32 lvds_cdl1cr = 0;
+	u32 lvds_cdl2cr = 0;
+	u32 lvds_dmlcr = 0;
+	u32 lvds_dmmcr = 0;
 	u32 lvds_cr = 0;
 	int i;
 
