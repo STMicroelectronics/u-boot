@@ -371,24 +371,39 @@ static int setup_led(enum led_state_t cmd)
 
 static void check_user_button(void)
 {
-	struct udevice *button;
-	int i;
+	struct udevice *button1 = NULL, *button2 = NULL;
+	enum forced_boot_mode boot_mode = BOOT_NORMAL;
 
-	if (!IS_ENABLED(CONFIG_CMD_STM32PROG) || !IS_ENABLED(CONFIG_BUTTON))
+	if (!IS_ENABLED(CONFIG_BUTTON))
 		return;
 
-	if (button_get_by_label("User-2", &button))
+	if (!IS_ENABLED(CONFIG_FASTBOOT) && !IS_ENABLED(CONFIG_CMD_STM32PROG))
 		return;
 
-	for (i = 0; i < 21; ++i) {
-		if (button_get_state(button) != BUTTON_ON)
-			return;
-		if (i < 20)
-			mdelay(50);
+	if (IS_ENABLED(CONFIG_CMD_STM32PROG))
+		button_get_by_label("User-1", &button1);
+
+	if (IS_ENABLED(CONFIG_FASTBOOT))
+		button_get_by_label("User-2", &button2);
+
+	if (!button1 && !button2)
+		return;
+
+	if (button1 && button_get_state(button1) == BUTTON_ON) {
+		log_notice("STM32Programmer key pressed, ");
+		boot_mode = BOOT_STM32PROG;
 	}
 
-	log_notice("entering download mode...\n");
-	clrsetbits_le32(TAMP_BOOT_CONTEXT, TAMP_BOOT_FORCED_MASK, BOOT_STM32PROG);
+	if (button2 && button_get_state(button2) == BUTTON_ON) {
+		log_notice("Fastboot key pressed, ");
+		boot_mode = BOOT_FASTBOOT;
+	}
+
+	if (boot_mode != BOOT_NORMAL) {
+		log_notice("entering download mode...\n");
+		clrsetbits_le32(TAMP_BOOT_CONTEXT, TAMP_BOOT_FORCED_MASK,
+				boot_mode);
+	}
 }
 
 static bool board_is_stm32mp257_eval(void)
