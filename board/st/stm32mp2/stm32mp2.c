@@ -227,22 +227,24 @@ bool detect_stm32mp25x_etml0700zxxdha(void)
 	return false;
 }
 
-bool detect_stm32mp25x_adv7535(void)
+bool detect_stm32mp25x_adv753x(void)
 {
 	ofnode node;
 	char id[ADV7511_CHIP_REVISION_LEN];
-	int ret;
 
-	node = ofnode_by_compatible(ofnode_null(),  "adi,adv7535");
-	if (!ofnode_valid(node))
-		return false;
+	node = ofnode_by_compatible(ofnode_null(),  "adi,adv7533");
+	if (!ofnode_valid(node)) {
+		node = ofnode_by_compatible(ofnode_null(),  "adi,adv7535");
+		if (!ofnode_valid(node))
+			return false;
+	}
 
 	if (!reset_gpio(node))
 		return false;
 
 	mdelay(10);
 
-	ret = i2c_read(node, ADV7511_REG_CHIP_REVISION, id, sizeof(id), 1);
+	i2c_read(node, ADV7511_REG_CHIP_REVISION, id, sizeof(id), 1);
 
 	if (id[0] == 0x14)
 		return true;
@@ -259,10 +261,13 @@ static const struct detect_info_t stm32mp25x_panels[] = {
 
 static const struct detect_info_t stm32mp25x_bridges[] = {
 	{
-		.detect = detect_stm32mp25x_adv7535,
+		.detect = detect_stm32mp25x_adv753x,
+		.compatible = "adi,adv7533",
+	},
+	{
+		.detect = detect_stm32mp25x_adv753x,
 		.compatible = "adi,adv7535",
 	},
-
 };
 
 static void board_stm32mp25x_eval_init(void)
@@ -594,7 +599,7 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 	char const *panel = env_get("panel");
 	char const *hdmi = env_get("hdmi");
 	bool detect_etml0700z9ndha = false;
-	bool detect_adv7535 = false;
+	bool detect_adv753x = false;
 	int nodeoff = 0, ret;
 	enum fdt_status status;
 
@@ -602,7 +607,8 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 		detect_etml0700z9ndha = !strcmp(panel, "edt,etml0700z9ndha");
 
 	if (hdmi)
-		detect_adv7535 = !strcmp(hdmi, "adi,adv7535");
+		/* string compare the hdmi compatible limit to 10 chars (adi,adv753) */
+		detect_adv753x = !strncmp(hdmi, "adi,adv753x", 10);
 
 	/* update LVDS panel "edt,etml0700z9ndha" */
 	status = detect_etml0700z9ndha ? FDT_STATUS_OKAY : FDT_STATUS_DISABLED;
@@ -619,9 +625,11 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 	if (nodeoff < 0)
 		return nodeoff;
 
-	/* update HDMI bridge "adi,adv7535" */
-	status = detect_adv7535 ? FDT_STATUS_OKAY : FDT_STATUS_DISABLED;
-	nodeoff = fdt_set_status_by_compatible(blob, "adi,adv7535", status);
+	/* update HDMI bridge "adi,adv753x" */
+	status = detect_adv753x ? FDT_STATUS_OKAY : FDT_STATUS_DISABLED;
+	nodeoff = fdt_set_status_by_compatible(blob, "adi,adv7533", status);
+	if (nodeoff < 0)
+		nodeoff = fdt_set_status_by_compatible(blob, "adi,adv7535", status);
 	/* Do not force disable status for sound card. Keep default status instead */
 	if (status == FDT_STATUS_OKAY) {
 		if (nodeoff < 0)
@@ -640,7 +648,7 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 			return nodeoff;
 	}
 
-	if (!detect_adv7535 && !detect_etml0700z9ndha) {
+	if (!detect_adv753x && !detect_etml0700z9ndha) {
 		nodeoff = fdt_status_disabled_by_compatible(blob, "st,stm32mp25-ltdc");
 		if (nodeoff < 0)
 			return nodeoff;
