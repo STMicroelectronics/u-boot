@@ -190,7 +190,7 @@ static int env_flash_save(void)
 
 	puts("Writing to Flash... ");
 	debug(" %08lX ... %08lX ...",
-		(ulong)&(flash_addr_new->data),
+		(ulong)&(flash_addr_new),
 		sizeof(env_ptr->data) + (ulong)&(flash_addr_new->data));
 	rc = flash_write((char *)&env_new, (ulong)flash_addr_new,
 			 sizeof(env_new));
