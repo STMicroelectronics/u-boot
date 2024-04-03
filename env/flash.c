@@ -135,7 +135,86 @@ static int env_flash_init(void)
 
 	return 0;
 }
+
+#if CONFIG_ENV_SECT_SIZE > CONFIG_ENV_SIZE
+static int save_rest_of_sector(ulong start, ulong end, char **saved_data)
+{
+	ulong up_data = 0;
+
+	up_data = end + 1 - (start + CONFIG_ENV_SIZE);
+	debug("Data to save 0x%lX\n", up_data);
+	if (up_data) {
+		*saved_data = malloc(up_data);
+		if (!saved_data) {
+			printf("Can't allocate the rest of sector\n");
+			return -ENOMEM;
+		}
+		memcpy_fromio(*saved_data, (void *)(start + CONFIG_ENV_SIZE),
+			      up_data);
+		debug("Data (start 0x%lX, len 0x%lX) saved at 0x%p\n",
+		      start + CONFIG_ENV_SIZE, up_data, *saved_data);
+	}
+
+	return 0;
+}
+
+static int restore_rest_of_sector(ulong start, ulong end, char *saved_data)
+{
+	ulong up_data;
+	int ret = 0;
+
+	up_data = end + 1 - (start + CONFIG_ENV_SIZE);
+	if (up_data) {
+		debug("Restoring the rest of data to 0x%lX len 0x%lX\n",
+		      start + CONFIG_ENV_SIZE, up_data);
+		ret = flash_write(saved_data, start + CONFIG_ENV_SIZE, up_data);
+	}
+
+	return ret;
+}
 #endif
+#endif
+
+static int env_update_flag(char flag, env_t *start, ulong end)
+{
+	env_t tmp_env;
+	char *saved_data = NULL;
+	int ret;
+
+	memcpy_fromio(&tmp_env, start, CONFIG_ENV_SIZE);
+	tmp_env.flags = flag;
+
+#if CONFIG_ENV_SECT_SIZE > CONFIG_ENV_SIZE
+	ret = save_rest_of_sector((ulong)start, end, &saved_data);
+	if (ret)
+		return ret;
+#endif
+	puts("Erasing Flash...");
+	debug(" %08lX ... %08lX ...", (ulong)start, end);
+
+	if (flash_sect_erase((ulong)start, end))
+		goto done;
+
+	puts("Writing to Flash... ");
+	debug(" %08lX ... %08lX ...",
+	      (ulong)&start,
+	      sizeof(tmp_env.data) + (ulong)&start->data);
+
+	ret = flash_write((char *)&tmp_env, (ulong)start, sizeof(tmp_env));
+	if (ret)
+		goto perror;
+
+#if CONFIG_ENV_SECT_SIZE > CONFIG_ENV_SIZE
+	ret = restore_rest_of_sector((long)start, end, saved_data);
+#endif
+
+perror:
+	flash_perror(ret);
+done:
+	free(saved_data);
+
+	return ret;
+}
 
 #ifdef CMD_SAVEENV
 static int env_flash_save(void)
@@ -197,8 +276,7 @@ static int env_flash_save(void)
 	if (rc)
 		goto perror;
 
-	rc = flash_write(&flag, (ulong)&(flash_addr->flags),
-			 sizeof(flash_addr->flags));
+	rc = env_update_flag(flag, flash_addr, end_addr);
 	if (rc)
 		goto perror;
 
@@ -344,7 +422,7 @@ done:
 static int env_flash_load(void)
 {
 	env_t *tmp_env;
-	int ret;
+	int ret = 0;
 
 	tmp_env = malloc(CONFIG_ENV_SIZE);
 	if (!tmp_env) {
@@ -368,31 +446,29 @@ static int env_flash_load(void)
 
 	if (flash_addr_new->flags != ENV_REDUND_OBSOLETE &&
 	    crc32(0, tmp_env->data, ENV_SIZE) == tmp_env->crc) {
-		char flag = ENV_REDUND_OBSOLETE;
-
 		gd->env_valid = ENV_REDUND;
 		flash_sect_protect(0, (ulong)flash_addr_new, end_addr_new);
-		flash_write(&flag,
-			    (ulong)&(flash_addr_new->flags),
-			    sizeof(flash_addr_new->flags));
+		ret = env_update_flag(ENV_REDUND_OBSOLETE, flash_addr_new, end_addr_new);
 		flash_sect_protect(1, (ulong)flash_addr_new, end_addr_new);
 	}
 
 	if (flash_addr->flags != ENV_REDUND_ACTIVE &&
 	    (flash_addr->flags & ENV_REDUND_ACTIVE) == ENV_REDUND_ACTIVE) {
-		char flag = ENV_REDUND_ACTIVE;
-
 		gd->env_valid = ENV_REDUND;
 		flash_sect_protect(0, (ulong)flash_addr, end_addr);
-		flash_write(&flag,
-			    (ulong)&(flash_addr->flags),
-			    sizeof(flash_addr->flags));
+		ret = env_update_flag(ENV_REDUND_ACTIVE, flash_addr, end_addr);
 		flash_sect_protect(1, (ulong)flash_addr, end_addr);
 	}
 
-	if (gd->env_valid == ENV_REDUND)
-		puts("*** Warning - some problems detected "
-		     "reading environment; recovered successfully\n\n");
+	if (gd->env_valid == ENV_REDUND) {
+		if (ret)
+			puts("*** Error - some problems detected "
+			     "environment can't be recovered\n\n");
+		else
+			puts("*** Warning - some problems detected "
+			     "reading environment; recovered successfully\n\n");
+	}
+
 #endif /* CONFIG_ENV_ADDR_REDUND */
 
 	ret = env_import((char *)tmp_env, 1, H_EXTERNAL);
