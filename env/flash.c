@@ -223,9 +223,6 @@ static int env_flash_save(void)
 	char	*saved_data = NULL;
 	char	flag = ENV_REDUND_OBSOLETE, new_flag = ENV_REDUND_ACTIVE;
 	int	rc = 1;
-#if CONFIG_ENV_SECT_SIZE > CONFIG_ENV_SIZE
-	ulong	up_data = 0;
-#endif
 
 	debug("Protect off %08lX ... %08lX\n", (ulong)flash_addr, end_addr);
 
@@ -244,22 +241,10 @@ static int env_flash_save(void)
 	env_new.flags	= new_flag;
 
 #if CONFIG_ENV_SECT_SIZE > CONFIG_ENV_SIZE
-	up_data = end_addr_new + 1 - ((long)flash_addr_new + CONFIG_ENV_SIZE);
-	debug("Data to save 0x%lX\n", up_data);
-	if (up_data) {
-		saved_data = malloc(up_data);
-		if (saved_data == NULL) {
-			printf("Unable to save the rest of sector (%ld)\n",
-				up_data);
-			goto done;
-		}
-		memcpy(saved_data,
-			(void *)((long)flash_addr_new + CONFIG_ENV_SIZE),
-			up_data);
-		debug("Data (start 0x%lX, len 0x%lX) saved at 0x%p\n",
-			(long)flash_addr_new + CONFIG_ENV_SIZE,
-			up_data, saved_data);
-	}
+	rc = save_rest_of_sector((long)flash_addr_new, end_addr_new, &saved_data);
+	if (rc)
+		goto done;
+
 #endif
 	puts("Erasing Flash...");
 	debug(" %08lX ... %08lX ...", (ulong)flash_addr_new, end_addr_new);
@@ -281,14 +266,10 @@ static int env_flash_save(void)
 		goto perror;
 
 #if CONFIG_ENV_SECT_SIZE > CONFIG_ENV_SIZE
-	if (up_data) { /* restore the rest of sector */
-		debug("Restoring the rest of data to 0x%lX len 0x%lX\n",
-			(long)flash_addr_new + CONFIG_ENV_SIZE, up_data);
-		if (flash_write(saved_data,
-				(long)flash_addr_new + CONFIG_ENV_SIZE,
-				up_data))
-			goto perror;
-	}
+	rc = restore_rest_of_sector((long)flash_addr_new, end_addr_new, saved_data);
+	if (rc)
+		goto perror;
+
 #endif
 	puts("done\n");
 
