@@ -1310,7 +1310,7 @@ static int eqos_free_pkt(struct udevice *dev, uchar *packet, int length)
 			 */
 			mb();
 			rx_desc->des3 = EQOS_DESC3_OWN | EQOS_DESC3_BUF1V;
-	eqos->config->ops->eqos_flush_desc(eqos, rx_desc);
+			eqos->config->ops->eqos_flush_desc(eqos, rx_desc);
 		}
 		writel((ulong)rx_desc, &eqos->dma_regs->ch0_rxdesc_tail_pointer);
 	}
