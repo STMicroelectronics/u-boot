@@ -268,16 +268,28 @@ static const struct detect_info_t stm32mp25x_bridges[] = {
 static void board_stm32mp25x_eval_init(void)
 {
 	const char *compatible;
+	struct udevice *dev;
+	ofnode node;
 
 	/* auto detection of connected panels */
 	compatible = detect_device(stm32mp25x_panels, ARRAY_SIZE(stm32mp25x_panels));
 
-	if (!compatible)
+	if (!compatible) {
 		/* remove the panel in environment */
 		env_set("panel", "");
-	else
+
+		/* no panel detected then unbind lvds to avoid a bad clock tree */
+		node = ofnode_by_compatible(ofnode_null(), "st,stm32mp25-lvds");
+		if (!ofnode_valid(node))
+			return;
+
+		device_find_global_by_ofnode(node, &dev);
+		device_remove(dev, DM_REMOVE_NORMAL);
+		device_unbind(dev);
+	} else {
 		/* save the detected compatible in environment */
 		env_set("panel", compatible);
+	}
 
 	/* auto detection of connected hdmi bridge */
 	compatible = detect_device(stm32mp25x_bridges, ARRAY_SIZE(stm32mp25x_bridges));
@@ -293,16 +305,28 @@ static void board_stm32mp25x_eval_init(void)
 static void board_stm32mp25x_disco_init(void)
 {
 	const char *compatible;
+	struct udevice *dev;
+	ofnode node;
 
 	/* auto detection of connected panels */
 	compatible = detect_device(stm32mp25x_panels, ARRAY_SIZE(stm32mp25x_panels));
 
-	if (!compatible)
+	if (!compatible) {
 		/* remove the panel in environment */
 		env_set("panel", "");
-	else
+
+		/* no panel detected then unbind lvds to avoid a bad clock tree */
+		node = ofnode_by_compatible(ofnode_null(), "st,stm32mp25-lvds");
+		if (!ofnode_valid(node))
+			return;
+
+		device_find_global_by_ofnode(node, &dev);
+		device_remove(dev, DM_REMOVE_NORMAL);
+		device_unbind(dev);
+	} else {
 		/* save the detected compatible in environment */
 		env_set("panel", compatible);
+	}
 }
 
 static int get_led(struct udevice **dev, char *led_string)
