@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR BSD-3-Clause
+/*
+ * Copyright (C) STMicroelectronics 2024 - All Rights Reserved
+ */
+
+#include "stm32mp23-u-boot.dtsi"
+
+/ {
+	config {
+		u-boot,boot-led = "led-blue";
+		u-boot,mmc-env-partition = "u-boot-env";
+		st,stm32prog-gpios = <&gpioc 11 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+	};
+};
+
+&dwc3 {
+	phys = <&usb2_phy2>;
+	phy-names = "usb2-phy";
+	dr_mode = "peripheral";
+	maximum-speed = "high-speed";
+	/delete-node/ port;
+};
+
+&i2c_rpmsg {
+	/delete-node/ typec@35;
+};
+
+&sdmmc3 {
+	status = "disabled";
+};
+
+&usart2 {
+	bootph-all;
+};
+
+&usart2_pins_a {
+	bootph-all;
+	pins1 {
+		bootph-all;
+	};
+	pins2 {
+		bootph-all;
+	};
+};
