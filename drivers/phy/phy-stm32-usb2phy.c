@@ -157,12 +157,12 @@ static int stm32_usb2phy_regulators_enable(struct phy *phy)
 	int ret;
 	struct stm32_usb2phy *phy_dev = dev_get_priv(phy->dev);
 
-	ret = regulator_set_enable(phy_dev->vdd33, true);
+	ret = regulator_set_enable_if_allowed(phy_dev->vdd33, true);
 	if (ret)
 		return ret;
 
 	if (phy_dev->vdda18) {
-		ret = regulator_set_enable(phy_dev->vdda18, true);
+		ret = regulator_set_enable_if_allowed(phy_dev->vdda18, true);
 		if (ret)
 			goto vdd33_disable;
 	}
@@ -181,12 +181,12 @@ static int stm32_usb2phy_regulators_disable(struct phy *phy)
 	struct stm32_usb2phy *phy_dev = dev_get_priv(phy->dev);
 
 	if (phy_dev->vdda18) {
-		ret = regulator_set_enable(phy_dev->vdda18, false);
+		ret = regulator_set_enable_if_allowed(phy_dev->vdda18, false);
 		if (ret)
 			return ret;
 	}
 
-	ret = regulator_set_enable(phy_dev->vdd33, false);
+	ret = regulator_set_enable_if_allowed(phy_dev->vdd33, false);
 	if (ret)
 		return ret;
 
