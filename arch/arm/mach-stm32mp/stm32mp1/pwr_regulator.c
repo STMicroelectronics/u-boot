@@ -101,6 +101,7 @@ static struct dm_pmic_ops stm32mp_pwr_ops = {
 };
 
 static const struct udevice_id stm32mp_pwr_ids[] = {
+	{ .compatible = "st,stm32mp1-pwr-reg" },
 	{ .compatible = "st,stm32mp1,pwr-reg" },
 	{ }
 };
