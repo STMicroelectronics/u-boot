@@ -4,3 +4,7 @@
  */
 
 #include "stm32mp157a-dk1-u-boot.dtsi"
+
+&sdmmc2 {
+	status = "disabled";
+};
