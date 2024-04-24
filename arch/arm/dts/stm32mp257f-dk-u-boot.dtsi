@@ -30,6 +30,10 @@
 	/delete-node/ typec@35;
 };
 
+&sdmmc3 {
+	status = "disabled";
+};
+
 &usart2 {
 	bootph-all;
 };
