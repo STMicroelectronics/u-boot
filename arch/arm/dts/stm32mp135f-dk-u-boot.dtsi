@@ -37,6 +37,10 @@
 	};
 };
 
+&sdmmc2 {
+	status = "disabled";
+};
+
 &uart4 {
 	bootph-all;
 };
