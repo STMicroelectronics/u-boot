@@ -52,6 +52,7 @@ static bool check_stboard(u16 board)
 		0x1605, /* stm32mp25xx-dk */
 		0x1635,
 		0x1936, /* stm32mp25xx-ev */
+		0x2059, /* stm32mp21xx-dk */
 	};
 
 	for (i = 0; i < ARRAY_SIZE(st_board_id); i++)
