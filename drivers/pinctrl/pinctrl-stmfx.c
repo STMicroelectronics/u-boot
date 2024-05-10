@@ -178,9 +178,9 @@ static int stmfx_gpio_set_flags(struct udevice *dev, unsigned int offset,
 		if (flags & GPIOD_OPEN_SOURCE)
 			return -ENOTSUPP;
 		if (flags & GPIOD_OPEN_DRAIN)
-			ret = stmfx_conf_set_type(dev, offset, 0);
-		else /* PUSH-PULL */
 			ret = stmfx_conf_set_type(dev, offset, 1);
+		else /* PUSH-PULL */
+			ret = stmfx_conf_set_type(dev, offset, 0);
 		if (ret)
 			return ret;
 		ret = stmfx_gpio_direction_output(dev, offset, value);
