@@ -101,11 +101,11 @@
  * and the ramdisk at the end.
  */
 #define __KERNEL_ADDR_R     __stringify(0xc2000000)
-#define __FDT_ADDR_R        __stringify(0xc4000000)
-#define __SCRIPT_ADDR_R     __stringify(0xc4100000)
-#define __PXEFILE_ADDR_R    __stringify(0xc4200000)
-#define __FDTOVERLAY_ADDR_R __stringify(0xc4300000)
-#define __RAMDISK_ADDR_R    __stringify(0xc4400000)
+#define __FDT_ADDR_R        __stringify(0xc6000000)
+#define __SCRIPT_ADDR_R     __stringify(0xc6100000)
+#define __PXEFILE_ADDR_R    __stringify(0xc6200000)
+#define __FDTOVERLAY_ADDR_R __stringify(0xc6300000)
+#define __RAMDISK_ADDR_R    __stringify(0xc6400000)
 
 #define STM32MP_MEM_LAYOUT \
 	"kernel_addr_r=" __KERNEL_ADDR_R "\0" \
