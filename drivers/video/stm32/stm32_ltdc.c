@@ -865,6 +865,7 @@ static int stm32_ltdc_bind(struct udevice *dev)
 
 static const struct udevice_id stm32_ltdc_ids[] = {
 	{ .compatible = "st,stm32-ltdc" },
+	{ .compatible = "st,stm32mp21-ltdc" },
 	{ .compatible = "st,stm32mp25-ltdc" },
 	{ }
 };
