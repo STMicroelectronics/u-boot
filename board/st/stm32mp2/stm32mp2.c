@@ -791,3 +791,88 @@ void *env_sf_get_env_addr(void)
 {
 	return NULL;
 }
+
+#if defined(CONFIG_OF_BOARD_FIXUP)
+
+int fdt_update_fwu_properties(void *blob, int nodeoff,
+			      const char *compat_str,
+			      const char *storage_path)
+{
+	int ret;
+	int storage_off;
+
+	ret = fdt_increase_size(blob, 100);
+	if (ret) {
+		printf("fdt_increase_size: err=%s\n", fdt_strerror(ret));
+		return ret;
+	}
+
+	ret = fdt_setprop_string(blob, nodeoff, "compatible", compat_str);
+	if (ret) {
+		log_err("Can't set compatible property\n");
+		return ret;
+	}
+
+	storage_off = fdt_path_offset(blob, storage_path);
+	if (storage_off < 0) {
+		log_err("Can't find %s path\n", storage_path);
+		return nodeoff;
+	}
+
+	ret = fdt_setprop_string(blob, nodeoff, "fwu-mdata-store", storage_path);
+
+	if (ret < 0)
+		log_err("Can't set fwu-mdata-store property\n");
+
+	return ret;
+}
+
+int fdt_update_fwu_mdata(void *blob)
+{
+	int nodeoff, ret = 0;
+	u32 bootmode;
+
+	nodeoff = fdt_path_offset(blob, "/fwu-mdata");
+	if (nodeoff < 0) {
+		log_info("no /fwu-mdata node ?\n");
+
+		return 0;
+	}
+
+	bootmode = get_bootmode() & TAMP_BOOT_DEVICE_MASK;
+
+	switch (bootmode) {
+	case BOOT_FLASH_SD:
+		/* sdmmc1 : nothing to do, already the default device tree configuration */
+		break;
+	case BOOT_FLASH_EMMC:
+		/* sdmmc2 */
+		ret = fdt_update_fwu_properties(blob, nodeoff, "u-boot,fwu-mdata-gpt",
+						"/soc@0/bus@42080000/mmc@48230000");
+		break;
+
+	case BOOT_FLASH_SPINAND:
+	case BOOT_FLASH_NOR:
+		/* flash0 */
+		ret = fdt_update_fwu_properties(blob, nodeoff, "u-boot,fwu-mdata-mtd",
+						"/soc@0/ommanager@40500000/spi@40430000/flash@0");
+		break;
+	default:
+		/* TF-A firmware update not supported for other boot device */
+		ret = fdt_del_node(blob, nodeoff);
+	}
+
+	return ret;
+}
+
+int board_fix_fdt(void *blob)
+{
+	int ret = 0;
+
+	if (CONFIG_IS_ENABLED(FWU_MDATA))
+		ret = fdt_update_fwu_mdata(blob);
+
+	return ret;
+}
+#endif /* CONFIG_OF_BOARD_FIXUP */
+
