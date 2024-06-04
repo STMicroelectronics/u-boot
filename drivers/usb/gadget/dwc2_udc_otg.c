@@ -27,6 +27,7 @@
 #include <typec.h>
 #include <dm/device_compat.h>
 #include <dm/devres.h>
+#include <wait_bit.h>
 #include <linux/bug.h>
 #include <linux/delay.h>
 
@@ -464,13 +465,24 @@ static void reconfig_usbd(struct dwc2_udc *dev)
 {
 	/* 2. Soft-reset OTG Core and then unreset again. */
 	int i;
-	unsigned int uTemp = writel(CORE_SOFT_RESET, &reg->grstctl);
+	unsigned int uTemp;
 	uint32_t dflt_gusbcfg;
 	uint32_t rx_fifo_sz, tx_fifo_sz, np_tx_fifo_sz;
 	u32 max_hw_ep;
 	int pdata_hw_ep;
+	int ret, snpsid = readl(&reg->gsnpsid); /* Read SNPSID before performing core reset */
 
 	debug("Resetting OTG controller\n");
+	writel(CORE_SOFT_RESET, &reg->grstctl);
+	if ((snpsid & SNPSID_REV_MASK) >=
+		(SNPSID_REV_VER_4_20a & SNPSID_REV_MASK)) {
+		ret = wait_for_bit_le32(&reg->grstctl, GRSTCTL_CSRSTDONE,
+					true, 1000, false);
+		if (ret == 0)
+			clrbits_le32(&reg->grstctl, CORE_SOFT_RESET);
+		else
+			pr_warn("%s: Timeout!\n", __func__);
+	}
 
 	dflt_gusbcfg =
 		0<<15		/* PHY Low Power Clock sel*/

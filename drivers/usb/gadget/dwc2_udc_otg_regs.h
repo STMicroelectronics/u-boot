@@ -63,24 +63,26 @@ struct dwc2_usbotg_reg {
 	u32 gnptxfsiz; /* Non-Periodic Transmit FIFO Size */
 	u8  res0[12];
 	u32 ggpio;     /* 0x038 */
-	u8  res1[20];
+	u8  res1[4];
+	u32 gsnpsid;   /* 0x040 */
+	u8  res2[12];
 	u32 ghwcfg4; /* User HW Config4 */
-	u8  res2[176];
+	u8  res3[176];
 	u32 dieptxf[15]; /* Device Periodic Transmit FIFO size register */
-	u8  res3[1728];
+	u8  res4[1728];
 	/* Device Configuration */
 	u32 dcfg; /* Device Configuration Register */
 	u32 dctl; /* Device Control */
 	u32 dsts; /* Device Status */
-	u8  res4[4];
+	u8  res5[4];
 	u32 diepmsk; /* Device IN Endpoint Common Interrupt Mask */
 	u32 doepmsk; /* Device OUT Endpoint Common Interrupt Mask */
 	u32 daint; /* Device All Endpoints Interrupt */
 	u32 daintmsk; /* Device All Endpoints Interrupt Mask */
-	u8  res5[224];
+	u8  res6[224];
 	struct dwc2_dev_in_endp in_endp[16];
 	struct dwc2_dev_out_endp out_endp[16];
-	u8  res6[768];
+	u8  res7[768];
 	struct ep_fifo ep[16];
 };
 
@@ -118,6 +120,7 @@ struct dwc2_usbotg_reg {
 /* DWC2_UDC_OTG_GRSTCTL */
 #define AHB_MASTER_IDLE		(1u<<31)
 #define CORE_SOFT_RESET		(0x1<<0)
+#define GRSTCTL_CSRSTDONE	BIT(29)
 
 /* DWC2_UDC_OTG_GINTSTS/DWC2_UDC_OTG_GINTMSK core interrupt register */
 #define INT_RESUME			(1u<<31)
@@ -294,4 +297,8 @@ struct dwc2_usbotg_reg {
 #define GGPIO_STM32_OTG_GCCFG_IDEN                BIT(22)
 #define GGPIO_STM32_OTG_GCCFG_IDPULLUP_DIS        BIT(28)
 
+/*Synopsys ID Register (GSNPSID) */
+#define SNPSID_REV_VER_4_20a			(0x4f54400a)
+#define SNPSID_REV_MASK				(0x0000ffff)
+#define SNPSID_DEVID_OFFSET			12
 #endif
