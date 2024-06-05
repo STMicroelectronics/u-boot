@@ -30,6 +30,7 @@ struct dwc2_plat_otg_data {
 	bool		force_b_session_valid;
 	bool		force_vbus_detection;
 	bool		activate_stm_id_vb_detection;
+	bool		activate_stm_ggpio_idpullup_dis;
 };
 
 int dwc2_udc_probe(struct dwc2_plat_otg_data *pdata);
