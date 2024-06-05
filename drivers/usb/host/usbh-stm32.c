@@ -94,6 +94,7 @@ static int stm32_usbh_probe(struct udevice *dev)
 
 static const struct udevice_id stm32_usbh_ids[] = {
 	{ .compatible = "st,stm32mp25-usbh" },
+	{ .compatible = "st,stm32mp21-usbh" },
 	{ /* sentinel */ },
 };
 
