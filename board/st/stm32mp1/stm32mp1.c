@@ -1283,6 +1283,11 @@ int fdt_update_fwu_mdata(void *blob)
 		break;
 
 	case BOOT_FLASH_SPINAND:
+		/* flash0 */
+		ret = fdt_update_fwu_properties(blob, nodeoff, "u-boot,fwu-mdata-mtd",
+						"/soc/etzpc@5c007000/spi@58003000/spi-nand@0");
+		break;
+
 	case BOOT_FLASH_NOR:
 		/* flash0 */
 		ret = fdt_update_fwu_properties(blob, nodeoff, "u-boot,fwu-mdata-mtd",
