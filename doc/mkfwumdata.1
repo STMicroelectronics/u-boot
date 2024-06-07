@@ -9,6 +9,7 @@ mkfwumdata \- create FWU metadata image
 .OP \-v version
 .OP \-a activeidx
 .OP \-p previousidx
+.OP \-s bank-state
 .OP \-g
 .OP \-V vendor-file
 .BI \-i\~ imagecount
@@ -50,6 +51,11 @@ as the previous active Bank. Default is
 or
 .IR bankcount "-1,"
 whichever is non-negative.
+.
+.B \-s
+Set
+.IR bank-state
+as the bank state. Valid values are V, A or I. Default is A.
 .
 .TP
 .B \-g

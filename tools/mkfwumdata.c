@@ -34,14 +34,16 @@ typedef uint64_t u64;
 #define MAX_BANKS_V2			4
 
 #define BANK_INVALID			(u8)0xFF
+#define BANK_VALID			(u8)0xFE
 #define BANK_ACCEPTED			(u8)0xFC
 
 #include <fwu_mdata.h>
 
-static const char *opts_short = "b:i:a:p:v:V:gh";
+static const char *opts_short = "b:s:i:a:p:v:V:gh";
 
 static struct option options[] = {
 	{"banks", required_argument, NULL, 'b'},
+	{"bank-state", required_argument, NULL, 's'},
 	{"images", required_argument, NULL, 'i'},
 	{"guid", required_argument, NULL, 'g'},
 	{"active-bank", required_argument, NULL, 'a'},
@@ -59,6 +61,7 @@ static void print_usage(void)
 		"\t-i, --images <num>          Number of images (mandatory)\n"
 		"\t-b, --banks  <num>          Number of banks (mandatory)\n"
 		"\t-v, --version               Metadata version (mandatory)\n"
+		"\t-s, --bank-state  <val>     list of bank states (default=A (accepted), V(valid) or I(invalid)\n"
 		"\t-a, --active-bank  <num>    Active bank (default=0)\n"
 		"\t-p, --previous-bank  <num>  Previous active bank (default=active_bank - 1)\n"
 		"\t-g, --guid                  Use GUID instead of UUID\n"
@@ -286,7 +289,8 @@ static void fwu_fill_version_specific_mdata(struct fwu_mdata_object *mobj)
 {
 }
 #else
-static void fwu_fill_version_specific_mdata(struct fwu_mdata_object *mobj)
+static void fwu_fill_version_specific_mdata(struct fwu_mdata_object *mobj,
+					    u8 bank_state[])
 {
 	int i;
 	struct fwu_fw_store_desc *fw_desc;
@@ -296,8 +300,7 @@ static void fwu_fill_version_specific_mdata(struct fwu_mdata_object *mobj)
 	mdata->desc_offset = sizeof(struct fwu_mdata);
 
 	for (i = 0; i < MAX_BANKS_V2; i++)
-		mdata->bank_state[i] = i < mobj->banks ?
-			BANK_ACCEPTED : BANK_INVALID;
+		mdata->bank_state[i] = bank_state[i];
 
 	fw_desc = (struct fwu_fw_store_desc *)((u8 *)mdata + sizeof(*mdata));
 	fw_desc->num_banks = mobj->banks;
@@ -310,7 +313,8 @@ static void fwu_fill_version_specific_mdata(struct fwu_mdata_object *mobj)
 #endif /* CONFIG_FWU_MDATA_V1 */
 
 /* Caller must ensure that @uuids[] has @mobj->images entries. */
-static int fwu_parse_fill_uuids(struct fwu_mdata_object *mobj, char *uuids[])
+static int fwu_parse_fill_uuids(struct fwu_mdata_object *mobj, char *uuids[],
+				u8 bank_state[])
 {
 	struct fwu_mdata *mdata = mobj->mdata;
 	char *vdata;
@@ -320,7 +324,7 @@ static int fwu_parse_fill_uuids(struct fwu_mdata_object *mobj, char *uuids[])
 	mdata->active_index = active_bank;
 	mdata->previous_active_index = previous_bank;
 
-	fwu_fill_version_specific_mdata(mobj);
+	fwu_fill_version_specific_mdata(mobj, bank_state);
 
 	for (i = 0; i < mobj->images; i++) {
 		ret = fwu_parse_fill_image_uuid(mobj, i, uuids[i]);
@@ -359,9 +363,9 @@ out:
 	return ret;
 }
 
-static int fwu_make_mdata(size_t images, size_t banks, u8 version,
-			  const char *vendor_file, char *uuids[],
-			  char *output)
+static int fwu_make_mdata(size_t images, size_t banks,
+			  u8 bank_state[], u8 version,
+			  const char *vendor_file, char *uuids[], char *output)
 {
 	int ret;
 	FILE *file;
@@ -387,7 +391,7 @@ static int fwu_make_mdata(size_t images, size_t banks, u8 version,
 			goto done_make;
 	}
 
-	ret = fwu_parse_fill_uuids(mobj, uuids);
+	ret = fwu_parse_fill_uuids(mobj, uuids, bank_state);
 	if (ret < 0)
 		goto done_make;
 
@@ -416,14 +420,17 @@ done_make:
 int main(int argc, char *argv[])
 {
 	unsigned long banks = 0, images = 0, version = 0;
-	int c, ret;
+	u8 bank_state[MAX_BANKS_V2];
+	int c, ret, i;
 	const char *vendor_file;
+	char *bank_state_list, *p;
 
 	/* Explicitly initialize defaults */
 	active_bank = 0;
 	__use_guid = false;
 	previous_bank = INT_MAX;
 	vendor_file = NULL;
+	bank_state_list = "";
 
 	do {
 		c = getopt_long(argc, argv, opts_short, options, NULL);
@@ -433,6 +440,9 @@ int main(int argc, char *argv[])
 			return 0;
 		case 'b':
 			banks = strtoul(optarg, NULL, 0);
+			break;
+		case 's':
+			bank_state_list = optarg;
 			break;
 		case 'i':
 			images = strtoul(optarg, NULL, 0);
@@ -483,7 +493,39 @@ int main(int argc, char *argv[])
 		previous_bank = active_bank > 0 ? active_bank - 1 : banks - 1;
 	}
 
-	ret = fwu_make_mdata(images, banks, (u8)version, vendor_file,
+	if (!strcmp(bank_state_list, "")) {
+		for (i = 0; i < banks; i++)
+			bank_state[i] = BANK_ACCEPTED;
+	} else {
+		char *state;
+
+		p = bank_state_list;
+
+		if (strlen(bank_state_list) != (2 * banks - 1)) {
+			fprintf(stderr, "Error: bank-state must be equal to bank number\n");
+			return -EINVAL;
+		}
+		for (i = 0; i < banks; i++) {
+			state = strsep(&p, ",");
+			if (!strcmp(state, "A")) {
+				bank_state[i] = BANK_ACCEPTED;
+			} else if (!strcmp(state, "V")) {
+				bank_state[i] = BANK_VALID;
+			} else if (!strcmp(state, "I")) {
+				bank_state[i] = BANK_INVALID;
+			} else {
+				fprintf(stderr, "Error: bank-state entry must be A (Accepted),"
+						"V(Valid) or I(Invalid) (ex: -s A,V)\n");
+				return -EINVAL;
+			}
+		}
+	}
+
+	/* Fill till MAX_BANKS_V2*/
+	for (i = banks; i < MAX_BANKS_V2; i++)
+		bank_state[i] = BANK_INVALID;
+
+	ret = fwu_make_mdata(images, banks, bank_state, (u8)version, vendor_file,
 			     argv + optind, argv[argc - 1]);
 	if (ret < 0)
 		fprintf(stderr, "Error: Failed to parse and write image: %s\n",
