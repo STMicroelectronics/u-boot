@@ -14,6 +14,7 @@
 #include <env.h>
 #include <errno.h>
 #include <fdtdec.h>
+#include <fwu.h>
 #include <hash.h>
 #include <log.h>
 #include <malloc.h>
@@ -462,6 +463,7 @@ const char *bootdelay_process(void)
 {
 	char *s;
 	int bootdelay;
+	uint boot_idx;
 
 	bootcount_inc();
 
@@ -487,7 +489,14 @@ const char *bootdelay_process(void)
 		s = env_get("failbootcmd");
 	} else
 #endif /* CONFIG_POST */
-	if (bootcount_error())
+	{
+		if (IS_ENABLED(CONFIG_FWU_MULTI_BANK_UPDATE))
+			fwu_plat_get_bootidx(&boot_idx);
+		else
+			boot_idx = bootcount_error();
+	}
+
+	if (boot_idx)
 		s = env_get("altbootcmd");
 	else
 		s = env_get("bootcmd");
