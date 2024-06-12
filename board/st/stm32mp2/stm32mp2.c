@@ -794,6 +794,12 @@ void *env_sf_get_env_addr(void)
 
 #if defined(CONFIG_OF_BOARD_FIXUP)
 
+#if defined(CONFIG_STM32MP21X)
+#define SPINAND_NOR_PATH "/soc@0/spi@40430000/flash@0"
+#else
+#define SPINAND_NOR_PATH "/soc@0/ommanager@40500000/spi@40430000/flash@0"
+#endif
+
 int fdt_update_fwu_properties(void *blob, int nodeoff,
 			      const char *compat_str,
 			      const char *storage_path)
@@ -855,7 +861,7 @@ int fdt_update_fwu_mdata(void *blob)
 	case BOOT_FLASH_NOR:
 		/* flash0 */
 		ret = fdt_update_fwu_properties(blob, nodeoff, "u-boot,fwu-mdata-mtd",
-						"/soc@0/ommanager@40500000/spi@40430000/flash@0");
+						SPINAND_NOR_PATH);
 		break;
 	default:
 		/* TF-A firmware update not supported for other boot device */
