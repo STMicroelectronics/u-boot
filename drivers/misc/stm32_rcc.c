@@ -82,7 +82,7 @@ static int stm32_rcc_bind(struct udevice *dev)
 
 	drv = lists_driver_lookup_name(rcc_clk->drv_name_rst);
 	if (!drv) {
-		dev_err(dev, "Cannot find driver stm32_rcc_reset'\n");
+		dev_err(dev, "Cannot find driver '%s'\n", rcc_clk->drv_name_rst);
 		return -ENOENT;
 	}
 
