@@ -295,6 +295,8 @@ struct dwc2_usbotg_reg {
 /* OTG general core configuration register (OTG_GCCFG:0x38) for STM32MP1 */
 #define GGPIO_STM32_OTG_GCCFG_VBDEN               BIT(21)
 #define GGPIO_STM32_OTG_GCCFG_IDEN                BIT(22)
+/* OTG general core configuration register (OTG_GCCFG:0x38) for STM32MP21 */
+#define GGPIO_STM32_OTG_GCCFG_VBVALOVAL		  BIT(23)
 #define GGPIO_STM32_OTG_GCCFG_IDPULLUP_DIS        BIT(28)
 
 /*Synopsys ID Register (GSNPSID) */

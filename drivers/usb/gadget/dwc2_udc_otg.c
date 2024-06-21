@@ -1078,6 +1078,7 @@ static void dwc2_set_stm32mp1_hsotg_params(struct dwc2_plat_otg_data *p)
 static void dwc2_set_stm32mp21_hsotg_params(struct dwc2_plat_otg_data *p)
 {
 	p->activate_stm_ggpio_idpullup_dis = true;
+	p->activate_stm_ggpio_vbvaloval = true;
 	p->usb_gusbcfg =
 		0 << 15		/* PHY Low Power Clock sel*/
 		| 0x9 << 10	/* USB Turnaround time (0x9 for HS phy) */
@@ -1198,6 +1199,9 @@ static int dwc2_udc_otg_probe(struct udevice *dev)
 
 	if (plat->activate_stm_ggpio_idpullup_dis)
 		setbits_le32(&usbotg_reg->ggpio, GGPIO_STM32_OTG_GCCFG_IDPULLUP_DIS);
+
+	if (plat->activate_stm_ggpio_vbvaloval && plat->force_b_session_valid)
+		setbits_le32(&usbotg_reg->ggpio, GGPIO_STM32_OTG_GCCFG_VBVALOVAL);
 
 	ret = dwc2_udc_probe(plat);
 	if (ret)
