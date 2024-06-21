@@ -277,7 +277,9 @@ int dwc2_flush_rx_fifo(struct dwc2_core_regs *regs);
 #define GI2CCTL_REGADDR_MASK			GENMASK(15, 8)
 #define GI2CCTL_RWDATA_MASK			GENMASK(7, 0)
 
-#define GGPIO_STM32_OTG_GCCFG_IDPULLUP_DIS        BIT(28)
+#define GGPIO_STM32_OTG_GCCFG_IDPULLUP_DIS	BIT(28)
+/* OTG general core configuration register (OTG_GCCFG:0x38) for STM32MP21 */
+#define GGPIO_STM32_OTG_GCCFG_VBVALOVAL		BIT(23)
 #define GGPIO_STM32_OTG_GCCFG_IDEN		BIT(22)
 #define GGPIO_STM32_OTG_GCCFG_VBDEN		BIT(21)
 #define GGPIO_STM32_OTG_GCCFG_PWRDWN		BIT(16)
