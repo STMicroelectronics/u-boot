@@ -1041,7 +1041,10 @@ static int dwc2_udc_otg_of_to_plat(struct udevice *dev)
 		ret = typec_get_data_role(typec, 0);
 		plat->force_b_session_valid = (ret == TYPEC_DEVICE);
 	} else {
+		enum usb_dr_mode dft_mode = usb_get_role_switch_default_mode(dev_ofnode(dev));
+
 		plat->force_b_session_valid =
+			(dft_mode == USB_DR_MODE_PERIPHERAL) ||
 			dev_read_bool(dev, "u-boot,force-b-session-valid");
 		plat->force_vbus_detection =
 			dev_read_bool(dev, "u-boot,force-vbus-detection");
