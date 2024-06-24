@@ -27,10 +27,7 @@
 /* NAND support */
 #define CONFIG_SYS_MAX_NAND_DEVICE	1
 
-/* CFI support */
 #define CONFIG_SYS_MAX_FLASH_BANKS	1
-#define CONFIG_CFI_FLASH_USE_WEAK_ACCESSORS
-
 #define STM32MP_FIP_IMAGE_GUID \
 	EFI_GUID(0x19d5df83, 0x11b0, 0x457b, 0xbe, 0x2c, \
 		 0x75, 0x59, 0xc1, 0x31, 0x42, 0xa5)
