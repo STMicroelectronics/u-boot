@@ -103,7 +103,7 @@ static int stm32_ipcc_probe(struct udevice *dev)
 {
 	struct stm32_ipcc *ipcc = dev_get_priv(dev);
 	fdt_addr_t addr;
-	struct clk clk;
+	struct clk *clk;
 	int ret;
 
 	dev_dbg(dev, "\n");
@@ -127,25 +127,20 @@ static int stm32_ipcc_probe(struct udevice *dev)
 	}
 
 	ipcc->reg_proc = ipcc->reg_base + ipcc->proc_id * IPCC_PROC_OFFST;
-
-	ret = clk_get_by_index(dev, 0, &clk);
+	/*  Check if clocks is present, since clock is not present in m33td flavor */
+	clk = devm_clk_get_optional(dev, NULL);
+	ret = IS_ERR(clk);
 	if (ret)
 		return ret;
 
-	ret = clk_enable(&clk);
+	ret = clk_enable(clk);
 	if (ret)
-		goto clk_free;
-
+		return ret;
 	/* get channel number */
 	ipcc->n_chans = readl(ipcc->reg_base + IPCC_HWCFGR);
 	ipcc->n_chans &= IPCFGR_CHAN_MASK;
 
 	return 0;
-
-clk_free:
-	clk_free(&clk);
-
-	return ret;
 }
 
 static const struct udevice_id stm32_ipcc_ids[] = {
