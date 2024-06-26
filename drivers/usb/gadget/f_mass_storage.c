@@ -678,6 +678,7 @@ static int sleep_thread(struct fsg_common *common)
 				return -EIO;
 
 			k = 0;
+			schedule();
 		}
 
 		usb_gadget_handle_interrupts(controller_index);
