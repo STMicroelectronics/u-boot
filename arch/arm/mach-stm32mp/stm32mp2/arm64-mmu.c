@@ -16,6 +16,14 @@
 
 struct mm_region stm32mp2_mem_map[MP2_MEM_MAP_MAX] = {
 	{
+		/* LPSRAMs, VDERAM, RETRAM, SRAMs, SYSRAM: alias1 */
+		.virt = 0x0A000000UL,
+		.phys = 0x0A000000UL,
+		.size = 0x00200000UL,
+		.attrs = PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
+			 PTE_BLOCK_NON_SHARE |
+			 PTE_BLOCK_PXN | PTE_BLOCK_UXN
+	}, {
 #if defined(CONFIG_STM32MP25X)
 		/* PCIe */
 		.virt = 0x10000000UL,
@@ -26,14 +34,6 @@ struct mm_region stm32mp2_mem_map[MP2_MEM_MAP_MAX] = {
 			 PTE_BLOCK_PXN | PTE_BLOCK_UXN
 	}, {
 #endif
-		/* LPSRAMs, VDERAM, RETRAM, SRAMs, SYSRAM: alias1 */
-		.virt = 0x20000000UL,
-		.phys = 0x20000000UL,
-		.size = 0x00200000UL,
-		.attrs = PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
-			 PTE_BLOCK_NON_SHARE |
-			 PTE_BLOCK_PXN | PTE_BLOCK_UXN
-	}, {
 		/* Peripherals: alias1 */
 		.virt = 0x40000000UL,
 		.phys = 0x40000000UL,
