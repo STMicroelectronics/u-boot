@@ -111,6 +111,10 @@ static int scmi_clk_get_attribute(struct udevice *dev, int clkid, char *name,
 		if (ret)
 			return ret;
 
+		/* Do not register clk with empty name */
+		if (!out.clock_name[0])
+			return -ECANCELED;
+
 		strncpy(name, out.clock_name, SCMI_CLOCK_NAME_LENGTH_MAX);
 		*attr = out.attributes;
 	} else {
@@ -127,6 +131,10 @@ static int scmi_clk_get_attribute(struct udevice *dev, int clkid, char *name,
 		ret = devm_scmi_process_msg(dev, &msg);
 		if (ret)
 			return ret;
+
+		/* Do not register clk with empty name */
+		if (!out.clock_name[0])
+			return -ECANCELED;
 
 		strncpy(name, out.clock_name, SCMI_CLOCK_NAME_LENGTH_MAX);
 		*attr = out.attributes;
