@@ -63,6 +63,10 @@ static int scmi_clk_get_attribute(struct udevice *dev, int clkid, char **name)
 	if (ret)
 		return ret;
 
+	/* Do not register clk with empty name */
+	if (!out.clock_name[0])
+		return -ECANCELED;
+
 	*name = strdup(out.clock_name);
 
 	return 0;
