@@ -85,6 +85,7 @@ struct stm32_usb2phy {
 	struct reset_ctl reset;
 	struct udevice *vdd33;
 	struct udevice *vdda18;
+	struct udevice *vbus;
 	uint init;
 	bool internal_vbus_comp;
 	const struct stm32mp2_usb2phy_hw_data *hw_data;
@@ -307,6 +308,54 @@ static int stm32_usb2phy_exit(struct phy *phy)
 	}
 
 	return reset_assert(&phy_dev->reset);
+}
+
+static int stm32_usb2phy_phy_power_on(struct phy *phy)
+{
+	struct stm32_usb2phy *phy_dev = dev_get_priv(phy->dev);
+	int ret;
+
+	if (phy_dev->vbus) {
+		ret = regulator_set_enable_if_allowed(phy_dev->vbus, true);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
+static int stm32_usb2phy_phy_power_off(struct phy *phy)
+{
+	struct stm32_usb2phy *phy_dev = dev_get_priv(phy->dev);
+	int ret;
+
+	if (phy_dev->vbus) {
+		ret = regulator_set_enable_if_allowed(phy_dev->vbus, false);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
+static int stm32_usb2phy_get_regulator(ofnode node,
+				       char *supply_name,
+				       struct udevice **regulator)
+{
+	struct ofnode_phandle_args regulator_phandle;
+	int ret;
+
+	ret = ofnode_parse_phandle_with_args(node, supply_name,
+					     NULL, 0, 0, &regulator_phandle);
+	if (ret)
+		return ret;
+
+	ret = uclass_get_device_by_ofnode(UCLASS_REGULATOR,
+					  regulator_phandle.node, regulator);
+	if (ret)
+		return ret;
+
+	return 0;
 }
 
 static int stm32_usb2phy_set_mode(struct phy *phy, enum phy_mode mode, int submode)
@@ -592,13 +641,15 @@ static int stm32_usb2phy_tuning(struct udevice *dev, ofnode node)
 static const struct phy_ops stm32_usb2phy_ops = {
 	.init = stm32_usb2phy_init,
 	.exit = stm32_usb2phy_exit,
+	.power_on = stm32_usb2phy_phy_power_on,
+	.power_off = stm32_usb2phy_phy_power_off,
 	.set_mode = stm32_usb2phy_set_mode,
 };
 
 static int stm32_usb2phy_probe(struct udevice *dev)
 {
 	struct stm32_usb2phy *phy_dev = dev_get_priv(dev);
-	ofnode node = dev_ofnode(dev);
+	ofnode node = dev_ofnode(dev), connector;
 	int ret;
 	u32 phycr;
 
@@ -654,6 +705,21 @@ static int stm32_usb2phy_probe(struct udevice *dev)
 	if (ret) {
 		dev_err(dev, "can't set tuning parameters: %d\n", ret);
 		return ret;
+	}
+
+	connector = ofnode_find_subnode(node, "connector");
+	if (ofnode_valid(connector)) {
+		ret = stm32_usb2phy_get_regulator(connector, "vbus-supply",
+						  &phy_dev->vbus);
+		if (ret) {
+			if (ret != -ENOENT) {
+				dev_err(dev, "Can't get vbus regulator\n");
+				return ret;
+			}
+			phy_dev->vbus = NULL;
+		}
+	} else {
+		phy_dev->vbus = NULL;
 	}
 
 	return 0;
