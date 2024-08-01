@@ -41,8 +41,9 @@
 #define LVDS_CDL1CR	0x002C  /* channel distrib link 1 configuration register	*/
 #define LVDS_CDL2CR	0x0030  /* channel distrib link 2 configuration register	*/
 
-#define CDL1CR_DEFAULT	0x4321
-#define CDL2CR_DEFAULT	0x59876
+#define CDL1CR_DEFAULT		0x04321 /* Default value for CDL1CR */
+#define CDL2CR_4DL_DEFAULT	0x04321 /* Default value for CDL2CR with SINGLE link */
+#define CDL2CR_8DL_DEFAULT	0x59876 /* Default value for CDL2CR with DUAL link */
 
 /* LVDS Host registers */
 #define LVDS_PHY_MASTER	0x0
@@ -145,7 +146,7 @@ struct stm32_lvds {
 	void __iomem *base;
 	struct udevice *panel;
 	u32 refclk;
-	int dual_link;
+	int link_type;
 	int bus_format;
 	struct udevice *vdd_reg;
 	struct udevice *vdda18_reg;
@@ -159,8 +160,10 @@ struct stm32_lvds {
  *    from the first port, even pixels from the second port
  */
 enum lvds_pixels_order {
-	LVDS_DUAL_LINK_EVEN_ODD_PIXELS = BIT(0),
-	LVDS_DUAL_LINK_ODD_EVEN_PIXELS = BIT(1),
+	LVDS_SINGLE_LINK_PRIMARY = BIT(0),
+	LVDS_SINGLE_LINK_SECONDARY = BIT(1),
+	LVDS_DUAL_LINK_EVEN_ODD_PIXELS = BIT(2),
+	LVDS_DUAL_LINK_ODD_EVEN_PIXELS = BIT(3),
 };
 
 enum lvds_pixel {
@@ -315,7 +318,8 @@ static int stm32_lvds_pll_enable(struct stm32_lvds *lvds,
 	/* Set PLL Slv & Mst configs and timings */
 	pll_in_khz = lvds->refclk / 1000;
 
-	if (lvds->dual_link)
+	if (lvds->link_type & LVDS_DUAL_LINK_EVEN_ODD_PIXELS ||
+	    lvds->link_type & LVDS_DUAL_LINK_ODD_EVEN_PIXELS)
 		multiplier = 2;
 	else
 		multiplier = 1;
@@ -397,10 +401,14 @@ static int stm32_lvds_enable(struct udevice *dev,
 	lvds_cr &= ~CR_LKMOD;
 	lvds_cdl1cr = CDL1CR_DEFAULT;
 
-	if (lvds->dual_link) {
+	if (lvds->link_type & LVDS_DUAL_LINK_EVEN_ODD_PIXELS ||
+	    lvds->link_type & LVDS_DUAL_LINK_ODD_EVEN_PIXELS) {
 		lvds_cr |= CR_LKMOD;
-		lvds_cdl2cr = CDL2CR_DEFAULT;
+		lvds_cdl2cr = CDL2CR_8DL_DEFAULT;
 	}
+
+	if (lvds->link_type & LVDS_SINGLE_LINK_SECONDARY)
+		lvds_cdl2cr = CDL2CR_4DL_DEFAULT;
 
 	/* Set signal polarity */
 	if (timings->flags & DISPLAY_FLAGS_DE_LOW)
@@ -413,7 +421,7 @@ static int stm32_lvds_enable(struct udevice *dev,
 		lvds_cr |= CR_VSPOL;
 
 	/* Set link phase */
-	switch (lvds->dual_link) {
+	switch (lvds->link_type) {
 	case LVDS_DUAL_LINK_EVEN_ODD_PIXELS: /* LKPHA = 0 */
 		lvds_cr &= ~CR_LKPHA;
 		break;
@@ -511,8 +519,8 @@ static int stm32_lvds_set_backlight(struct udevice *dev, int percent)
 static int lvds_handle_pixel_order(struct stm32_lvds *lvds)
 {
 	ofnode parent, panel_port0, panel_port1;
-	bool even_pixels, odd_pixels;
-	int port0, port1;
+	bool even_pixels_port0, odd_pixels_port0;
+	bool even_pixels_port1, odd_pixels_port1;
 
 	/*
 	 * In case we are operating in single link,
@@ -521,41 +529,37 @@ static int lvds_handle_pixel_order(struct stm32_lvds *lvds)
 	 */
 	parent = ofnode_find_subnode(dev_ofnode(lvds->panel), "ports");
 	if (!ofnode_valid(parent))
-		return 0;
+		return LVDS_SINGLE_LINK_PRIMARY;
 
 	panel_port0 = ofnode_first_subnode(parent);
 	if (!ofnode_valid(panel_port0))
 		return -EPIPE;
 
-	even_pixels = ofnode_read_bool(panel_port0, "dual-lvds-even-pixels");
-	odd_pixels = ofnode_read_bool(panel_port0, "dual-lvds-odd-pixels");
-	if (even_pixels && odd_pixels)
-		return -EINVAL;
-
-	port0 = even_pixels ? LVDS_DUAL_LINK_EVEN_ODD_PIXELS :
-		LVDS_DUAL_LINK_ODD_EVEN_PIXELS;
-
 	panel_port1 = ofnode_next_subnode(panel_port0);
 	if (!ofnode_valid(panel_port1))
 		return -EPIPE;
 
-	even_pixels = ofnode_read_bool(panel_port1, "dual-lvds-even-pixels");
-	odd_pixels = ofnode_read_bool(panel_port1, "dual-lvds-odd-pixels");
-	if (even_pixels && odd_pixels)
-		return -EINVAL;
-
-	port1 = even_pixels ? LVDS_DUAL_LINK_EVEN_ODD_PIXELS :
-		LVDS_DUAL_LINK_ODD_EVEN_PIXELS;
+	even_pixels_port0 = ofnode_read_bool(panel_port0, "dual-lvds-even-pixels");
+	odd_pixels_port0 = ofnode_read_bool(panel_port0, "dual-lvds-odd-pixels");
+	even_pixels_port1 = ofnode_read_bool(panel_port1, "dual-lvds-even-pixels");
+	odd_pixels_port1 = ofnode_read_bool(panel_port1, "dual-lvds-odd-pixels");
 
 	/*
 	 * A valid dual-LVDS bus is found when one port is marked with
 	 * "dual-lvds-even-pixels", and the other port is marked with
-	 * "dual-lvds-odd-pixels", bail out if the markers are not right.
+	 * "dual-lvds-odd-pixels"
 	 */
-	if (port0 + port1 != LVDS_DUAL_LINK_EVEN_ODD_PIXELS + LVDS_DUAL_LINK_ODD_EVEN_PIXELS)
-		return -EINVAL;
+	if (even_pixels_port0 && odd_pixels_port1 && !odd_pixels_port0 && !even_pixels_port1)
+		return LVDS_DUAL_LINK_EVEN_ODD_PIXELS;
 
-	return port0;
+	if (odd_pixels_port0 && even_pixels_port1 && !even_pixels_port0 && !odd_pixels_port1)
+		return LVDS_DUAL_LINK_ODD_EVEN_PIXELS;
+
+	/* Ports have no tags even or odd. Both must be defined as single link */
+	if (!odd_pixels_port0 && !even_pixels_port0 && !odd_pixels_port1 && !even_pixels_port1)
+		return LVDS_SINGLE_LINK_PRIMARY | LVDS_SINGLE_LINK_SECONDARY;
+
+	return -EINVAL;
 }
 
 static int stm32_lvds_probe(struct udevice *dev)
@@ -659,19 +663,25 @@ static int stm32_lvds_probe(struct udevice *dev)
 		priv->bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG;
 
 	/* Handle dual link config */
-	priv->dual_link = lvds_handle_pixel_order(priv);
-	if (priv->dual_link < 0)
+	priv->link_type = lvds_handle_pixel_order(priv);
+	if (priv->link_type < 0)
 		goto err_rst;
 
-	if (priv->dual_link > 0) {
+	if (priv->link_type & LVDS_SINGLE_LINK_SECONDARY ||
+	    priv->link_type & LVDS_DUAL_LINK_ODD_EVEN_PIXELS ||
+	    priv->link_type & LVDS_DUAL_LINK_EVEN_ODD_PIXELS) {
 		ret = stm32_lvds_pll_enable(priv, &timings, LVDS_PHY_SLAVE);
 		if (ret)
 			goto err_rst;
 	}
 
-	ret = stm32_lvds_pll_enable(priv, &timings, LVDS_PHY_MASTER);
-	if (ret)
-		goto err_rst;
+	if (priv->link_type & LVDS_SINGLE_LINK_PRIMARY ||
+	    priv->link_type & LVDS_DUAL_LINK_ODD_EVEN_PIXELS ||
+	    priv->link_type & LVDS_DUAL_LINK_EVEN_ODD_PIXELS) {
+		ret = stm32_lvds_pll_enable(priv, &timings, LVDS_PHY_MASTER);
+		if (ret)
+			goto err_rst;
+	}
 
 	return 0;
 
