@@ -160,13 +160,6 @@ static int rifsc_check_access(void *base, u32 id)
 		return -EACCES;
 	}
 
-skip_cid_check:
-	/* Check security configuration */
-	if (sec_reg_value & BIT(reg_offset)) {
-		log_debug("Invalid security configuration for peripheral %d\n", id);
-		return -EACCES;
-	}
-
 	/* Check semaphore accesses */
 	if (cid_reg_value & CIDCFGR_SEMEN) {
 		if (!(FIELD_GET(RIFSC_RISC_SEMWL_MASK, cid_reg_value) & BIT(RIF_CID1))) {
@@ -178,6 +171,13 @@ skip_cid_check:
 			log_debug("Semaphore unavailable for peripheral %d\n", id);
 			return -EACCES;
 		}
+	}
+
+skip_cid_check:
+	/* Check security configuration */
+	if (sec_reg_value & BIT(reg_offset)) {
+		log_debug("Invalid security configuration for peripheral %d\n", id);
+		return -EACCES;
 	}
 
 	return 0;
