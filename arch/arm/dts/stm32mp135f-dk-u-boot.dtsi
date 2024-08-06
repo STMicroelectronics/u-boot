@@ -31,8 +31,7 @@
 		};
 
 		led-blue {
-			label = "heartbeat";
-			gpios = <&gpioa 14 GPIO_ACTIVE_LOW>;
+			/delete-property/default-state;
 		};
 	};
 };
