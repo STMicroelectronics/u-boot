@@ -83,6 +83,13 @@
 	bootph-all;
 };
 
+/* pre-reloc probe = reserve video frame buffer in video_reserve() */
+&ltdc {
+	clocks = <&rcc CK_BUS_LTDC>, <&rcc CK_KER_LTDC>;
+	clock-names = "bus", "lcd";
+	bootph-all;
+};
+
 &pinctrl {
 	bootph-all;
 };
