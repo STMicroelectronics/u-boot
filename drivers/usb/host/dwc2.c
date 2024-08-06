@@ -159,6 +159,7 @@ static void dwc_otg_core_reset(struct udevice *dev,
 			       struct dwc2_core_regs *regs)
 {
 	int ret;
+	uint32_t snpsid;
 
 	/* Wait for AHB master IDLE state. */
 	ret = wait_for_bit_le32(&regs->grstctl, DWC2_GRSTCTL_AHBIDLE,
@@ -166,10 +167,20 @@ static void dwc_otg_core_reset(struct udevice *dev,
 	if (ret)
 		dev_info(dev, "%s: Timeout!\n", __func__);
 
+	snpsid = readl(&regs->gsnpsid);
+
 	/* Core Soft Reset */
 	writel(DWC2_GRSTCTL_CSFTRST, &regs->grstctl);
-	ret = wait_for_bit_le32(&regs->grstctl, DWC2_GRSTCTL_CSFTRST,
-				false, 1000, false);
+	if ((snpsid & DWC2_SNPSID_REV_MASK) <
+		(DWC2_SNPSID_REV_VER_4_20a & DWC2_SNPSID_REV_MASK)) {
+		ret = wait_for_bit_le32(&regs->grstctl, DWC2_GRSTCTL_CSFTRST,
+					false, 1000, false);
+	} else {
+		ret = wait_for_bit_le32(&regs->grstctl, DWC2_GRSTCTL_CSRSTDONE,
+					true, 1000, false);
+		if (ret == 0)
+			clrbits_le32(&regs->grstctl, DWC2_GRSTCTL_CSFTRST);
+	}
 	if (ret)
 		dev_info(dev, "%s: Timeout!\n", __func__);
 
@@ -1182,7 +1193,8 @@ static int dwc2_init_common(struct udevice *dev, struct dwc2_priv *priv)
 		 snpsid >> 12 & 0xf, snpsid & 0xfff);
 
 	if ((snpsid & DWC2_SNPSID_DEVID_MASK) != DWC2_SNPSID_DEVID_VER_2xx &&
-	    (snpsid & DWC2_SNPSID_DEVID_MASK) != DWC2_SNPSID_DEVID_VER_3xx) {
+	    (snpsid & DWC2_SNPSID_DEVID_MASK) != DWC2_SNPSID_DEVID_VER_3xx &&
+	    (snpsid & DWC2_SNPSID_DEVID_MASK) != DWC2_SNPSID_DEVID_VER_4xx) {
 		dev_info(dev, "SNPSID invalid (not DWC2 OTG device): %08x\n",
 			 snpsid);
 		return -ENODEV;
