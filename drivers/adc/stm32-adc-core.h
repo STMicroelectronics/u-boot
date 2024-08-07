@@ -37,6 +37,7 @@ struct udevice;
  * @aclk:		clock for the analog circuitry
  * @bclk:		bus clock common for all ADCs
  * @vref:		regulator reference
+ * @vdda:		supply voltage
  * @vref_uv:		reference supply voltage (uV)
  */
 struct stm32_adc_common {
@@ -45,6 +46,7 @@ struct stm32_adc_common {
 	struct clk aclk;
 	struct clk bclk;
 	struct udevice *vref;
+	struct udevice *vdda;
 	int vref_uv;
 };
 

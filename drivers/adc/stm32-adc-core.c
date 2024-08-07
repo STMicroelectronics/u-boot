@@ -150,6 +150,12 @@ static int stm32_adc_core_probe(struct udevice *dev)
 		return -ENOENT;
 	}
 
+	ret = device_get_supply_regulator(dev, "vdda-supply", &common->vdda);
+	if (ret) {
+		dev_err(dev, "can't get vdda-supply: %d\n", ret);
+		return ret;
+	}
+
 	ret = device_get_supply_regulator(dev, "vref-supply", &common->vref);
 	if (ret) {
 		dev_err(dev, "can't get vref-supply: %d\n", ret);

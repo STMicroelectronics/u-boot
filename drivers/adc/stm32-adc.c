@@ -432,8 +432,22 @@ static int stm32_adc_write_selfcalib(struct udevice *dev)
 static int stm32_adc_selfcalib(struct udevice *dev)
 {
 	struct stm32_adc *adc = dev_get_priv(dev);
+	struct stm32_adc_common *common = dev_get_priv(dev_get_parent(dev));
 	int ret;
 	bool lincal_done = false;
+
+	ret = regulator_set_enable_if_allowed(common->vdda, true);
+	if (ret) {
+		dev_err(dev, "Failed to enable vdd_supply: %s",
+			common->vdda->name);
+		return ret;
+	}
+
+	ret = regulator_set_enable_if_allowed(common->vref, true);
+	if (ret) {
+		dev_err(dev, "Failed to enable Vref: %s", common->vref->name);
+		return ret;
+	}
 
 	/* Try to restore linear calibration */
 	if (adc->cfg->has_linearcal)
@@ -614,8 +628,13 @@ static int stm32_adc_probe(struct udevice *dev)
 	adc->regs = common->base + offset;
 	adc->cfg = (const struct stm32_adc_cfg *)dev_get_driver_data(dev);
 
-	/* VDD supplied by common vref pin */
-	uc_pdata->vdd_supply = common->vref;
+	/*
+	 * VDDA and Vref can be two separate ADC supplies.
+	 * Provide the VDDA as VDD to the framework, that supplies the ADC.
+	 * Provide Vref value used by SAR ADC for conversion (can be different),
+	 * the u-class use it for raw to microvolt conversion.
+	 */
+	uc_pdata->vdd_supply = common->vdda;
 	uc_pdata->vdd_microvolts = common->vref_uv;
 	uc_pdata->vss_microvolts = 0;
 
