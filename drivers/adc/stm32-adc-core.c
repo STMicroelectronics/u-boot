@@ -25,6 +25,13 @@
 
 /* STM32 H7 maximum analog clock rate (from datasheet) */
 #define STM32H7_ADC_MAX_CLK_RATE	36000000
+#define STM32MP25_ADC_MAX_CLK_RATE	70000000
+
+struct stm32_adc_core_cfg {
+	int (*clk_sel)(struct udevice *dev, struct stm32_adc_common *common);
+	const unsigned int *presc;
+	const unsigned int num_presc;
+};
 
 /**
  * struct stm32h7_adc_ck_spec - specification for stm32h7 adc clock
@@ -57,6 +64,9 @@ static const struct stm32h7_adc_ck_spec stm32h7_adc_ckmodes_spec[] = {
 	{ 2, 0, 2 },
 	{ 3, 0, 4 },
 };
+
+/* STM32MP25 ADC internal common clock prescaler division ratios */
+static const unsigned int stm32mp25_presc_div[] = {1, 2, 4, 6, 8, 10, 12, 16, 32, 64, 128, 256};
 
 static int stm32h7_adc_clk_sel(struct udevice *dev,
 			       struct stm32_adc_common *common)
@@ -139,9 +149,50 @@ out:
 	return 0;
 }
 
+static int stm32mp25_adc_clk_sel(struct udevice *dev, struct stm32_adc_common *common)
+{
+	const struct stm32_adc_core_cfg *adc_cfg = (struct stm32_adc_core_cfg *)
+						    dev_get_driver_data(dev);
+	unsigned long rate;
+	u32 val;
+	int i;
+
+	if (!clk_valid(&common->aclk)) {
+		dev_err(dev, "No 'adc' clock found\n");
+		return -ENOENT;
+	}
+
+	rate = clk_get_rate(&common->aclk);
+	if (!rate) {
+		dev_err(dev, "Invalid clock rate: 0\n");
+		return -EINVAL;
+	}
+
+	for (i = 0; i < adc_cfg->num_presc; i++) {
+		if ((rate / adc_cfg->presc[i]) <= STM32MP25_ADC_MAX_CLK_RATE)
+			break;
+	}
+	if (i >= adc_cfg->num_presc) {
+		dev_err(dev, "adc clk selection failed\n");
+		return -EINVAL;
+	}
+
+	common->rate = rate / adc_cfg->presc[i];
+	val = readl_relaxed(common->base + STM32H7_ADC_CCR);
+	val &= ~STM32H7_PRESC_MASK;
+	val |= i << STM32H7_PRESC_SHIFT;
+	writel_relaxed(val, common->base + STM32H7_ADC_CCR);
+
+	dev_dbg(dev, "Using analog clock source at %ld kHz\n", common->rate / 1000);
+
+	return 0;
+}
+
 static int stm32_adc_core_probe(struct udevice *dev)
 {
 	struct stm32_adc_common *common = dev_get_priv(dev);
+	const struct stm32_adc_core_cfg *adc_cfg = (struct stm32_adc_core_cfg *)
+						   dev_get_driver_data(dev);
 	int ret;
 
 	common->base = dev_read_addr_ptr(dev);
@@ -178,7 +229,7 @@ static int stm32_adc_core_probe(struct udevice *dev)
 		}
 	}
 
-	ret = clk_get_by_name(dev, "bus", &common->bclk);
+	ret = clk_get_by_name_optional(dev, "bus", &common->bclk);
 	if (!ret) {
 		ret = clk_enable(&common->bclk);
 		if (ret) {
@@ -187,7 +238,7 @@ static int stm32_adc_core_probe(struct udevice *dev)
 		}
 	}
 
-	ret = stm32h7_adc_clk_sel(dev, common);
+	ret = adc_cfg->clk_sel(dev, common);
 	if (ret)
 		goto err_bclk_disable;
 
@@ -204,10 +255,21 @@ err_aclk_disable:
 	return ret;
 }
 
+static const struct stm32_adc_core_cfg stm32h7_adc_priv_cfg = {
+	.clk_sel = &stm32h7_adc_clk_sel,
+};
+
+static const struct stm32_adc_core_cfg stm32mp25_adc_priv_cfg = {
+	.clk_sel = &stm32mp25_adc_clk_sel,
+	.presc = stm32mp25_presc_div,
+	.num_presc = ARRAY_SIZE(stm32mp25_presc_div),
+};
+
 static const struct udevice_id stm32_adc_core_ids[] = {
-	{ .compatible = "st,stm32h7-adc-core" },
-	{ .compatible = "st,stm32mp1-adc-core" },
-	{ .compatible = "st,stm32mp13-adc-core" },
+	{ .compatible = "st,stm32h7-adc-core", .data = (ulong)&stm32h7_adc_priv_cfg },
+	{ .compatible = "st,stm32mp1-adc-core", .data = (ulong)&stm32h7_adc_priv_cfg },
+	{ .compatible = "st,stm32mp13-adc-core", .data = (ulong)&stm32h7_adc_priv_cfg},
+	{ .compatible = "st,stm32mp25-adc-core", .data = (ulong)&stm32mp25_adc_priv_cfg },
 	{}
 };
 

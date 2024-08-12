@@ -12,9 +12,11 @@
 #include <env.h>
 #include <asm/io.h>
 #include <dm/device_compat.h>
+#include <linux/bitfield.h>
 #include <linux/bitops.h>
 #include <linux/delay.h>
 #include <linux/iopoll.h>
+#include <power/regulator.h>
 #include "stm32-adc-core.h"
 
 /* STM32H7 - Registers for each ADC instance */
@@ -29,6 +31,9 @@
 #define STM32H7_ADC_DIFSEL		0xC0
 #define STM32H7_ADC_CALFACT		0xC4
 #define STM32H7_ADC_CALFACT2		0xC8
+
+/* STM32MP25 - Registers for each ADC instance */
+#define STM32MP25_ADC_CALFACT STM32H7_ADC_CALFACT
 
 /* STM32H7_ADC_ISR - bit fields */
 #define STM32MP1_VREGREADY		BIT(12)
@@ -52,6 +57,14 @@
 #define STM32H7_ADSTART			BIT(2)
 #define STM32H7_ADDIS			BIT(1)
 #define STM32H7_ADEN			BIT(0)
+
+/* STM32MP25_ADC_CFGR - bit fields */
+#define STM32MP25_RES_MASK		GENMASK(3, 2)
+
+/* STM32MP25_ADC_CALFACT - bit fields */
+#define STM32MP25_CALADDOS		BIT(31)
+#define STM32MP25_CALFACT_S		GENMASK(8, 0)
+#define STM32MP25_CALFACT_D		GENMASK(24, 16)
 
 /* STM32H7_ADC_CALFACT2 - bit fields */
 #define STM32H7_LINCALFACT_SHIFT	0
@@ -88,10 +101,14 @@
 #define STM32H7_LINCALFACT_NUM		6
 #define STM32H7_LINCAL_NAME_LEN		32
 
+/* Number of loops in the calibration procedure to average data on STM32MP25 */
+#define STM32MP25_CALIB_LOOP		8
+
 struct stm32_adc_cfg {
 	const struct stm32_adc_regspec	*regs;
 	unsigned int max_channels;
 	unsigned int num_bits;
+	int (*calib)(struct udevice *dev);
 	bool has_vregready;
 	bool has_boostmode;
 	bool has_linearcal;
@@ -328,6 +345,109 @@ out:
 	return ret;
 }
 
+static int stm32mp25_adc_calfact_data(struct udevice *dev, u32 *average)
+{
+	struct stm32_adc *adc = dev_get_priv(dev);
+	u32 val, avg = 0;
+	int i, ret;
+
+	for (i = 0; i < STM32MP25_CALIB_LOOP; i++) {
+		setbits_le32(adc->regs + STM32H7_ADC_CR, STM32H7_ADSTART);
+
+		/*
+		 * Wait for end of conversion by polling ADSTART bit until it is cleared
+		 * Also work if waiting for EOC to be set in STM32H7_ADC_ISR
+		 */
+		ret = readl_poll_sleep_timeout(adc->regs + STM32H7_ADC_CR, val,
+					       !(val & STM32H7_ADSTART), 100, STM32_ADC_TIMEOUT_US);
+		if (ret < 0) {
+			dev_err(dev, "Conversion failed: %d\n", ret);
+			return ret;
+		}
+
+		val = readl(adc->regs + STM32H7_ADC_DR);
+		avg += val;
+	}
+
+	*average = DIV_ROUND_CLOSEST(avg, STM32MP25_CALIB_LOOP);
+
+	return 0;
+}
+
+static int stm32mp25_adc_run_calib(struct udevice *dev)
+{
+	struct stm32_adc *adc = dev_get_priv(dev);
+	u32 average_data = 0, calfact = 0;
+	int ret;
+
+	setbits_le32(adc->regs + STM32H7_ADC_CR, STM32H7_ADCAL);
+	/* Clears CALADDOS (and old calibration data if any) */
+	writel_relaxed(0, adc->regs + STM32MP25_ADC_CALFACT);
+	/* Select single ended input calibration */
+	clrbits_le32(adc->regs + STM32H7_ADC_CR, STM32H7_ADCALDIF);
+	/* Use default resolution (e.g. 12 bits) */
+	clrbits_le32(adc->regs + STM32H7_ADC_CFGR, STM32MP25_RES_MASK);
+
+retry:
+	ret = stm32mp25_adc_calfact_data(dev, &average_data);
+	if (ret)
+		goto out;
+
+	/* If the averaged data is zero, retry with additional offset (set CALADDOS) */
+	if (!average_data) {
+		if (!calfact) {
+			/* Averaged data is zero, retry with additional offset */
+			calfact = STM32MP25_CALADDOS;
+			writel_relaxed(STM32MP25_CALADDOS,
+				       adc->regs + STM32MP25_ADC_CALFACT);
+			goto retry;
+		}
+		/* Averaged data is still zero with additional offset, just warn about it */
+		dev_warn(dev, "Single-ended calibration average: 0\n");
+	}
+
+	calfact |= FIELD_PREP(STM32MP25_CALFACT_S, average_data);
+
+	/* Select differential input calibration (keep previous CALADDOS value) */
+	setbits_le32(adc->regs + STM32H7_ADC_CR, STM32H7_ADCALDIF);
+
+	ret = stm32mp25_adc_calfact_data(dev, &average_data);
+	if (ret)
+		goto out;
+	/*
+	 * If the averaged data is below 0x800 (half value in 12-bits mode),
+	 * retry with additional offset
+	 */
+	if (average_data < 0x800) {
+		if (!(calfact & STM32MP25_CALADDOS)) {
+			/* Retry the whole calibration with additional offset */
+			clrbits_le32(adc->regs + STM32H7_ADC_CR, STM32H7_ADCALDIF);
+			calfact = STM32MP25_CALADDOS;
+			writel(calfact, adc->regs + STM32MP25_ADC_CALFACT);
+			goto retry;
+		}
+		/*
+		 * Averaged data is still below center value. It needs to be clamped to zero,
+		 * so don't use the result here, warn about it.
+		 */
+		dev_warn(dev, "Differential calibration clamped(0): 0x%x\n", average_data);
+	} else {
+		calfact |= FIELD_PREP(STM32MP25_CALFACT_D, average_data);
+	}
+
+	writel_relaxed(calfact, adc->regs + STM32MP25_ADC_CALFACT);
+
+	dev_dbg(dev, "Set calfact_s=0x%03lx, calfact_d=0x%03lx, calados=%ld\n",
+		FIELD_GET(STM32MP25_CALFACT_S, calfact),
+		FIELD_GET(STM32MP25_CALFACT_D, calfact),
+		FIELD_GET(STM32MP25_CALADDOS, calfact));
+
+out:
+	clrbits_le32(adc->regs + STM32H7_ADC_CR, STM32H7_ADCAL);
+
+	return ret;
+}
+
 /* Retrieve calibration data from env variables */
 static bool stm32_adc_getenv_selfcalib(struct udevice *dev)
 {
@@ -508,6 +628,36 @@ disable:
 	return ret;
 }
 
+static int stm32mp25_adc_calib(struct udevice *dev)
+{
+	struct stm32_adc_common *common = dev_get_priv(dev_get_parent(dev));
+	int ret;
+
+	ret = regulator_set_enable_if_allowed(common->vdda, true);
+	if (ret) {
+		dev_err(dev, "Failed to enable vdd_supply: %s",
+			common->vdda->name);
+		return ret;
+	}
+
+	ret = regulator_set_enable_if_allowed(common->vref, true);
+	if (ret) {
+		dev_err(dev, "Failed to enable Vref: %s", common->vref->name);
+		return ret;
+	}
+
+	ret = stm32_adc_enable(dev);
+	if (ret < 0)
+		return ret;
+
+	/* Run offset calibration unconditionally. */
+	ret = stm32mp25_adc_run_calib(dev);
+	if (ret)
+		stm32_adc_stop(dev);
+
+	return ret;
+}
+
 static int stm32_adc_get_legacy_chan_count(struct udevice *dev)
 {
 	int ret;
@@ -646,7 +796,7 @@ static int stm32_adc_probe(struct udevice *dev)
 	if (ret < 0)
 		return ret;
 
-	ret = stm32_adc_selfcalib(dev);
+	ret = adc->cfg->calib(dev);
 	if (ret)
 		stm32_adc_enter_pwr_down(dev);
 
@@ -663,6 +813,7 @@ static const struct stm32_adc_cfg stm32h7_adc_cfg = {
 	.regs = &stm32h7_adc_regspec,
 	.num_bits = 16,
 	.max_channels = STM32_ADC_CH_MAX,
+	.calib = &stm32_adc_selfcalib,
 	.has_boostmode = true,
 	.has_linearcal = true,
 	.has_presel = true,
@@ -672,6 +823,7 @@ static const struct stm32_adc_cfg stm32mp1_adc_cfg = {
 	.regs = &stm32h7_adc_regspec,
 	.num_bits = 16,
 	.max_channels = STM32_ADC_CH_MAX,
+	.calib = &stm32_adc_selfcalib,
 	.has_vregready = true,
 	.has_boostmode = true,
 	.has_linearcal = true,
@@ -682,6 +834,15 @@ static const struct stm32_adc_cfg stm32mp13_adc_cfg = {
 	.regs = &stm32mp13_adc_regspec,
 	.num_bits = 12,
 	.max_channels = STM32_ADC_CH_MAX - 1,
+	.calib = &stm32_adc_selfcalib,
+};
+
+static const struct stm32_adc_cfg stm32mp25_adc_cfg = {
+	.regs = &stm32h7_adc_regspec,
+	.num_bits = 12,
+	.max_channels = STM32_ADC_CH_MAX,
+	.calib = &stm32mp25_adc_calib,
+	.has_presel = true,
 };
 
 static const struct udevice_id stm32_adc_ids[] = {
@@ -691,6 +852,8 @@ static const struct udevice_id stm32_adc_ids[] = {
 	  .data = (ulong)&stm32mp1_adc_cfg },
 	{ .compatible = "st,stm32mp13-adc",
 	  .data = (ulong)&stm32mp13_adc_cfg },
+	{ .compatible = "st,stm32mp25-adc",
+	  .data = (ulong)&stm32mp25_adc_cfg },
 	{}
 };
 
