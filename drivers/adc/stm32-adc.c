@@ -852,6 +852,8 @@ static const struct udevice_id stm32_adc_ids[] = {
 	  .data = (ulong)&stm32mp1_adc_cfg },
 	{ .compatible = "st,stm32mp13-adc",
 	  .data = (ulong)&stm32mp13_adc_cfg },
+	{ .compatible = "st,stm32mp21-adc",
+	  .data = (ulong)&stm32mp25_adc_cfg },
 	{ .compatible = "st,stm32mp25-adc",
 	  .data = (ulong)&stm32mp25_adc_cfg },
 	{}
