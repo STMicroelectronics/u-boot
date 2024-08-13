@@ -711,27 +711,27 @@ static const struct clock_config stm32mp25_clock_cfg[] = {
 		   SEC_RIFSC(63)),
 
 	/* USB2PHY2 */
-	STM32_COMPOSITE_NODIV(CK_KER_USB2PHY2EN, "ck_ker_usb2phy2_en", 0, SEC_RIFSC(63),
+	STM32_COMPOSITE_NODIV(CK_KER_USB2PHY2EN, "ck_ker_usb2phy2_en", 0, SEC_RIFSC(66),
 			      GATE_USB2PHY2, MUX_USB2PHY2),
 
 	/* USB3 PCIe COMBOPHY */
 	STM32_GATE(CK_BUS_USB3PCIEPHY, "ck_icn_p_usb3pciephy", "ck_icn_apb4", 0, GATE_USB3PCIEPHY,
-		   SEC_RIFSC(66)),
+		   SEC_RIFSC(67)),
 
-	STM32_COMPOSITE_NODIV(CK_KER_USB3PCIEPHY, "ck_ker_usb3pciephy", 0, SEC_RIFSC(66),
+	STM32_COMPOSITE_NODIV(CK_KER_USB3PCIEPHY, "ck_ker_usb3pciephy", 0, SEC_RIFSC(67),
 			      GATE_USB3PCIEPHY, MUX_USB3PCIEPHY),
 
 	/* USB3 DRD */
 	STM32_GATE(CK_BUS_USB3DR, "ck_icn_m_usb3dr", "ck_icn_hsl", 0, GATE_USB3DR,
 		   SEC_RIFSC(66)),
 	STM32_GATE(CK_KER_USB2PHY2, "ck_ker_usb2phy2", "ck_flexgen_58", 0, GATE_USB3DR,
-		   SEC_RIFSC(63)),
+		   SEC_RIFSC(66)),
 
 	/* USBTC */
 	STM32_GATE(CK_BUS_USBTC, "ck_icn_p_usbtc", "ck_flexgen_35", 0, GATE_USBTC,
-		   SEC_RIFSC(63)),
+		   SEC_RIFSC(69)),
 	STM32_GATE(CK_KER_USBTC, "ck_ker_usbtc", "ck_flexgen_35", 0, GATE_USBTC,
-		   SEC_RIFSC(63)),
+		   SEC_RIFSC(69)),
 
 	/* VDEC / VENC */
 	STM32_GATE(CK_BUS_VDEC, "ck_icn_p_vdec", "ck_icn_apb4", 0, GATE_VDEC, SEC_RIFSC(89)),
