@@ -269,6 +269,7 @@ static const struct udevice_id stm32_adc_core_ids[] = {
 	{ .compatible = "st,stm32h7-adc-core", .data = (ulong)&stm32h7_adc_priv_cfg },
 	{ .compatible = "st,stm32mp1-adc-core", .data = (ulong)&stm32h7_adc_priv_cfg },
 	{ .compatible = "st,stm32mp13-adc-core", .data = (ulong)&stm32h7_adc_priv_cfg},
+	{ .compatible = "st,stm32mp21-adc-core", .data = (ulong)&stm32mp25_adc_priv_cfg },
 	{ .compatible = "st,stm32mp25-adc-core", .data = (ulong)&stm32mp25_adc_priv_cfg },
 	{}
 };
