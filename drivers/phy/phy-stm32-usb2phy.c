@@ -87,7 +87,6 @@ struct stm32_usb2phy {
 	struct udevice *vdda18;
 	struct udevice *vbus;
 	uint init;
-	bool internal_vbus_comp;
 	const struct stm32mp2_usb2phy_hw_data *hw_data;
 };
 
@@ -386,7 +385,7 @@ static int stm32_usb2phy_set_mode(struct phy *phy, enum phy_mode mode, int submo
 			 * are turned off, there is some internal error inside the usb3dr-ctrl
 			 * while running in usb3-speed
 			 */
-			if (!phy_dev->internal_vbus_comp && submode == USB_ROLE_NONE) {
+			if (submode == USB_ROLE_NONE) {
 				ret = regmap_update_bits(phy_dev->regmap,
 							 phy_data->cr_offset,
 							 SYSCFG_USB2PHY2CR_USB2PHY2CMN_MASK |
@@ -416,18 +415,10 @@ static int stm32_usb2phy_set_mode(struct phy *phy, enum phy_mode mode, int submo
 		 * VBUS is not present then usb-ctrl puts PHY in suspend and inturn
 		 * PHY turns off clocks to ctrl which makes the device-mode init fail
 		 */
-		if (phy_data->valid_mode == USB2_MODE_OTG)
+		if (phy_data->valid_mode == USB2_MODE_OTG) {
 			ret = regmap_update_bits(phy_dev->regmap,
 						 phy_data->cr_offset,
 						 SYSCFG_USB2PHY2CR_USB2PHY2CMN_MASK,
-						 0);
-		else if (phy_dev->internal_vbus_comp) {
-			ret = regmap_update_bits(phy_dev->regmap,
-						 phy_data->cr_offset,
-						 SYSCFG_USB2PHY2CR_USB2PHY2CMN_MASK |
-						 SYSCFG_USB2PHY2CR_VBUSVALID_MASK |
-						 SYSCFG_USB2PHY2CR_VBUSVLDEXTSEL_MASK |
-						 SYSCFG_USB2PHY2CR_VBUSVLDEXT_MASK,
 						 0);
 		} else {
 			if (submode == USB_ROLE_NONE) {
@@ -692,12 +683,6 @@ static int stm32_usb2phy_probe(struct udevice *dev)
 	if (!phy_dev->hw_data) {
 		dev_err(dev, "can't get matching stm32mp2_usb2_of_data\n");
 		return -EINVAL;
-	}
-
-	if (phy_dev->hw_data->valid_mode != USB2_MODE_HOST_ONLY) {
-		phy_dev->internal_vbus_comp = ofnode_read_bool(node, "st,internal-vbus-comp");
-		dev_dbg(dev, "Using usb2phy %s VBUS Comparator\n",
-			phy_dev->internal_vbus_comp ? "Internal" : "External");
 	}
 
 	/* Configure phy tuning */
