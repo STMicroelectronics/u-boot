@@ -1173,6 +1173,17 @@ void stm32mp15x_dk2_fdt_update(void *new_blob)
 			log_debug("touchscreen@38 node updated to @2a\n");
 		}
 	}
+
+	/* Get node from panel otm8009a node */
+	nodeoff = fdt_node_offset_by_compatible(new_blob, -1, "orisetech,otm8009a");
+	if (nodeoff < 0) {
+		log_warning("panel-otm8009a node not found\n");
+		return;
+	}
+
+	ret = fdt_delprop(new_blob, nodeoff, "reset-gpios");
+	if (ret != 0)
+		log_warning("fail to delete reset gpio %d\n", ret);
 }
 
 void fdt_update_panel_dsi(void *new_blob)
