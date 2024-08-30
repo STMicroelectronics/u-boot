@@ -24,7 +24,8 @@
  * default bootcmd for stm32mp13 STMicroelectronics boards:
  * for serial/usb: execute the stm32prog command
  * for mmc boot (eMMC, SD card), distro boot on the same mmc device
- * for nand or spi-nand boot, distro boot with ubifs on UBI partition
+ * for nand or spi-nand boot, distro boot with ubifs on UBI partition or
+ * sdcard
  * for nor boot, distro boot on SD card = mmc0 ONLY !
  */
 #define ST_STM32MP13_BOOTCMD "bootcmd_stm32mp=" \
@@ -37,7 +38,7 @@
 		"then env set boot_targets \"mmc${boot_instance}\"; fi;" \
 		"if test ${boot_device} = nand ||" \
 		  " test ${boot_device} = spi-nand ;" \
-		"then env set boot_targets ubifs0; fi;" \
+		"then env set boot_targets ubifs0 mmc0; fi;" \
 		"if test ${boot_device} = nor;" \
 		"then env set boot_targets mmc0; fi;" \
 		"run distro_bootcmd;" \
