@@ -19,7 +19,7 @@
 					 230400, 460800, 921600, \
 					 1000000, 2000000, 4000000}
 
-#ifdef CONFIG_EXTRA_ENV_SETTINGS
+#ifdef CFG_EXTRA_ENV_SETTINGS
 /*
  * default bootcmd for stm32mp13 STMicroelectronics boards:
  * for serial/usb: execute the stm32prog command
@@ -44,8 +44,8 @@
 		"run distro_bootcmd;" \
 	"fi;\0"
 
-#undef CONFIG_EXTRA_ENV_SETTINGS
-#define CONFIG_EXTRA_ENV_SETTINGS \
+#undef CFG_EXTRA_ENV_SETTINGS
+#define CFG_EXTRA_ENV_SETTINGS \
 	STM32MP_MEM_LAYOUT \
 	ST_STM32MP13_BOOTCMD \
 	BOOTENV \
