@@ -561,9 +561,75 @@ static void dw_mipi_dsi_packet_handler_config(struct dw_mipi_dsi *dsi)
 	dsi_write(dsi, DSI_PCKHDL_CFG, CRC_RX_EN | ECC_RX_EN | BTA_EN);
 }
 
+static int dw_mipi_dsi_video_get_panel(struct udevice *dev, struct udevice **panel)
+{
+	ofnode ep_node, node, ports, remote;
+	u32 remote_phandle;
+	int ret;
+
+	ports = ofnode_find_subnode(dev_ofnode(dev), "ports");
+	if (!ofnode_valid(ports)) {
+		dev_dbg(dev, "Remote bridge subnode\n");
+		return ret;
+	}
+
+	for (node = ofnode_first_subnode(ports);
+	     ofnode_valid(node);
+	     node = dev_read_next_subnode(node)) {
+		ep_node = ofnode_first_subnode(node);
+		if (!ofnode_valid(ep_node))
+			continue;
+
+		ret = ofnode_read_u32(ep_node, "remote-endpoint", &remote_phandle);
+		if (ret) {
+			dev_dbg(dev, "%s(%s): Could not find remote-endpoint property\n",
+				__func__, dev_read_name(dev));
+			return ret;
+		}
+
+		remote = ofnode_get_by_phandle(remote_phandle);
+		if (!ofnode_valid(remote)) {
+			dev_dbg(dev, "%s(%s): Remote is not valid\n", __func__, dev_read_name(dev));
+			return -EINVAL;
+		}
+
+		while (ofnode_valid(remote)) {
+			remote = ofnode_get_parent(remote);
+			if (!ofnode_valid(remote)) {
+				dev_dbg(dev, "%s(%s): no UCLASS_DISPLAY for remote-endpoint\n",
+					__func__, dev_read_name(dev));
+				continue;
+			}
+
+			uclass_get_device_by_ofnode(UCLASS_PANEL, remote, panel);
+			if (*panel)
+				break;
+		}
+	}
+
+	/* Sanity check, we can get out of the loop without having a clean ofnode */
+	if (!(*panel))
+		ret = -EINVAL;
+	else
+		if (!ofnode_valid(dev_ofnode(*panel)))
+			ret = -EINVAL;
+
+	return ret;
+}
+
 static void dw_mipi_dsi_video_packet_config(struct dw_mipi_dsi *dsi,
 					    struct display_timing *timings)
 {
+	struct mipi_dsi_device *device = dsi->device;
+	struct udevice *panel;
+	int rotation = 0;
+
+	/* Rotation supported only by mp25 SOCs */
+	if (ofnode_device_is_compatible(dev_ofnode(device->dev), "st,stm32mp25-dsi")) {
+		if (!dw_mipi_dsi_video_get_panel(device->dev, &panel))
+			rotation = dev_read_u32_default(panel, "rotation", 0);
+	}
+
 	/*
 	 * TODO dw drv improvements
 	 * only burst mode is supported here. For non-burst video modes,
@@ -571,7 +637,10 @@ static void dw_mipi_dsi_video_packet_config(struct dw_mipi_dsi *dsi,
 	 * DSI_VNPCR.NPSIZE... especially because this driver supports
 	 * non-burst video modes, see dw_mipi_dsi_video_mode_config()...
 	 */
-	dsi_write(dsi, DSI_VID_PKT_SIZE, VID_PKT_SIZE(timings->hactive.typ));
+	if (rotation == 90 || rotation == 270)
+		dsi_write(dsi, DSI_VID_PKT_SIZE, VID_PKT_SIZE(timings->vactive.typ));
+	else
+		dsi_write(dsi, DSI_VID_PKT_SIZE, VID_PKT_SIZE(timings->hactive.typ));
 }
 
 static void dw_mipi_dsi_command_mode_config(struct dw_mipi_dsi *dsi)
@@ -616,13 +685,28 @@ static u32 dw_mipi_dsi_get_hcomponent_lbcc(struct dw_mipi_dsi *dsi,
 static void dw_mipi_dsi_line_timer_config(struct dw_mipi_dsi *dsi,
 					  struct display_timing *timings)
 {
+	struct mipi_dsi_device *device = dsi->device;
 	u32 htotal, hsa, hbp, lbcc;
+	struct udevice *panel;
+	int rotation = 0;
 
-	htotal = timings->hactive.typ + timings->hfront_porch.typ +
-		 timings->hback_porch.typ + timings->hsync_len.typ;
+	/* Rotation supported only by mp25 SOCs */
+	if (ofnode_device_is_compatible(dev_ofnode(device->dev), "st,stm32mp25-dsi")) {
+		if (!dw_mipi_dsi_video_get_panel(device->dev, &panel))
+			rotation = dev_read_u32_default(panel, "rotation", 0);
+	}
 
-	hsa = timings->hsync_len.typ;
-	hbp = timings->hback_porch.typ;
+	if (rotation == 90 || rotation == 270) {
+		htotal = timings->vactive.typ + timings->vfront_porch.typ +
+			 timings->vback_porch.typ + timings->vsync_len.typ;
+		hsa = timings->vsync_len.typ;
+		hbp = timings->vback_porch.typ;
+	} else {
+		htotal = timings->hactive.typ + timings->hfront_porch.typ +
+			 timings->hback_porch.typ + timings->hsync_len.typ;
+		hsa = timings->hsync_len.typ;
+		hbp = timings->hback_porch.typ;
+	}
 
 	/*
 	 * TODO dw drv improvements
@@ -641,12 +725,28 @@ static void dw_mipi_dsi_line_timer_config(struct dw_mipi_dsi *dsi,
 static void dw_mipi_dsi_vertical_timing_config(struct dw_mipi_dsi *dsi,
 					       struct display_timing *timings)
 {
+	struct mipi_dsi_device *device = dsi->device;
 	u32 vactive, vsa, vfp, vbp;
+	struct udevice *panel;
+	int rotation = 0;
 
-	vactive = timings->vactive.typ;
-	vsa =  timings->vsync_len.typ;
-	vfp =  timings->vfront_porch.typ;
-	vbp = timings->vback_porch.typ;
+	/* Rotation supported only by mp25 SOCs */
+	if (ofnode_device_is_compatible(dev_ofnode(device->dev), "st,stm32mp25-dsi")) {
+		if (!dw_mipi_dsi_video_get_panel(device->dev, &panel))
+			rotation = dev_read_u32_default(panel, "rotation", 0);
+	}
+
+	if (rotation == 90 || rotation == 270) {
+		vactive = timings->hactive.typ;
+		vsa =  timings->hsync_len.typ;
+		vfp =  timings->hfront_porch.typ;
+		vbp = timings->hback_porch.typ;
+	} else {
+		vactive = timings->vactive.typ;
+		vsa =  timings->vsync_len.typ;
+		vfp =  timings->vfront_porch.typ;
+		vbp = timings->vback_porch.typ;
+	}
 
 	dsi_write(dsi, DSI_VID_VACTIVE_LINES, vactive);
 	dsi_write(dsi, DSI_VID_VSA_LINES, vsa);
