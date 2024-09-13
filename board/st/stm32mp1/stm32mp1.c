@@ -799,12 +799,17 @@ static void board_stm32mp15x_ev1_init(void)
 	struct driver *drv;
 	struct gpio_desc reset_gpio;
 	char path[40];
+	int ret;
 
 	/* configure IRQ line on EV1 for touchscreen before LCD reset */
-	uclass_get_device_by_driver(UCLASS_I2C_GENERIC, DM_DRIVER_GET(goodix), &dev);
+	ret = uclass_get_device_by_driver(UCLASS_I2C_GENERIC, DM_DRIVER_GET(goodix), &dev);
+	if (ret)
+		return;
 
 	/* get & set reset gpio for panel */
-	uclass_get_device_by_driver(UCLASS_PANEL, DM_DRIVER_GET(rm68200_panel), &dev);
+	ret = uclass_get_device_by_driver(UCLASS_PANEL, DM_DRIVER_GET(rm68200_panel), &dev);
+	if (ret)
+		return;
 
 	gpio_request_by_name(dev, "reset-gpios", 0, &reset_gpio, GPIOD_IS_OUT);
 
