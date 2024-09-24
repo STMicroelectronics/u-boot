@@ -14,6 +14,7 @@ obj-$(CONFIG_STM32MP15X) += stm32mp1/
 obj-$(CONFIG_STM32MP25X) += stm32mp2/
 
 obj-$(CONFIG_STM32MP_TAMP_NVMEM) += nvram.o
+obj-$(CONFIG_MFD_STM32_TIMERS) += timers.o
 
 ifdef CONFIG_SPL_BUILD
 obj-y += spl.o
