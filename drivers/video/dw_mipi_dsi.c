@@ -556,7 +556,13 @@ static void dw_mipi_dsi_dpi_config(struct dw_mipi_dsi *dsi,
 
 static void dw_mipi_dsi_packet_handler_config(struct dw_mipi_dsi *dsi)
 {
-	dsi_write(dsi, DSI_PCKHDL_CFG, CRC_RX_EN | ECC_RX_EN | BTA_EN);
+	struct mipi_dsi_device *device = dsi->device;
+	u32 val = CRC_RX_EN | ECC_RX_EN | BTA_EN | EOTP_TX_EN;
+
+	if (device->mode_flags & MIPI_DSI_MODE_EOT_PACKET)
+		val &= ~EOTP_TX_EN;
+
+	dsi_write(dsi, DSI_PCKHDL_CFG, val);
 }
 
 static int dw_mipi_dsi_video_get_panel(struct udevice *dev, struct udevice **panel)
