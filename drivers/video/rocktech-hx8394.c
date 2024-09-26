@@ -235,7 +235,7 @@ static const struct panel_ops hx8394_panel_ops = {
 };
 
 static const struct udevice_id hx8394_panel_ids[] = {
-	{ .compatible = "rocktech,hx8394" },
+	{ .compatible = "rocktech,rk055mhd042a0" },
 	{ }
 };
 
