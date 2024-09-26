@@ -1038,7 +1038,7 @@ void fdt_update_panel_dsi(void *new_blob)
 	if (!panel)
 		return;
 
-	if (!strcmp(panel, "rocktech,hx8394")) {
+	if (!strcmp(panel, "rocktech,rk055mhd042a0")) {
 		nodeoff = fdt_node_offset_by_compatible(new_blob, -1, "raydium,rm68200");
 		if (nodeoff < 0) {
 			log_warning("panel-dsi node not found");
