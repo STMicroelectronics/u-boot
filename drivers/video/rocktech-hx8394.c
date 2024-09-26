@@ -223,7 +223,8 @@ static int hx8394_panel_probe(struct udevice *dev)
 	plat->format = MIPI_DSI_FMT_RGB888;
 	plat->mode_flags = MIPI_DSI_MODE_VIDEO |
 			   MIPI_DSI_MODE_VIDEO_BURST |
-			   MIPI_DSI_MODE_LPM;
+			   MIPI_DSI_MODE_LPM |
+			   MIPI_DSI_MODE_EOT_PACKET;
 
 	return 0;
 }
