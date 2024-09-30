@@ -325,7 +325,7 @@ static void board_stm32mp25x_eval_init(void)
 		env_set("hdmi", compatible);
 }
 
-static void board_stm32mp25x_disco_init(void)
+static void board_stm32mp2xx_disco_init(void)
 {
 	const char *compatible;
 	struct udevice *dev;
@@ -428,6 +428,15 @@ static bool board_is_stm32mp257_eval(void)
 {
 	if (CONFIG_IS_ENABLED(TARGET_ST_STM32MP25X) &&
 	    (of_machine_is_compatible("st,stm32mp257f-ev1")))
+		return true;
+
+	return false;
+}
+
+static bool board_is_stm32mp235_disco(void)
+{
+	if (CONFIG_IS_ENABLED(TARGET_ST_STM32MP23X) &&
+	    (of_machine_is_compatible("st,stm32mp235f-dk")))
 		return true;
 
 	return false;
@@ -611,8 +620,8 @@ int board_late_init(void)
 	if (board_is_stm32mp257_eval())
 		board_stm32mp25x_eval_init();
 
-	if (board_is_stm32mp257_disco())
-		board_stm32mp25x_disco_init();
+	if (board_is_stm32mp257_disco() | board_is_stm32mp235_disco())
+		board_stm32mp2xx_disco_init();
 
 	if (IS_ENABLED(CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG)) {
 		fdt_compat = fdt_getprop(gd->fdt_blob, 0, "compatible",
@@ -698,7 +707,7 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 	return 0;
 }
 
-static int fixup_stm32mp257_disco_panel(void *blob)
+static int fixup_stm32mp2xx_disco_panel(void *blob)
 {
 	char const *panel = env_get("panel");
 	bool detect_etml0700z9ndha = false;
@@ -741,8 +750,8 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 			log_err("Error during panel fixup ! (%d)\n", ret);
 	}
 
-	if (board_is_stm32mp257_disco()) {
-		ret = fixup_stm32mp257_disco_panel(blob);
+	if (board_is_stm32mp257_disco() | board_is_stm32mp235_disco()) {
+		ret = fixup_stm32mp2xx_disco_panel(blob);
 		if (ret)
 			log_err("Error during panel fixup ! (%d)\n", ret);
 	}
