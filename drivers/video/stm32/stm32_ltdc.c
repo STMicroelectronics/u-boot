@@ -24,6 +24,20 @@
 #include <dm/pinctrl.h>
 #include <linux/bitops.h>
 
+#if CONFIG_IS_ENABLED(ARCH_STM32MP)
+/* direct access to RIFSC function, waiting firewall uclass */
+#include <mach/rif.h>
+static int stm32_check_access_by_id(ofnode device_node, u32 id)
+{
+	return stm32_rifsc_check_access_by_id(device_node, id);
+}
+#else
+static int stm32_check_access_by_id(ofnode device_node, u32 id)
+{
+	return -EACCES;
+}
+#endif
+
 struct stm32_ltdc_priv {
 	void __iomem *regs;
 	enum video_log2_bpp l2bpp;
@@ -785,7 +799,52 @@ static int stm32_ltdc_probe(struct udevice *dev)
 	struct udevice *syscon;
 	ofnode node, port;
 	ulong rate;
-	int ret;
+	int ret, idx;
+
+	if (IS_ENABLED(CONFIG_STM32MP25X) || IS_ENABLED(CONFIG_STM32MP23X) ||
+	    IS_ENABLED(CONFIG_STM32MP21X)) {
+		struct ofnode_phandle_args args;
+
+		node = dev_ofnode(dev);
+
+		idx = ofnode_stringlist_search(node, "access-controller-names", "cmn");
+		if (idx < 0)
+			return idx;
+
+		ret = ofnode_parse_phandle_with_args(node, "access-controllers",
+						     "#access-controller-cells",
+						     0, idx, &args);
+		if (ret < 0) {
+			dev_err(dev, "Can not get access-controllers to common registers\n");
+			return ret;
+		}
+
+		ret = stm32_check_access_by_id(dev_ofnode(dev), args.args[0]);
+		if (ret < 0) {
+			dev_err(dev, "Fail to get access to common registers\n");
+			return ret;
+		}
+
+		node = dev_read_subnode(dev, "l1l2");
+
+		idx = ofnode_stringlist_search(node, "access-controller-names", "l1l2");
+		if (idx < 0)
+			return idx;
+
+		ret = ofnode_parse_phandle_with_args(node, "access-controllers",
+						     "#access-controller-cells",
+						     0, idx, &args);
+		if (ret < 0) {
+			dev_err(dev, "Can not get access-controllers to l1l2 registers\n");
+			return ret;
+		}
+
+		ret = stm32_check_access_by_id(dev_ofnode(dev), args.args[0]);
+		if (ret < 0) {
+			dev_err(dev, "Fail to get access to l1l2 registers\n");
+			return ret;
+		}
+	}
 
 	if (IS_ENABLED(CONFIG_SYSCON) &&
 	    (IS_ENABLED(CONFIG_STM32MP25X) || IS_ENABLED(CONFIG_STM32MP23X))) {
