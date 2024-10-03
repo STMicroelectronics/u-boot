@@ -11,6 +11,9 @@
 #include <display.h>
 #include <dm.h>
 #include <log.h>
+#if CONFIG_IS_ENABLED(ARCH_STM32MP)
+#include <mach/rif.h>
+#endif /* CONFIG_IS_ENABLED(ARCH_STM32MP) */
 #include <panel.h>
 #include <regmap.h>
 #include <reset.h>
@@ -25,6 +28,18 @@
 #include <linux/bitops.h>
 #include <linux/printk.h>
 #include <linux/sizes.h>
+
+#if !CONFIG_IS_ENABLED(ARCH_STM32MP)
+static int stm32_rifsc_grant_access_by_id(ofnode device_node, u32 id)
+{
+	return -EACCES;
+}
+
+static int stm32_rifsc_release_access_by_id(ofnode device_node, u32 id)
+{
+	return -EACCES;
+}
+#endif
 
 struct stm32_ltdc_plat {
 	void __iomem *regs;
@@ -45,6 +60,8 @@ struct stm32_ltdc_priv {
 	u32 crop_x, crop_y, crop_w, crop_h;
 	u32 alpha;
 	u32 hw_version;
+	struct ofnode_phandle_args args_cmn;
+	struct ofnode_phandle_args args_l1l2;
 };
 
 /* Layer register offsets */
@@ -783,7 +800,51 @@ static int stm32_ltdc_of_to_plat(struct udevice *dev)
 	struct stm32_ltdc_priv *priv = dev_get_priv(dev);
 	struct udevice *syscon;
 	ofnode node, port;
-	int ret;
+	int ret, idx;
+
+	if (IS_ENABLED(CONFIG_STM32MP25X) || IS_ENABLED(CONFIG_STM32MP23X) ||
+	    IS_ENABLED(CONFIG_STM32MP21X)) {
+		node = dev_ofnode(dev);
+
+		idx = ofnode_stringlist_search(node, "access-controller-names", "cmn");
+		if (idx < 0)
+			return idx;
+
+		ret = ofnode_parse_phandle_with_args(node, "access-controllers",
+						     "#access-controller-cells",
+						     0, idx, &priv->args_cmn);
+		if (ret < 0) {
+			dev_err(dev, "Can not get access-controllers to common registers\n");
+			return ret;
+		}
+
+		ret = stm32_rifsc_grant_access_by_id(dev_ofnode(dev), priv->args_cmn.args[0]);
+		if (ret < 0) {
+			dev_err(dev, "Fail to get access to common registers\n");
+			return ret;
+		}
+
+		node = dev_read_subnode(dev, "l1l2");
+
+		idx = ofnode_stringlist_search(node, "access-controller-names", "l1l2");
+		if (idx < 0)
+			return idx;
+
+		ret = ofnode_parse_phandle_with_args(node, "access-controllers",
+						     "#access-controller-cells",
+						     0, idx, &priv->args_l1l2);
+		if (ret < 0) {
+			dev_err(dev, "Can not get access-controllers to l1l2 registers\n");
+			return ret;
+		}
+
+		ret = stm32_rifsc_grant_access_by_id(dev_ofnode(dev), priv->args_l1l2.args[0]);
+		if (ret < 0) {
+			stm32_rifsc_release_access_by_id(dev_ofnode(dev), priv->args_cmn.args[0]);
+			dev_err(dev, "Fail to get access to l1l2 registers\n");
+			return ret;
+		}
+	}
 
 	if (IS_ENABLED(CONFIG_SYSCON) &&
 	    (IS_ENABLED(CONFIG_STM32MP25X) || IS_ENABLED(CONFIG_STM32MP23X))) {
@@ -1010,6 +1071,19 @@ static int stm32_ltdc_bind(struct udevice *dev)
 	return 0;
 }
 
+static int stm32_ltdc_remove(struct udevice *dev)
+{
+	if (IS_ENABLED(CONFIG_STM32MP25X) || IS_ENABLED(CONFIG_STM32MP23X) ||
+	    IS_ENABLED(CONFIG_STM32MP21X)) {
+		struct stm32_ltdc_priv *priv = dev_get_priv(dev);
+
+		stm32_rifsc_release_access_by_id(dev_ofnode(dev), priv->args_cmn.args[0]);
+		stm32_rifsc_release_access_by_id(dev_ofnode(dev), priv->args_l1l2.args[0]);
+	}
+
+	return 0;
+}
+
 static const struct udevice_id stm32_ltdc_ids[] = {
 	{ .compatible = "st,stm32-ltdc" },
 	{ .compatible = "st,stm32mp251-ltdc" },
@@ -1025,5 +1099,7 @@ U_BOOT_DRIVER(stm32_ltdc) = {
 	.probe			= stm32_ltdc_probe,
 	.bind			= stm32_ltdc_bind,
 	.plat_auto	= sizeof(struct stm32_ltdc_plat),
-	.priv_auto	= sizeof(struct stm32_ltdc_priv),
+	.priv_auto		= sizeof(struct stm32_ltdc_priv),
+	.flags			= DM_FLAG_OS_PREPARE,
+	.remove			= stm32_ltdc_remove,
 };
