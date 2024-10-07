@@ -86,6 +86,9 @@ static int button_gpio_bind(struct udevice *parent)
 		struct button_uc_plat *uc_plat;
 		const char *label;
 
+		if (!ofnode_is_enabled(node))
+			continue;
+
 		label = ofnode_read_string(node, "label");
 		if (!label) {
 			debug("%s: node %s has no label\n", __func__,
