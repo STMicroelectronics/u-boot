@@ -216,7 +216,7 @@ config STM32_FLASH
 
 config STM32_HYPERBUS
 	bool "STMicroelectronics HyperBus driver"
-	depends on STM32MP25X && DM_MTD && CFI_FLASH
+	depends on (STM32MP23X ||STM32MP25X) && DM_MTD && CFI_FLASH
 	help
 	  This enables STMicroelectronics HyperBus controller on STM32MP2
 	  SoCs family.

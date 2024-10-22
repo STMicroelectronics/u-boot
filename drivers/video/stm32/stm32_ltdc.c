@@ -649,7 +649,8 @@ static int stm32_ltdc_probe(struct udevice *dev)
 	ulong rate;
 	int ret;
 
-	if (IS_ENABLED(CONFIG_SYSCON) && IS_ENABLED(CONFIG_STM32MP25X)) {
+	if (IS_ENABLED(CONFIG_SYSCON) &&
+	    (IS_ENABLED(CONFIG_STM32MP25X) || IS_ENABLED(CONFIG_STM32MP23X))) {
 		ret = uclass_get_device_by_phandle(UCLASS_SYSCON, dev, "st,syscon", &syscon);
 		if (ret) {
 			if (ret != -ENOENT) {
@@ -783,7 +784,8 @@ static int stm32_ltdc_probe(struct udevice *dev)
 	if (IS_ENABLED(CONFIG_VIDEO_BRIDGE)) {
 		if (bridge) {
 			/* Set the pixel clock according to the encoder */
-			if (IS_ENABLED(CONFIG_SYSCON) && IS_ENABLED(CONFIG_STM32MP25X)) {
+			if (IS_ENABLED(CONFIG_SYSCON) &&
+			    (IS_ENABLED(CONFIG_STM32MP25X) || IS_ENABLED(CONFIG_STM32MP23X))) {
 				if (!strcmp(bridge->name, "stm32-display-dsi"))
 					regmap_write(regmap, SYSCFG_DISPLAYCLKCR,
 						     DISPLAYCLKCR_DPI);

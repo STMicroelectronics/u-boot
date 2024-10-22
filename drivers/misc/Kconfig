@@ -454,7 +454,7 @@ config STM32MP_FUSE
 
 config STM32_OMM
 	bool "Enable Octo Memory Manager (OMM) driver for the STM32MP2 SoC's family"
-	depends on STM32MP25X && MISC
+	depends on (STM32MP23X || STM32MP25X) && MISC
 	help
 	  This driver manages the muxing between the 2 OSPI busses and
 	  the 2 output ports. There are 4 possible muxing configurations:

@@ -48,6 +48,20 @@
 #define CPU_STM32MP253Dxx       0xC00B3E0C
 #define CPU_STM32MP251Dxx       0xC00B3E6D
 
+/* ID for STM32MP23x = Device Part Number (RPN) (bit31:0) */
+#define CPU_STM32MP235Cxx       0x00082182
+#define CPU_STM32MP233Cxx       0x000B318E
+#define CPU_STM32MP231Cxx       0x000B31EF
+#define CPU_STM32MP235Axx       0x40082F82
+#define CPU_STM32MP233Axx       0x400B3F8E
+#define CPU_STM32MP231Axx       0x400B3FEF
+#define CPU_STM32MP235Fxx       0x80082182
+#define CPU_STM32MP233Fxx       0x800B318E
+#define CPU_STM32MP231Fxx       0x800B31EF
+#define CPU_STM32MP235Dxx       0xC0082F82
+#define CPU_STM32MP233Dxx       0xC00B3F8E
+#define CPU_STM32MP231Dxx       0xC00B3FEF
+
 /* return CPU_STMP32MP...Xxx constants */
 u32 get_cpu_type(void);
 
