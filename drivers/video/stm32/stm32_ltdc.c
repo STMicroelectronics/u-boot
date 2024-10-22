@@ -648,7 +648,8 @@ static int stm32_ltdc_of_to_plat(struct udevice *dev)
 	ofnode node, port;
 	int ret;
 
-	if (IS_ENABLED(CONFIG_SYSCON) && IS_ENABLED(CONFIG_STM32MP25X)) {
+	if (IS_ENABLED(CONFIG_SYSCON) &&
+	    (IS_ENABLED(CONFIG_STM32MP25X) || IS_ENABLED(CONFIG_STM32MP23X))) {
 		ret = uclass_get_device_by_phandle(UCLASS_SYSCON, dev, "st,syscon", &syscon);
 		if (ret) {
 			if (ret != -ENOENT)
@@ -788,7 +789,8 @@ static int stm32_ltdc_probe(struct udevice *dev)
 		if (plat->bridge) {
 			ret = video_bridge_attach(plat->bridge);
 			/* Set the pixel clock according to the encoder */
-			if (IS_ENABLED(CONFIG_SYSCON) && IS_ENABLED(CONFIG_STM32MP25X)) {
+			if (IS_ENABLED(CONFIG_SYSCON) &&
+			    (IS_ENABLED(CONFIG_STM32MP25X) || IS_ENABLED(CONFIG_STM32MP23X))) {
 				if (!strcmp(plat->bridge->name, "stm32-display-dsi"))
 					regmap_write(plat->regmap, SYSCFG_DISPLAYCLKCR,
 						     DISPLAYCLKCR_DPI);
