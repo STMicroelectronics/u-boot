@@ -45,11 +45,12 @@ arch-dtbs:
 
 PHONY += arch-ext-dtbs
 arch-ext-dtbs: arch-dtbs
-	$(Q)test -e $(EXT_DTS) && (\
-		echo "  EXT_DTS in $(EXT_DTS)";\
+	$(Q)if [ -e $(EXT_DTS) ]; then \
+		echo "  EXT_DTS in $(EXT_DTS)"; \
 		$(MAKE) $(build)=$(EXT_DTS) dtbs && \
-		cp $(EXT_DTS)/*.dtb arch/$(ARCH)/dts/ || \
-		/bin/true) || /bin/true
+		(cp $(EXT_DTS)/*.dtb arch/$(ARCH)/dts/ || \
+		/bin/true) || /bin/false; \
+	else /bin/true; fi
 
 ifeq ($(CONFIG_SPL_BUILD),y)
 obj-$(CONFIG_OF_EMBED) := dt-spl.dtb.o
