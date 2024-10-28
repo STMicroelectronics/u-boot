@@ -67,6 +67,8 @@ int get_eth_nb(void)
 	int nb_eth;
 
 	switch (get_cpu_type()) {
+	case CPU_STM32MP257Fxx: /* Dirty hack to test STM32MP23 soft on STM32MP25 board */
+		fallthrough;
 	case CPU_STM32MP235Fxx:
 		fallthrough;
 	case CPU_STM32MP235Dxx:
