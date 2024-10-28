@@ -27,6 +27,9 @@ int pwm_set_config(struct udevice *dev, uint channel, uint period_ns,
 	if (!ops->set_config)
 		return -ENOSYS;
 
+	if (duty_ns > period_ns)
+		return -EINVAL;
+
 	return ops->set_config(dev, channel, period_ns, duty_ns);
 }
 
