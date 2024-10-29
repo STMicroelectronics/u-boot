@@ -98,6 +98,7 @@ static int stm32_timers_probe(struct udevice *dev)
 
 static const struct udevice_id stm32_timers_ids[] = {
 	{ .compatible = "st,stm32-timers" },
+	{ .compatible = "st,stm32mp21-timers", .data = STM32MP21_TIM_IPIDR },
 	{ .compatible = "st,stm32mp25-timers", .data = STM32MP25_TIM_IPIDR },
 	{}
 };

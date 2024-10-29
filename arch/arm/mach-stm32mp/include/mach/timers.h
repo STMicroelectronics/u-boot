@@ -49,6 +49,7 @@
 
 #define MAX_TIM_PSC		0xFFFF
 
+#define STM32MP21_TIM_IPIDR	0x00120002
 #define STM32MP25_TIM_IPIDR	0x00120002
 
 struct stm32_timers_plat {
