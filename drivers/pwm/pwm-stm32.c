@@ -200,6 +200,7 @@ static const struct pwm_ops stm32_pwm_ops = {
 
 static const struct udevice_id stm32_pwm_ids[] = {
 	{ .compatible = "st,stm32-pwm" },
+	{ .compatible = "st,stm32mp21-pwm" },
 	{ .compatible = "st,stm32mp25-pwm" },
 	{ }
 };
