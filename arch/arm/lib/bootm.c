@@ -318,11 +318,22 @@ static void boot_jump_linux(struct bootm_headers *images, int flag)
 				    (u64)switch_to_el1, ES_TO_AARCH64);
 #else
 		if ((IH_ARCH_DEFAULT == IH_ARCH_ARM64) &&
-		    (images->os.arch == IH_ARCH_ARM))
-			armv8_switch_to_el2(0, (u64)gd->bd->bi_arch_number,
-					    (u64)images->ft_addr, 0,
-					    (u64)images->ep,
-					    ES_TO_AARCH32);
+		    (images->os.arch == IH_ARCH_ARM)) {
+			unsigned int el = current_el();
+
+			if (el == 2)
+				armv8_switch_to_el1(0, (u64)gd->bd->bi_arch_number,
+						    (u64)images->ft_addr, 0,
+						    (u64)images->ep,
+						    ES_TO_AARCH32);
+			else if (el == 3)
+				armv8_switch_to_el2(0, (u64)gd->bd->bi_arch_number,
+						    (u64)images->ft_addr, 0,
+						    (u64)images->ep,
+						    ES_TO_AARCH32);
+			else
+				panic("Invalid ARM mode switch");
+		}
 		else
 			armv8_switch_to_el2((u64)images->ft_addr, 0, 0, 0,
 					    images->ep,
