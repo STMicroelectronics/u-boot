@@ -25,7 +25,7 @@
 			enable-method = "psci";
 			clocks = <&scmi_perf 0>;
 			clock-names = "cpu";
-			power-domains = <&CPU_PD0>;
+			power-domains = <&cpu0_pd>;
 			power-domain-names = "psci";
 			#cooling-cells = <2>;
 		};
@@ -37,8 +37,8 @@
 				compatible = "arm,idle-state";
 				arm,psci-suspend-param = <0x00000001>;
 				local-timer-stop;
-				entry-latency-us = <300>;
-				exit-latency-us = <500>;
+				entry-latency-us = <150>;
+				exit-latency-us = <200>;
 				min-residency-us = <1000>;
 			};
 		};
@@ -47,25 +47,25 @@
 			STOP1: domain-stop1 {
 				compatible = "domain-idle-state";
 				arm,psci-suspend-param = <0x00000011>;
-				entry-latency-us = <400>;
-				exit-latency-us = <1200>;
+				entry-latency-us = <300>;
+				exit-latency-us = <500>;
 				min-residency-us = <1500>;
 			};
 
 			LP_STOP1: domain-lp-stop1 {
 				compatible = "domain-idle-state";
 				arm,psci-suspend-param = <0x0000021>;
-				entry-latency-us = <500>;
-				exit-latency-us = <2000>;
-				min-residency-us = <3000>;
+				entry-latency-us = <350>;
+				exit-latency-us = <600>;
+				min-residency-us = <2000>;
 			};
 
 			LPLV_STOP1: domain-lplv-stop1 {
 				compatible = "domain-idle-state";
 				arm,psci-suspend-param = <0x00000211>;
 				entry-latency-us = <500>;
-				exit-latency-us = <3000>;
-				min-residency-us = <4000>;
+				exit-latency-us = <2000>;
+				min-residency-us = <2500>;
 			};
 		};
 	};
@@ -198,7 +198,7 @@
 	};
 
 	intc: interrupt-controller@4ac00000 {
-		compatible = "arm,cortex-a7-gic";
+		compatible = "st,stm32mp2-cortex-a7-gic", "arm,cortex-a7-gic";
 		#interrupt-cells = <3>;
 		interrupt-controller;
 		interrupt-parent = <&intc>;
@@ -219,23 +219,29 @@
 		};
 	};
 
+	d1_pd: power-domain-d1 {
+		compatible = "st,stm32mp-pm-domain";
+		#power-domain-cells = <0>;
+		power-domains = <&cluster_pd>;
+	};
+
 	psci {
 		compatible = "arm,psci-1.0";
 		method = "smc";
 
-		CPU_PD0: power-domain-cpu0 {
+		cpu0_pd: power-domain-cpu0 {
 			#power-domain-cells = <0>;
 			domain-idle-states = <&CPU_PWRDN>;
-			power-domains = <&CLUSTER_PD>;
+			power-domains = <&cluster_pd>;
 		};
 
-		CLUSTER_PD: power-domain-cluster {
+		cluster_pd: power-domain-cluster {
 			#power-domain-cells = <0>;
 			domain-idle-states = <&STOP1>, <&LP_STOP1>;
-			power-domains = <&RET_PD>;
+			power-domains = <&ret_pd>;
 		};
 
-		RET_PD: power-domain-retention {
+		ret_pd: power-domain-retention {
 			#power-domain-cells = <0>;
 			domain-idle-states = <&LPLV_STOP1>;
 		};
@@ -341,7 +347,7 @@
 				     <GIC_SPI 47 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk CK_SCMI_HPDMA1>;
-			power-domains = <&RET_PD>;
+			power-domains = <&ret_pd>;
 			#dma-cells = <3>;
 			st,axi-max-burst-len = <16>;
 		};
@@ -366,7 +372,7 @@
 				     <GIC_SPI 63 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk CK_SCMI_HPDMA2>;
-			power-domains = <&RET_PD>;
+			power-domains = <&ret_pd>;
 			#dma-cells = <3>;
 			st,axi-max-burst-len = <16>;
 		};
@@ -391,7 +397,7 @@
 				     <GIC_SPI 79 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 80 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk CK_SCMI_HPDMA3>;
-			power-domains = <&RET_PD>;
+			power-domains = <&ret_pd>;
 			#dma-cells = <3>;
 			st,axi-max-burst-len = <16>;
 		};
@@ -418,7 +424,7 @@
 			resets = <&rcc OSPIIOM_R>;
 			st,syscfg-amcr = <&syscfg 0x2c00 0x7>;
 			access-controllers = <&rifsc 111>;
-			power-domains = <&CLUSTER_PD>;
+			power-domains = <&d1_pd>;
 			status = "disabled";
 			ranges = <0 0 0x40430000 0x400>,
 				 <1 0 0x40440000 0x400>;
@@ -434,7 +440,7 @@
 				clocks = <&scmi_clk CK_SCMI_OSPI1>;
 				resets = <&scmi_reset RST_SCMI_OSPI1>, <&scmi_reset RST_SCMI_OSPI1DLL>;
 				access-controllers = <&rifsc 74>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -449,7 +455,7 @@
 				clocks = <&scmi_clk CK_SCMI_OSPI2>;
 				resets = <&scmi_reset RST_SCMI_OSPI2>, <&scmi_reset RST_SCMI_OSPI2DLL>;
 				access-controllers = <&rifsc 75>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 		};
@@ -473,7 +479,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 1>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				pwm {
@@ -504,7 +510,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 2>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				pwm {
@@ -535,7 +541,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 3>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				pwm {
@@ -566,7 +572,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 4>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				pwm {
@@ -597,7 +603,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 5>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				counter {
@@ -622,7 +628,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 6>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				counter {
@@ -647,7 +653,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 10>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				counter {
@@ -678,7 +684,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 11>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				counter {
@@ -709,7 +715,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 12>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				counter {
@@ -731,7 +737,7 @@
 			};
 
 			lptimer1: timer@40090000 {
-				compatible = "st,stm32mp25-lptimer";
+				compatible = "st,stm32mp25-lptimer", "st,stm32-lptimer";
 				reg = <0x40090000 0x400>;
 				interrupts-extended = <&exti1 47 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc CK_KER_LPTIM1>;
@@ -739,35 +745,35 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 17>;
-				power-domains = <&RET_PD>;
+				power-domains = <&ret_pd>;
 				wakeup-source;
 				status = "disabled";
 
 				counter {
-					compatible = "st,stm32mp25-lptimer-counter";
+					compatible = "st,stm32mp25-lptimer-counter", "st,stm32-lptimer-counter";
 					status = "disabled";
 				};
 
 				pwm {
-					compatible = "st,stm32mp25-pwm-lp";
+					compatible = "st,stm32mp25-pwm-lp", "st,stm32-pwm-lp";
 					#pwm-cells = <3>;
 					status = "disabled";
 				};
 
 				timer {
-					compatible = "st,stm32mp25-lptimer-timer";
+					compatible = "st,stm32mp25-lptimer-timer", "st,stm32-lptimer-timer";
 					status = "disabled";
 				};
 
 				trigger@0 {
-					compatible = "st,stm32mp25-lptimer-trigger";
+					compatible = "st,stm32mp25-lptimer-trigger", "st,stm32-lptimer-trigger";
 					reg = <0>;
 					status = "disabled";
 				};
 			};
 
 			lptimer2: timer@400a0000 {
-				compatible = "st,stm32mp25-lptimer";
+				compatible = "st,stm32mp25-lptimer", "st,stm32-lptimer";
 				reg = <0x400a0000 0x400>;
 				interrupts-extended = <&exti1 48 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc CK_KER_LPTIM2>;
@@ -775,28 +781,28 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 18>;
-				power-domains = <&RET_PD>;
+				power-domains = <&ret_pd>;
 				wakeup-source;
 				status = "disabled";
 
 				counter {
-					compatible = "st,stm32mp25-lptimer-counter";
+					compatible = "st,stm32mp25-lptimer-counter", "st,stm32-lptimer-counter";
 					status = "disabled";
 				};
 
 				pwm {
-					compatible = "st,stm32mp25-pwm-lp";
+					compatible = "st,stm32mp25-pwm-lp", "st,stm32-pwm-lp";
 					#pwm-cells = <3>;
 					status = "disabled";
 				};
 
 				timer {
-					compatible = "st,stm32mp25-lptimer-timer";
+					compatible = "st,stm32mp25-lptimer-timer", "st,stm32-lptimer-timer";
 					status = "disabled";
 				};
 
 				trigger@1 {
-					compatible = "st,stm32mp25-lptimer-trigger";
+					compatible = "st,stm32mp25-lptimer-trigger", "st,stm32-lptimer-trigger";
 					reg = <1>;
 					status = "disabled";
 				};
@@ -814,7 +820,7 @@
 					<&hpdma 52 0x43 0x21>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 23>;
-				power-domains = <&RET_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -830,7 +836,7 @@
 				       <&hpdma 52 0x20 0x00003021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 23>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -846,7 +852,7 @@
 					<&hpdma 54 0x43 0x21>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 24>;
-				power-domains = <&RET_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -862,7 +868,7 @@
 				       <&hpdma 54 0x20 0x00003021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 24>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -889,7 +895,7 @@
 				       <&hpdma 12 0x20 0x3021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 32>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				wakeup-source;
 				status = "disabled";
 			};
@@ -903,7 +909,7 @@
 				       <&hpdma 14 0x20 0x3021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 33>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				wakeup-source;
 				status = "disabled";
 			};
@@ -917,7 +923,7 @@
 				       <&hpdma 16 0x20 0x3021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 34>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				wakeup-source;
 				status = "disabled";
 			};
@@ -931,7 +937,7 @@
 				       <&hpdma 18 0x20 0x3021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 35>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				wakeup-source;
 				status = "disabled";
 			};
@@ -949,7 +955,7 @@
 				       <&hpdma 28 0x20 0x00003021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 41>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -966,7 +972,7 @@
 				       <&hpdma 31 0x20 0x00003021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 42>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -983,7 +989,7 @@
 				       <&hpdma 34 0x20 0x00003021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 43>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1000,7 +1006,7 @@
 				       <&hpdma 37 0x20 0x00003021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 44>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1017,7 +1023,7 @@
 				       <&hpdma 40 0x20 0x00003021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 45>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1034,7 +1040,7 @@
 				       <&hpdma 43 0x20 0x00003021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 46>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1051,7 +1057,7 @@
 				       <&hpdma 46 0x20 0x00003021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 47>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1064,7 +1070,7 @@
 				clocks = <&rcc CK_KER_I3C1>;
 				resets = <&rcc I3C1_R>;
 				access-controllers = <&rifsc 114>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1077,7 +1083,7 @@
 				clocks = <&rcc CK_KER_I3C2>;
 				resets = <&rcc I3C2_R>;
 				access-controllers = <&rifsc 115>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1090,7 +1096,7 @@
 				clocks = <&rcc CK_KER_I3C3>;
 				resets = <&rcc I3C3_R>;
 				access-controllers = <&rifsc 116>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1104,7 +1110,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 8>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				counter {
@@ -1135,7 +1141,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 9>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				counter {
@@ -1169,7 +1175,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 0>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				pwm {
@@ -1203,7 +1209,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 7>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				pwm {
@@ -1233,7 +1239,7 @@
 				       <&hpdma 20 0x20 0x3021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 36>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				wakeup-source;
 				status = "disabled";
 			};
@@ -1250,7 +1256,7 @@
 					<&hpdma 50 0x43 0x21>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 22>;
-				power-domains = <&RET_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1266,7 +1272,7 @@
 				       <&hpdma 50 0x20 0x00003021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 22>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1282,7 +1288,7 @@
 				       <&hpdma 56 0x20 0x00003021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 25>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1296,7 +1302,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 13>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				counter {
@@ -1327,7 +1333,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 14>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				counter {
@@ -1358,7 +1364,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 15>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				counter {
@@ -1391,7 +1397,7 @@
 				       <&hpdma 58 0x20 0x00003021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 26>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1416,7 +1422,7 @@
 					clock-names = "sai_ck";
 					dmas = <&hpdma 73 0x43 0x21>;
 					dma-names = "tx";
-					power-domains = <&CLUSTER_PD>;
+					power-domains = <&d1_pd>;
 					status = "disabled";
 				};
 
@@ -1428,7 +1434,7 @@
 					clock-names = "sai_ck";
 					dmas = <&hpdma 74 0x43 0x12>;
 					dma-names = "rx";
-					power-domains = <&CLUSTER_PD>;
+					power-domains = <&d1_pd>;
 					status = "disabled";
 				};
 			};
@@ -1454,7 +1460,7 @@
 					clock-names = "sai_ck";
 					dmas = <&hpdma 75 0x43 0x21>;
 					dma-names = "tx";
-					power-domains = <&CLUSTER_PD>;
+					power-domains = <&d1_pd>;
 					status = "disabled";
 				};
 
@@ -1466,7 +1472,7 @@
 					clock-names = "sai_ck";
 					dmas = <&hpdma 76 0x43 0x12>;
 					dma-names = "rx";
-					power-domains = <&CLUSTER_PD>;
+					power-domains = <&d1_pd>;
 					status = "disabled";
 				};
 			};
@@ -1492,7 +1498,7 @@
 					clock-names = "sai_ck";
 					dmas = <&hpdma 77 0x43 0x21>;
 					dma-names = "tx";
-					power-domains = <&CLUSTER_PD>;
+					power-domains = <&d1_pd>;
 					status = "disabled";
 				};
 
@@ -1504,7 +1510,7 @@
 					clock-names = "sai_ck";
 					dmas = <&hpdma 78 0x43 0x12>;
 					dma-names = "rx";
-					power-domains = <&CLUSTER_PD>;
+					power-domains = <&d1_pd>;
 					status = "disabled";
 				};
 			};
@@ -1518,7 +1524,7 @@
 				       <&hpdma 26 0x20 0x3021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 39>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				wakeup-source;
 				status = "disabled";
 			};
@@ -1536,7 +1542,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 16>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				pwm {
@@ -1566,7 +1572,7 @@
 				       <&hpdma 10 0x20 0x3021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 31>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				wakeup-source;
 				status = "disabled";
 			};
@@ -1592,7 +1598,7 @@
 					clock-names = "sai_ck";
 					dmas = <&hpdma 79 0x63 0x21>;
 					dma-names = "tx";
-					power-domains = <&CLUSTER_PD>;
+					power-domains = <&d1_pd>;
 					status = "disabled";
 				};
 
@@ -1604,7 +1610,7 @@
 					clock-names = "sai_ck";
 					dmas = <&hpdma 80 0x43 0x12>;
 					dma-names = "rx";
-					power-domains = <&CLUSTER_PD>;
+					power-domains = <&d1_pd>;
 					status = "disabled";
 				};
 			};
@@ -1621,7 +1627,7 @@
 				       <&hpdma 60 0x20 0x00003021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 27>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1637,7 +1643,7 @@
 				       <&hpdma 62 0x20 0x00003021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 28>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1650,7 +1656,7 @@
 				       <&hpdma 22 0x20 0x3021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 37>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				wakeup-source;
 				status = "disabled";
 			};
@@ -1664,7 +1670,7 @@
 				       <&hpdma 24 0x20 0x3021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 38>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				wakeup-source;
 				status = "disabled";
 			};
@@ -1679,7 +1685,7 @@
 				dmas = <&hpdma 137 0x60 0x00003012>;
 				dma-names = "tx";
 				access-controllers = <&rifsc 88>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1688,7 +1694,7 @@
 				reg = <0x404c0000 0x400>;
 				clocks = <&rcc CK_BUS_CRC>;
 				access-controllers = <&rifsc 109>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1704,7 +1710,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 58>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				adc1: adc@0 {
@@ -1772,7 +1778,7 @@
 				resets = <&rcc MDF1_R>;
 				reset-names = "mdf";
 				access-controllers = <&rifsc 54>;
-				power-domains = <&RET_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				sitf0: sitf@80 {
@@ -1915,7 +1921,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				access-controllers = <&rifsc 59>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 
 				adc3: adc@0 {
@@ -1960,7 +1966,7 @@
 				dmas = <&hpdma 6 0x40 0x3021>;
 				dma-names = "in";
 				access-controllers = <&rifsc 95>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -1971,7 +1977,7 @@
 				clock-names = "rng_clk", "rng_hclk";
 				resets = <&rcc RNG_R>;
 				access-controllers = <&rifsc 92>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -2007,7 +2013,7 @@
 				       <&hpdma 172 0x20 0x00003021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 29>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -2038,12 +2044,12 @@
 				       <&hpdma 169 0x20 0x00003021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 48>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
 			lptimer3: timer@46050000 {
-				compatible = "st,stm32mp25-lptimer";
+				compatible = "st,stm32mp25-lptimer", "st,stm32-lptimer";
 				reg = <0x46050000 0x400>;
 				interrupts-extended = <&exti2 29 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc CK_KER_LPTIM3>;
@@ -2055,30 +2061,30 @@
 				status = "disabled";
 
 				counter {
-					compatible = "st,stm32mp25-lptimer-counter";
+					compatible = "st,stm32mp25-lptimer-counter", "st,stm32-lptimer-counter";
 					status = "disabled";
 				};
 
 				pwm {
-					compatible = "st,stm32mp25-pwm-lp";
+					compatible = "st,stm32mp25-pwm-lp", "st,stm32-pwm-lp";
 					#pwm-cells = <3>;
 					status = "disabled";
 				};
 
 				timer {
-					compatible = "st,stm32mp25-lptimer-timer";
+					compatible = "st,stm32mp25-lptimer-timer", "st,stm32-lptimer-timer";
 					status = "disabled";
 				};
 
 				trigger@2 {
-					compatible = "st,stm32mp25-lptimer-trigger";
+					compatible = "st,stm32mp25-lptimer-trigger", "st,stm32-lptimer-trigger";
 					reg = <2>;
 					status = "disabled";
 				};
 			};
 
 			lptimer4: timer@46060000 {
-				compatible = "st,stm32mp25-lptimer";
+				compatible = "st,stm32mp25-lptimer", "st,stm32-lptimer";
 				reg = <0x46060000 0x400>;
 				interrupts-extended = <&exti2 30 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc CK_KER_LPTIM4>;
@@ -2090,30 +2096,30 @@
 				status = "disabled";
 
 				counter {
-					compatible = "st,stm32mp25-lptimer-counter";
+					compatible = "st,stm32mp25-lptimer-counter", "st,stm32-lptimer-counter";
 					status = "disabled";
 				};
 
 				pwm {
-					compatible = "st,stm32mp25-pwm-lp";
+					compatible = "st,stm32mp25-pwm-lp", "st,stm32-pwm-lp";
 					#pwm-cells = <3>;
 					status = "disabled";
 				};
 
 				timer {
-					compatible = "st,stm32mp25-lptimer-timer";
+					compatible = "st,stm32mp25-lptimer-timer", "st,stm32-lptimer-timer";
 					status = "disabled";
 				};
 
 				trigger@3 {
-					compatible = "st,stm32mp25-lptimer-trigger";
+					compatible = "st,stm32mp25-lptimer-trigger", "st,stm32-lptimer-trigger";
 					reg = <3>;
 					status = "disabled";
 				};
 			};
 
 			lptimer5: timer@46070000 {
-				compatible = "st,stm32mp25-lptimer";
+				compatible = "st,stm32mp25-lptimer", "st,stm32-lptimer";
 				reg = <0x46070000 0x400>;
 				interrupts-extended = <&exti2 31 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc CK_KER_LPTIM5>;
@@ -2125,23 +2131,23 @@
 				status = "disabled";
 
 				counter {
-					compatible = "st,stm32mp25-lptimer-counter";
+					compatible = "st,stm32mp25-lptimer-counter", "st,stm32-lptimer-counter";
 					status = "disabled";
 				};
 
 				pwm {
-					compatible = "st,stm32mp25-pwm-lp";
+					compatible = "st,stm32mp25-pwm-lp", "st,stm32-pwm-lp";
 					#pwm-cells = <3>;
 					status = "disabled";
 				};
 
 				timer {
-					compatible = "st,stm32mp25-lptimer-timer";
+					compatible = "st,stm32mp25-lptimer-timer", "st,stm32-lptimer-timer";
 					status = "disabled";
 				};
 
 				trigger@4 {
-					compatible = "st,stm32mp25-lptimer-trigger";
+					compatible = "st,stm32mp25-lptimer-trigger", "st,stm32-lptimer-trigger";
 					reg = <4>;
 					status = "disabled";
 				};
@@ -2156,7 +2162,7 @@
 				clocks = <&rcc CK_KER_I3C4>;
 				resets = <&rcc I3C4_R>;
 				access-controllers = <&rifsc 117>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -2169,7 +2175,7 @@
 				clocks = <&rcc CK_BUS_LTDC>, <&rcc CK_KER_LTDC>;
 				clock-names = "bus", "lcd";
 				resets = <&rcc LTDC_R>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 				access-controllers = <&rifsc 80>;
 				access-controller-names = "cmn";
@@ -2208,7 +2214,7 @@
 				clocks = <&rcc CK_BUS_DCMIPP>, <&rcc CK_KER_CSI>;
 				clock-names = "kclk", "mclk";
 				access-controllers = <&rifsc 87>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -2222,7 +2228,7 @@
 				reset-names = "phy-rst";
 				st,syscfg = <&syscfg>;
 				access-controllers = <&rifsc 67>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				wakeup-source;
 				interrupts-extended = <&exti1 45 IRQ_TYPE_EDGE_FALLING>;
 				status = "disabled";
@@ -2238,9 +2244,9 @@
 				resets = <&rcc SDMMC1_R>;
 				cap-sd-highspeed;
 				cap-mmc-highspeed;
-				max-frequency = <120000000>;
+				max-frequency = <166000000>;
 				access-controllers = <&rifsc 76>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -2254,9 +2260,9 @@
 				resets = <&rcc SDMMC2_R>;
 				cap-sd-highspeed;
 				cap-mmc-highspeed;
-				max-frequency = <120000000>;
+				max-frequency = <166000000>;
 				access-controllers = <&rifsc 77>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -2270,9 +2276,9 @@
 				resets = <&rcc SDMMC3_R>;
 				cap-sd-highspeed;
 				cap-mmc-highspeed;
-				max-frequency = <120000000>;
+				max-frequency = <166000000>;
 				access-controllers = <&rifsc 78>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -2304,7 +2310,7 @@
 				snps,axi-config = <&stmmac_axi_config_1>;
 				snps,tso;
 				access-controllers = <&rifsc 60>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				wakeup-source;
 				status = "disabled";
 				snps,mtl-rx-config = <&mtl_rx_setup_1>;
@@ -2338,7 +2344,7 @@
 				#size-cells = <1>;
 				ranges = <0x482e0000 0x482e0000 0x20000>;
 				access-controllers = <&rifsc 63>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				wakeup-source;
 				interrupts-extended = <&exti1 43 IRQ_TYPE_EDGE_RISING>;
 				status = "disabled";
@@ -2374,7 +2380,7 @@
 				#size-cells = <1>;
 				ranges = <0x48300000 0x48300000 0x100000>;
 				access-controllers = <&rifsc 66>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				wakeup-source;
 				interrupts-extended = <&exti1 44 IRQ_TYPE_EDGE_RISING>;
 				status = "disabled";
@@ -2396,18 +2402,20 @@
 			pcie_ep: pcie-ep@48400000 {
 				compatible = "st,stm32mp25-pcie-ep", "snps,dw-pcie-ep";
 				num-lanes = <1>;
-				reg = <0x48400000 0x400000>,
-				      <0x10000000 0x8000000>;
-				reg-names = "dbi", "addr_space";
+				reg = <0x48400000 0x100000>,
+				      <0x48500000 0x100000>,
+				      <0x48700000 0x80000>,
+				      <0x10000000 0x10000000>;
+				reg-names = "dbi", "dbi2", "atu", "addr_space";
 				st,syscfg = <&syscfg>;
-				clocks = <&rcc CK_SCMI_ICN_PCIE>;
+				clocks = <&rcc CK_BUS_PCIE>;
 				clock-names = "core";
 				resets = <&rcc PCIE_R>;
 				reset-names = "pcie";
 				phys = <&combophy PHY_TYPE_PCIE>;
 				phy-names = "pcie-phy";
 				access-controllers = <&rifsc 68>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 
@@ -2433,8 +2441,9 @@
 				ranges = <0x01000000 0 0x10010000 0x10010000 0 0x10000>,
 					 <0x02000000 0 0x10020000 0x10020000 0 0x7fe0000>,
 					 <0x42000000 0 0x18000000 0x18000000 0 0x8000000>;
+				dma-ranges = <0x42000000 0x0 0x80000000 0x80000000 0x0 0x80000000>;
 				bus-range = <0x00 0xff>;
-				clocks = <&rcc CK_SCMI_ICN_PCIE>;
+				clocks = <&rcc CK_BUS_PCIE>;
 				clock-names = "core";
 				resets = <&rcc PCIE_R>;
 				reset-names = "pcie";
@@ -2443,7 +2452,7 @@
 
 				msi-parent = <&v2m0>;
 				access-controllers = <&rifsc 68>;
-				power-domains = <&CLUSTER_PD>;
+				power-domains = <&d1_pd>;
 				status = "disabled";
 			};
 		};
@@ -2652,7 +2661,7 @@
 			compatible = "st,stm32mp1-exti";
 			interrupt-controller;
 			#interrupt-cells = <2>;
-			power-domains = <&RET_PD>;
+			power-domains = <&ret_pd>;
 			reg = <0x44220000 0x400>;
 			interrupts-extended =
 				<&intc GIC_SPI 268 IRQ_TYPE_LEVEL_HIGH>,	/* EXTI_0 */
@@ -2943,6 +2952,15 @@
 			compatible = "st,stm32mp257-z-pinctrl";
 			ranges = <0 0x46200000 0x400>;
 			interrupt-parent = <&exti1>;
+			interrupts-extended =
+				<&exti1  0 0>, <&exti1  1 0>, <&exti1  2 0>, <&exti1  3 0>,
+				<&exti1  4 0>, <&exti1  5 0>, <&exti1  6 0>, <&exti1  7 0>,
+				<&exti1  8 0>, <&exti1  9 0>, <&exti1 10 0>, <&exti1 11 0>,
+				<&exti1 12 0>, <&exti1 13 0>, <&exti1 14 0>, <&exti1 15 0>,
+				<&exti2  0 0>, <&exti2  1 0>, <&exti2  2 0>, <&exti2  3 0>,
+				<&exti2  4 0>, <&exti2  5 0>, <&exti2  6 0>, <&exti2  7 0>,
+				<&exti2  8 0>, <&exti2  9 0>, <&exti2 10 0>, <&exti2 11 0>,
+				<&exti2 12 0>, <&exti2 13 0>, <&exti2 14 0>, <&exti2 15 0>;
 
 			gpioz: gpio@46200000 {
 				gpio-controller;
@@ -3068,7 +3086,7 @@
 			#size-cells = <1>;
 			clocks = <&scmi_clk CK_SCMI_FMC>;
 			resets = <&scmi_reset RST_SCMI_FMC>;
-			power-domains = <&CLUSTER_PD>;
+			power-domains = <&d1_pd>;
 			status = "disabled";
 
 			nand-controller@4,0 {
@@ -3345,6 +3363,8 @@
 			interrupts = <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>;
 			nvmem-cells = <&rsc_tbl_addr>, <&rsc_tbl_size>;
 			nvmem-cell-names = "rsc-tbl-addr", "rsc-tbl-size";
+			power-domains = <&cluster_pd>, <&ret_pd>;
+			power-domain-names = "default", "sleep";
 
 			status = "disabled";
 		};

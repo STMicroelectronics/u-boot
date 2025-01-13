@@ -15,7 +15,7 @@
 		       <&hpdma 5 0x43 0x3012>;
 		dma-names = "in", "out";
 		access-controllers = <&rifsc 96>;
-		power-domains = <&CLUSTER_PD>;
+		power-domains = <&d1_pd>;
 		status = "disabled";
 	};
 
@@ -25,11 +25,11 @@
 		interrupts = <GIC_SPI 180 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&rcc CK_BUS_CRYP2>;
 		resets = <&rcc CRYP2_R>;
-		dmas = <&hpdma 140 0x40 0x3021 0x0>,
-		       <&hpdma 141 0x43 0x3012 0x0>;
+		dmas = <&hpdma 140 0x40 0x3021>,
+		       <&hpdma 141 0x43 0x3012>;
 		dma-names = "in", "out";
 		access-controllers = <&rifsc 97>;
-		power-domains = <&CLUSTER_PD>;
+		power-domains = <&d1_pd>;
 		status = "disabled";
 	};
 };

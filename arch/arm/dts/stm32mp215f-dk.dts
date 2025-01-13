@@ -9,6 +9,7 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/leds/common.h>
 #include <dt-bindings/input/input.h>
+#include <dt-bindings/rtc/rtc-stm32.h>
 #include "stm32mp215.dtsi"
 #include "stm32mp21xf.dtsi"
 #include "stm32mp21-pinctrl.dtsi"
@@ -52,6 +53,7 @@
 		compatible = "dmic-codec";
 		#sound-dai-cells = <1>;
 		sound-name-prefix = "dmic0";
+		vref-supply = <&scmi_v3v3>;
 		status = "okay";
 
 		port {
@@ -65,6 +67,7 @@
 		compatible = "dmic-codec";
 		#sound-dai-cells = <1>;
 		sound-name-prefix = "dmic1";
+		vref-supply = <&scmi_v3v3>;
 		status = "okay";
 
 		port {
@@ -95,6 +98,7 @@
 			label = "wake-up";
 			linux,code = <KEY_WAKEUP>;
 			interrupts-extended = <&optee 0>;
+			wakeup-source;
 			status = "okay";
 		};
 	};
@@ -130,6 +134,7 @@
 		backlight = <&panel_backlight>;
 		power-supply = <&scmi_v3v3>;
 		data-mapping = "bgr666";
+		default-on;
 		status = "okay";
 
 		width-mm = <105>;
@@ -164,6 +169,63 @@
 		dais = <&mdf1_port0 &mdf1_port1>;
 		status = "okay";
 	};
+
+	typec {
+		compatible = "adc-usb-c-connector";
+		io-channels = <&vdiv_cc1>, <&vdiv_cc2>;
+		io-channel-names = "cc1", "cc2";
+
+		connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			data-role = "device";
+			power-role = "sink";
+			port {
+				usb_c_port: endpoint {
+					remote-endpoint = <&usb_c_device_port>;
+				};
+			};
+		};
+	};
+
+	vdiv_cc1: voltage-divider-cc1 {
+		compatible = "voltage-divider";
+		#io-channel-cells = <0>;
+		io-channels = <&adc1 0>;
+		output-ohms = <3900>;
+		full-ohms = <5100>;
+	};
+
+	vdiv_cc2: voltage-divider-cc2 {
+		compatible = "voltage-divider";
+		#io-channel-cells = <0>;
+		io-channels = <&adc1 1>;
+		output-ohms = <3900>;
+		full-ohms = <5100>;
+	};
+
+	wifi_pwrseq: wifi-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		reset-gpios = <&gpiob 2 GPIO_ACTIVE_LOW>;
+	};
+};
+
+&adc_1 {
+	/* No pinctrl for ANA0 and ANA1 dedicated pins (channels 0 and 1) */
+	vdda-supply = <&scmi_vdda18adc>;
+	vref-supply = <&scmi_vdda_1v8>;
+	status = "okay";
+	adc1: adc@0 {
+		status = "okay";
+		channel@0 {
+			reg = <0>;
+			st,min-sample-time-ns = <100>;
+		};
+		channel@1{
+			reg = <1>;
+			st,min-sample-time-ns = <100>;
+		};
+	};
 };
 
 &a35ss_syscfg {
@@ -183,50 +245,6 @@
 	status = "okay";
 };
 
-&cs_cpu_debug0 {
-	status = "okay";
-};
-
-&cs_cti0 {
-	status = "okay";
-};
-
-&cs_cti1 {
-	status = "okay";
-};
-
-&cs_cti_cpu0 {
-	status = "okay";
-};
-
-&cs_etf {
-	status = "okay";
-};
-
-&cs_etm0 {
-	status = "okay";
-};
-
-&cs_etr {
-	status = "okay";
-};
-
-&cs_funnel {
-	status = "okay";
-};
-
-&cs_replicator {
-	status = "okay";
-};
-
-&cs_stm {
-	status = "okay";
-};
-
-&cs_tpiu {
-	status = "okay";
-};
-
 &csi {
 	vdd-supply =  <&scmi_vddcore>;
 	vdda18-supply = <&scmi_vdda_1v8>;
@@ -238,7 +256,7 @@
 			reg = <0>;
 			csi_sink: endpoint {
 				remote-endpoint = <&imx335_ep>;
-				data-lanes = <0 1>;
+				data-lanes = <1 2>;
 				bus-type = <4>;
 			};
 		};
@@ -274,6 +292,7 @@
 	phy-mode = "rmii";
 	max-speed = <100>;
 	phy-handle = <&phy0_eth1>;
+	phy-supply = <&scmi_v3v3>;
 	st,ext-phyclk;
 
 	mdio1 {
@@ -291,10 +310,27 @@
 	};
 };
 
+&hpdma {
+	memory-region = <&hpdma1_lli>;
+	lli-bus-interface = <1>;
+};
+
+&hpdma2 {
+	memory-region = <&hpdma2_lli>;
+	lli-bus-interface = <1>;
+};
+
+&hpdma3 {
+	memory-region = <&hpdma3_lli>;
+	lli-bus-interface = <1>;
+};
+
 &i2c2 {
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&i2c2_pins_a>;
 	pinctrl-1 = <&i2c2_sleep_pins_a>;
+	i2c-scl-rising-time-ns = <34>;
+	i2c-scl-falling-time-ns = <2>;
 	status = "okay";
 
 	goodix: goodix-ts@5d {
@@ -311,13 +347,15 @@
 		status = "okay" ;
 	};
 
-	imx335: imx335@1a {
+	imx335: camera@1a {
 		compatible = "sony,imx335";
 		reg = <0x1a>;
 		clocks = <&clk_ext_camera>;
-		reset-gpios = <&gpiod 5 (GPIO_ACTIVE_HIGH | GPIO_PUSH_PULL)>;
+		avdd-supply = <&scmi_v3v3>;
+		ovdd-supply = <&scmi_v3v3>;
+		dvdd-supply = <&scmi_v3v3>;
+		reset-gpios = <&gpiod 5 (GPIO_ACTIVE_LOW | GPIO_PUSH_PULL)>;
 		powerdown-gpios = <&gpiod 0 (GPIO_ACTIVE_HIGH | GPIO_PUSH_PULL)>;
-		status = "okay";
 
 		port {
 			imx335_ep: endpoint {
@@ -348,6 +386,14 @@
 
 &ipcc1 {
 	status = "okay";
+};
+
+/* use LPTIMER with tick broadcast for suspend mode */
+&lptimer3 {
+	status = "okay";
+	timer {
+		status = "okay";
+	};
 };
 
 &ltdc {
@@ -383,16 +429,23 @@
 	};
 
 	filter0: filter@84  {
+		#address-cells = <1>;
+		#size-cells = <0>;
 		st,cic-mode = <4>;
 		st,sitf = <&sitf3 0>;
 		st,hpf-filter-cutoff-bp = <625>;
 		status = "okay";
 
+		channel@0 {
+			reg = <0>;
+			label = "dmic_u26";
+		};
+
 		asoc_pdm0: mdf-dai {
 			compatible = "st,stm32mp25-mdf-dai";
 			#sound-dai-cells = <0>;
 			io-channels = <&filter0 0>;
-			power-domains = <&RET_PD>;
+			power-domains = <&d1_pd>;
 			status = "okay";
 			mdf1_port0: port {
 				mdf_endpoint0: endpoint {
@@ -403,16 +456,23 @@
 	};
 
 	filter1: filter@104  {
+		#address-cells = <1>;
+		#size-cells = <0>;
 		st,cic-mode = <4>;
 		st,sitf = <&sitf3 1>;
 		st,hpf-filter-cutoff-bp = <625>;
 		status = "okay";
 
+		channel@1 {
+			reg = <1>;
+			label = "dmic_u27";
+		};
+
 		asoc_pdm1: mdf-dai {
 			compatible = "st,stm32mp25-mdf-dai";
 			#sound-dai-cells = <0>;
 			io-channels = <&filter1 0>;
-			power-domains = <&RET_PD>;
+			power-domains = <&d1_pd>;
 			status = "okay";
 
 			mdf1_port1: port {
@@ -424,24 +484,31 @@
 	};
 };
 
+&rtc {
+	st,lsco = <RTC_OUT1>;
+	pinctrl-0 = <&rtc_out1_pins_a>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
 &scmi_regu {
-	scmi_vddcore: regulator@5  {
+	scmi_vddcore: regulator@5 {
 		reg = <VOLTD_SCMI_STPMIC_BUCK1>;
 		regulator-name = "vddcore";
 	};
-	scmi_vdd3v3_usb: regulator@15  {
+	scmi_vdd3v3_usb: regulator@f {
 		reg = <VOLTD_SCMI_STPMIC_LDO4>;
 		regulator-name = "vdd3v3_usb";
 	};
-	scmi_vdd_flash: regulator@16  {
+	scmi_vdd_flash: regulator@10 {
 		reg = <VOLTD_SCMI_STPMIC_LDO5>;
 		regulator-name = "vdd_flash";
 	};
-	scmi_vdda_1v8: regulator@17  {
+	scmi_vdda_1v8: regulator@11 {
 		reg = <VOLTD_SCMI_STPMIC_LDO6>;
 		regulator-name = "vdda_1v8";
 	};
-	scmi_v3v3: regulator@21  {
+	scmi_v3v3: regulator@15 {
 		reg = <VOLTD_SCMI_STPMIC_GPO1>;
 		regulator-name = "v3v3";
 	};
@@ -473,19 +540,36 @@
 
 &sdmmc2 {
 	pinctrl-names = "default", "opendrain", "sleep";
-	pinctrl-0 = <&sdmmc2_b4_pins_a &sdmmc2_d47_pins_a>;
-	pinctrl-1 = <&sdmmc2_b4_od_pins_a &sdmmc2_d47_pins_a>;
-	pinctrl-2 = <&sdmmc2_b4_sleep_pins_a &sdmmc2_d47_sleep_pins_a>;
-	non-removable;
-	no-sd;
-	no-sdio;
+	pinctrl-0 = <&sdmmc2_b4_pins_a>;
+	pinctrl-1 = <&sdmmc2_b4_od_pins_a>;
+	pinctrl-2 = <&sdmmc2_b4_sleep_pins_a>;
 	st,neg-edge;
-	bus-width = <8>;
+	cap-sdio-irq;
+	bus-width = <4>;
 	vmmc-supply = <&scmi_v3v3>;
 	vqmmc-supply = <&scmi_vddio2>;
-	mmc-ddr-1_8v;
-	mmc-hs200-1_8v;
-	status = "okay";
+	mmc-pwrseq = <&wifi_pwrseq>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	sd-uhs-sdr12;
+	sd-uhs-sdr25;
+	sd-uhs-sdr50;
+	sd-uhs-ddr50;
+	sd-uhs-sdr104;
+	status = "disabled";
+};
+
+&sdmmc3 {
+	pinctrl-names = "default", "opendrain", "sleep";
+	pinctrl-0 = <&sdmmc3_b4_pins_a>;
+	pinctrl-1 = <&sdmmc3_b4_od_pins_a>;
+	pinctrl-2 = <&sdmmc3_b4_sleep_pins_a>;
+	broken-cd;
+	disable-wp;
+	st,neg-edge;
+	bus-width = <4>;
+	vmmc-supply = <&scmi_v3v3>;
+	status = "disabled";
 };
 
 &spi1 {
@@ -535,6 +619,7 @@
 };
 
 &usb2_phy2 {
+	vdda18-supply = <&scmi_vdda_1v8>;
 	vdd33-supply = <&scmi_vdd3v3_usb>;
 	status = "okay";
 };
@@ -544,4 +629,9 @@
 	dr_mode = "peripheral";
 	usb-role-switch;
 	status = "okay";
+	port {
+		usb_c_device_port: endpoint {
+			remote-endpoint = <&usb_c_port>;
+		};
+	};
 };

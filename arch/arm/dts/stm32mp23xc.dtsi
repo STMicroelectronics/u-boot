@@ -15,7 +15,7 @@
 		       <&hpdma 5 0x43 0x3012>;
 		dma-names = "in", "out";
 		access-controllers = <&rifsc 96>;
-		power-domains = <&CLUSTER_PD>;
+		power-domains = <&d1_pd>;
 		status = "disabled";
 	};
 };

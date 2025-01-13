@@ -14,8 +14,6 @@
 		gpio6 = &gpiog;
 		gpio7 = &gpioh;
 		gpio8 = &gpioi;
-		gpio9 = &gpioj;
-		gpio10 = &gpiok;
 		gpio25 = &gpioz;
 		pinctrl0 = &pinctrl;
 		pinctrl1 = &pinctrl_z;
@@ -86,14 +84,6 @@
 };
 
 &gpioi {
-	bootph-all;
-};
-
-&gpioj {
-	bootph-all;
-};
-
-&gpiok {
 	bootph-all;
 };
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-3-Clause)
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause)
 /*
  * Copyright (C) STMicroelectronics 2023 - All Rights Reserved
  * Author: Alexandre Torgue <alexandre.torgue@foss.st.com> for STMicroelectronics.
@@ -156,7 +156,7 @@
 	bluetooth {
 		shutdown-gpios = <&gpioz 6 GPIO_ACTIVE_HIGH>;
 		compatible = "brcm,bcm43438-bt";
-		max-speed = <3000000>;
+		max-speed = <2000000>;
 		vbat-supply = <&v3v3>;
 		vddio-supply = <&v3v3>;
 	};

@@ -59,6 +59,7 @@
 		compatible = "dmic-codec";
 		#sound-dai-cells = <1>;
 		sound-name-prefix = "dmic0";
+		vref-supply = <&scmi_v3v3>;
 		status = "okay";
 
 		port {
@@ -72,6 +73,7 @@
 		compatible = "dmic-codec";
 		#sound-dai-cells = <1>;
 		sound-name-prefix = "dmic1";
+		vref-supply = <&scmi_v3v3>;
 		status = "okay";
 
 		port {
@@ -102,6 +104,7 @@
 			label = "wake-up";
 			linux,code = <KEY_WAKEUP>;
 			interrupts-extended = <&optee 0>;
+			wakeup-source;
 			status = "okay";
 		};
 	};
@@ -131,30 +134,6 @@
 		};
 	};
 
-	imx335_2v9: imx335-2v9 {
-		compatible = "regulator-fixed";
-		regulator-name = "imx335-avdd";
-		regulator-min-microvolt = <2900000>;
-		regulator-max-microvolt = <2900000>;
-		regulator-always-on;
-	};
-
-	imx335_1v8: imx335-1v8 {
-		compatible = "regulator-fixed";
-		regulator-name = "imx335-ovdd";
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <1800000>;
-		regulator-always-on;
-	};
-
-	imx335_1v2: imx335-1v2 {
-		compatible = "regulator-fixed";
-		regulator-name = "imx335-dvdd";
-		regulator-min-microvolt = <1200000>;
-		regulator-max-microvolt = <1200000>;
-		regulator-always-on;
-	};
-
 	memory@80000000 {
 		device_type = "memory";
 		reg = <0x0 0x80000000 0x1 0x0>;
@@ -164,6 +143,7 @@
 		compatible = "edt,etml0700z9ndha", "panel-lvds";
 		enable-gpios = <&gpioi 4 GPIO_ACTIVE_HIGH>;
 		backlight = <&panel_lvds_backlight>;
+		power-supply = <&scmi_v3v3>;
 		default-on;
 		status = "okay";
 
@@ -191,10 +171,11 @@
 	};
 
 	panel_lvds_backlight: panel-lvds-backlight {
-		compatible = "gpio-backlight";
-		gpios = <&gpioi 7 GPIO_ACTIVE_HIGH>;
-		default-on;
-		default-brightness-level = <1>;
+		compatible = "pwm-backlight";
+		pwms = <&pwm3 1 1000000 0>;
+		brightness-levels = <0 16 22 30 40 55 75 102 138 188 255>;
+		default-brightness-level = <10>;
+		power-supply = <&scmi_v3v3>;
 		status = "okay";
 	};
 
@@ -244,62 +225,6 @@
 	status = "okay";
 };
 
-&cs_cpu_debug0 {
-	status = "okay";
-};
-
-&cs_cpu_debug1 {
-	status = "okay";
-};
-
-&cs_cti0 {
-	status = "okay";
-};
-
-&cs_cti1 {
-	status = "okay";
-};
-
-&cs_cti_cpu0 {
-	status = "okay";
-};
-
-&cs_cti_cpu1 {
-	status = "okay";
-};
-
-&cs_etf {
-	status = "okay";
-};
-
-&cs_etm0 {
-	status = "okay";
-};
-
-&cs_etm1 {
-	status = "okay";
-};
-
-&cs_etr {
-	status = "okay";
-};
-
-&cs_funnel {
-	status = "okay";
-};
-
-&cs_replicator {
-	status = "okay";
-};
-
-&cs_stm {
-	status = "okay";
-};
-
-&cs_tpiu {
-	status = "okay";
-};
-
 &csi {
 	vdd-supply =  <&scmi_vddcore>;
 	vdda18-supply = <&scmi_v1v8>;
@@ -311,7 +236,7 @@
 			reg = <0>;
 			csi_sink: endpoint {
 				remote-endpoint = <&imx335_ep>;
-				data-lanes = <0 1>;
+				data-lanes = <1 2>;
 				bus-type = <4>;
 			};
 		};
@@ -413,14 +338,14 @@
 	/delete-property/dmas;
 	/delete-property/dma-names;
 
-	imx335: imx335@1a {
+	imx335: camera@1a {
 		compatible = "sony,imx335";
 		reg = <0x1a>;
 		clocks = <&clk_ext_camera>;
-		avdd-supply = <&imx335_2v9>;
-		ovdd-supply = <&imx335_1v8>;
-		dvdd-supply = <&imx335_1v2>;
-		reset-gpios = <&gpiob 1 (GPIO_ACTIVE_HIGH | GPIO_PUSH_PULL)>;
+		avdd-supply = <&scmi_v3v3>;
+		ovdd-supply = <&scmi_v3v3>;
+		dvdd-supply = <&scmi_v3v3>;
+		reset-gpios = <&gpiob 1 (GPIO_ACTIVE_LOW | GPIO_PUSH_PULL)>;
 		powerdown-gpios = <&gpiob 11 (GPIO_ACTIVE_HIGH | GPIO_PUSH_PULL)>;
 		status = "okay";
 
@@ -527,6 +452,7 @@
 
 /* use LPTIMER with tick broadcast for suspend mode */
 &lptimer3 {
+	clocks = <&rcc CK_LPTIM3_AM>;
 	status = "okay";
 	timer {
 		status = "okay";
@@ -583,6 +509,15 @@
 	memory-region = <&cm0_cube_fw>, <&cm0_cube_data>;
 	clocks = <&rcc CK_CPU3>,
 		 <&rcc CK_CPU3_AM>,
+		 <&rcc CK_LPUART1_C3>,
+		 <&rcc CK_KER_LPUART1>,
+		 <&rcc CK_LPUART1_AM>,
+		 <&rcc CK_GPIOZ_C3>,
+		 <&scmi_clk CK_SCMI_GPIOZ>,
+		 <&scmi_clk CK_SCMI_GPIOZ_AM>,
+		 <&rcc CK_LPTIM4_C3>,
+		 <&rcc CK_KER_LPTIM4>,
+		 <&rcc CK_LPTIM4_AM>,
 		 <&scmi_clk CK_SCMI_IPCC2>,
 		 <&scmi_clk CK_SCMI_IPCC2_AM>;
 	status = "okay";
@@ -618,16 +553,23 @@
 	};
 
 	filter0: filter@84  {
+		#address-cells = <1>;
+		#size-cells = <0>;
 		st,cic-mode = <4>;
 		st,sitf = <&sitf6 0>;
 		st,hpf-filter-cutoff-bp = <625>;
 		status = "okay";
 
+		channel@0 {
+			reg = <0>;
+			label = "dmic_u53";
+		};
+
 		asoc_pdm0: mdf-dai {
 			compatible = "st,stm32mp25-mdf-dai";
 			#sound-dai-cells = <0>;
 			io-channels = <&filter0 0>;
-			power-domains = <&RET_PD>;
+			power-domains = <&d1_pd>;
 			status = "okay";
 
 			mdf1_port0: port {
@@ -639,16 +581,23 @@
 	};
 
 	filter1: filter@104  {
+		#address-cells = <1>;
+		#size-cells = <0>;
 		st,cic-mode = <4>;
 		st,sitf = <&sitf6 1>;
 		st,hpf-filter-cutoff-bp = <625>;
 		status = "okay";
 
+		channel@1 {
+			reg = <1>;
+			label = "dmic_u12";
+		};
+
 		asoc_pdm1: mdf-dai {
 			compatible = "st,stm32mp25-mdf-dai";
 			#sound-dai-cells = <0>;
 			io-channels = <&filter1 0>;
-			power-domains = <&RET_PD>;
+			power-domains = <&d1_pd>;
 			status = "okay";
 
 			mdf1_port1: port {
@@ -707,35 +656,35 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <3300000>;
 	};
-	scmi_vddcore: regulator@11  {
+	scmi_vddcore: regulator@b {
 		reg = <VOLTD_SCMI_STPMIC2_BUCK2>;
 		regulator-name = "vddcore";
 	};
-	scmi_v1v8: regulator@14  {
+	scmi_v1v8: regulator@e {
 		reg = <VOLTD_SCMI_STPMIC2_BUCK5>;
 		regulator-name = "v1v8";
 	};
-	scmi_v3v3: regulator@16 {
+	scmi_v3v3: regulator@10 {
 		reg = <VOLTD_SCMI_STPMIC2_BUCK7>;
 		regulator-name = "v3v3";
 	};
-	scmi_vdd_emmc: regulator@18 {
+	scmi_vdd_emmc: regulator@12 {
 		reg = <VOLTD_SCMI_STPMIC2_LDO2>;
 		regulator-name = "vdd_emmc";
 	};
-	scmi_vdd3v3_usb: regulator@20 {
+	scmi_vdd3v3_usb: regulator@14 {
 		reg = <VOLTD_SCMI_STPMIC2_LDO4>;
 		regulator-name = "vdd3v3_usb";
 	};
-	scmi_v5v_hdmi: regulator@21 {
+	scmi_v5v_hdmi: regulator@15 {
 		reg = <VOLTD_SCMI_STPMIC2_LDO5>;
 		regulator-name = "v5v_hdmi";
 	};
-	scmi_v5v_vconn: regulator@22 {
+	scmi_v5v_vconn: regulator@16 {
 		reg = <VOLTD_SCMI_STPMIC2_LDO6>;
 		regulator-name = "v5v_vconn";
 	};
-	scmi_vdd_sdcard: regulator@23 {
+	scmi_vdd_sdcard: regulator@17 {
 		reg = <VOLTD_SCMI_STPMIC2_LDO7>;
 		regulator-name = "vdd_sdcard";
 	};
@@ -773,6 +722,7 @@
 	vmmc-supply = <&scmi_vdd_emmc>;
 	vqmmc-supply = <&scmi_vddio2>;
 	mmc-ddr-1_8v;
+	mmc-hs200-1_8v;
 	status = "okay";
 };
 
@@ -806,6 +756,16 @@
 	status = "disabled";
 };
 
+&timers3 {
+	status = "okay";
+	pwm3: pwm {
+		pinctrl-0 = <&pwm3_ch2_pins_a>;
+		pinctrl-1 = <&pwm3_ch2_sleep_pins_a>;
+		pinctrl-names = "default", "sleep";
+		status = "okay";
+	};
+};
+
 /* Bluetooth */
 &usart1 {
 	pinctrl-names = "default", "sleep", "idle";
@@ -818,7 +778,7 @@
 	bluetooth {
 		shutdown-gpios = <&gpiog 4 GPIO_ACTIVE_HIGH>;
 		compatible = "brcm,bcm43438-bt";
-		max-speed = <3000000>;
+		max-speed = <2000000>;
 		vbat-supply = <&scmi_v3v3>;
 		vddio-supply = <&scmi_v3v3>;
 	};

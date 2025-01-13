@@ -32,17 +32,10 @@
 		compatible = "operating-points-v2";
 		opp-shared;
 
-		opp-400000000 {
-			opp-hz = /bits/ 64 <400000000>;
-			opp-microvolt = <1200000>;
-			opp-supported-hw = <0x2>;
-			opp-suspend;
-		};
-
 		opp-650000000 {
 			opp-hz = /bits/ 64 <650000000>;
 			opp-microvolt = <1200000>;
-			opp-supported-hw = <0x1>;
+			opp-supported-hw = <0x3>;
 		};
 
 		opp-800000000 {
@@ -596,6 +589,7 @@
 		iwdg2: watchdog@5a002000 {
 			compatible = "st,stm32mp1-iwdg";
 			reg = <0x5a002000 0x400>;
+			interrupts = <GIC_SPI 151 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc IWDG2>, <&rcc CK_LSI>;
 			clock-names = "pclk", "lsi";
 			status = "disabled";
@@ -629,6 +623,15 @@
 			reg = <0x5a007000 0x400>;
 			clocks = <&rcc DDRPERFM>;
 			resets = <&rcc DDRPERFM_R>;
+			status = "disabled";
+		};
+
+		iwdg1: watchdog@5c003000 {
+			compatible = "st,stm32mp1-iwdg";
+			reg = <0x5c003000 0x400>;
+			interrupts = <GIC_SPI 150 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&rcc IWDG1>, <&rcc CK_LSI>;
+			clock-names = "pclk", "lsi";
 			status = "disabled";
 		};
 
@@ -1399,8 +1402,9 @@
 				clocks = <&rcc SPI4_K>;
 				resets = <&rcc SPI4_R>;
 				dmas = <&dmamux1 83 0x400 0x01>,
-				       <&dmamux1 84 0x400 0x01>;
-				dma-names = "rx", "tx";
+				       <&dmamux1 84 0x400 0x01>,
+				       <&mdma1 0 0x3 0x1200000a 0 0>;
+				dma-names = "rx", "tx", "rxm2m";
 				access-controllers = <&etzpc 53>;
 				status = "disabled";
 			};
@@ -2056,8 +2060,8 @@
 				reg = <0x58003000 0x1000>, <0x70000000 0x10000000>;
 				reg-names = "qspi", "qspi_mm";
 				interrupts = <GIC_SPI 92 IRQ_TYPE_LEVEL_HIGH>;
-				dmas = <&mdma1 22 0x2 0x10100002 0x0 0x0>,
-				       <&mdma1 22 0x2 0x10100008 0x0 0x0>;
+				dmas = <&mdma1 22 0x2 0x12000002 0x0 0x0>,
+				       <&mdma1 22 0x2 0x12000008 0x0 0x0>;
 				dma-names = "tx", "rx";
 				clocks = <&rcc QSPI_K>;
 				resets = <&rcc QSPI_R>;

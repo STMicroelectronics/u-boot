@@ -624,6 +624,7 @@
 	pinctrl-0 = <&spi4_pins_b>;
 	pinctrl-1 = <&spi4_sleep_pins_b>;
 	status = "disabled";
+	sram = <&spi4_dma_pool>;
 };
 
 &spi5 {
@@ -631,6 +632,13 @@
 	pinctrl-0 = <&spi5_pins_a>;
 	pinctrl-1 = <&spi5_sleep_pins_a>;
 	status = "disabled";
+};
+
+&sram4 {
+	spi4_dma_pool: dma-sram@9000 {
+		reg = <0x9000 0x1000>;
+		pool;
+	};
 };
 
 &timers1 {

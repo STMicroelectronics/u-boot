@@ -161,6 +161,30 @@
 		interrupt-parent = <&intc>;
 		ranges;
 
+		sram1: sram@30000000 {
+			compatible = "mmio-sram";
+			reg = <0x30000000 0x4000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x30000000 0x4000>;
+		};
+
+		sram2: sram@30004000 {
+			compatible = "mmio-sram";
+			reg = <0x30004000 0x2000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x30004000 0x2000>;
+		};
+
+		sram3: sram@30006000 {
+			compatible = "mmio-sram";
+			reg = <0x30006000 0x2000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x30006000 0x2000>;
+		};
+
 		timers2: timer@40000000 {
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -1134,6 +1158,7 @@
 		iwdg2: watchdog@5a002000 {
 			compatible = "st,stm32mp1-iwdg";
 			reg = <0x5a002000 0x400>;
+			interrupts = <GIC_SPI 127 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc IWDG2>, <&scmi_clk CK_SCMI_LSI>;
 			clock-names = "pclk", "lsi";
 			status = "disabled";
@@ -1144,6 +1169,15 @@
 			reg = <0x5a007000 0x400>;
 			clocks = <&rcc DDRPERFM>;
 			resets = <&rcc DDRPERFM_R>;
+			status = "disabled";
+		};
+
+		iwdg1: watchdog@5c003000 {
+			compatible = "st,stm32mp1-iwdg";
+			reg = <0x5c003000 0x400>;
+			interrupts = <GIC_SPI 126 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&rcc IWDG1>, <&scmi_clk CK_SCMI_LSI>;
+			clock-names = "pclk", "lsi";
 			status = "disabled";
 		};
 
@@ -1324,8 +1358,9 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				dmas = <&dmamux1 85 0x400 0x01>,
-				       <&dmamux1 86 0x400 0x01>;
-				dma-names = "rx", "tx";
+				       <&dmamux1 86 0x400 0x01>,
+				       <&mdma 0 0x3 0x1200000a 0 0>;
+				dma-names = "rx", "tx", "rxm2m";
 				access-controllers = <&etzpc 19>;
 				status = "disabled";
 			};
@@ -1707,8 +1742,8 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				interrupts = <GIC_SPI 91 IRQ_TYPE_LEVEL_HIGH>;
-				dmas = <&mdma 26 0x2 0x10100002 0x0 0x0>,
-				       <&mdma 26 0x2 0x10100008 0x0 0x0>;
+				dmas = <&mdma 26 0x2 0x12000002 0x0 0x0>,
+				       <&mdma 26 0x2 0x12000008 0x0 0x0>;
 				dma-names = "tx", "rx";
 				clocks = <&rcc QSPI_K>;
 				resets = <&rcc QSPI_R>;

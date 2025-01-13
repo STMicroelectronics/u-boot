@@ -14,7 +14,7 @@
 			enable-method = "psci";
 			clocks = <&scmi_perf 0>;
 			clock-names = "cpu";
-			power-domains = <&CPU_PD1>;
+			power-domains = <&cpu1_pd>;
 			power-domain-names = "psci";
 		};
 	};
@@ -26,10 +26,10 @@
 	};
 
 	psci {
-		CPU_PD1: power-domain-cpu1 {
+		cpu1_pd: power-domain-cpu1 {
 			#power-domain-cells = <0>;
 			domain-idle-states =  <&CPU_PWRDN>;
-			power-domains = <&CLUSTER_PD>;
+			power-domains = <&cluster_pd>;
 		};
 	};
 
@@ -111,7 +111,7 @@
 		clock-names = "hclk", "cclk";
 		bosch,mram-cfg = <0x0 0 0 32 0 0 2 2>;
 		access-controllers = <&rifsc 56>;
-		power-domains = <&CLUSTER_PD>;
+		power-domains = <&d1_pd>;
 		status = "disabled";
 	};
 
@@ -126,7 +126,7 @@
 		clock-names = "hclk", "cclk";
 		bosch,mram-cfg = <0xd50 0 0 32 0 0 2 2>;
 		access-controllers = <&rifsc 56>;
-		power-domains = <&CLUSTER_PD>;
+		power-domains = <&d1_pd>;
 		status = "disabled";
 	};
 
@@ -141,7 +141,7 @@
 		clock-names = "hclk", "cclk";
 		bosch,mram-cfg = <0x1aa0 0 0 32 0 0 2 2>;
 		access-controllers = <&rifsc 56>;
-		power-domains = <&CLUSTER_PD>;
+		power-domains = <&d1_pd>;
 		status = "disabled";
 	};
 
@@ -173,7 +173,7 @@
 		snps,axi-config = <&stmmac_axi_config_2>;
 		snps,tso;
 		access-controllers = <&rifsc 61>;
-		power-domains = <&CLUSTER_PD>;
+		power-domains = <&d1_pd>;
 		wakeup-source;
 		status = "disabled";
 		snps,mtl-rx-config = <&mtl_rx_setup_2>;

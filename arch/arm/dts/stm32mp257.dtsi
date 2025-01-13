@@ -20,7 +20,7 @@
 		ranges = <0x4c000000 0x4c000000 0x2000000>,
 			 <0x4b000000 0x4b000000 0xc0000>;
 		access-controllers = <&rifsc 70>;
-		power-domains = <&CLUSTER_PD>;
+		power-domains = <&d1_pd>;
 		status = "disabled";
 
 		deip_sw0: deip-sw@4c000000 {

@@ -5,6 +5,20 @@
  */
 #include "stm32mp213.dtsi"
 
+&soc0 {
+	csi: csi@48020000 {
+		compatible = "st,stm32mp25-csi";
+		reg = <0x48020000 0x0 0x2000>;
+		interrupts = <GIC_SPI 129 IRQ_TYPE_LEVEL_HIGH>;
+		resets = <&rcc CSI_R>;
+		clocks = <&rcc CK_KER_CSI>, <&rcc CK_KER_CSITXESC>,
+			 <&rcc CK_KER_CSIPHY>;
+		clock-names = "pclk", "txesc", "csi2phy";
+		access-controllers = <&rifsc 86>;
+		status = "disabled";
+	};
+};
+
 &soc1 {
 	ltdc: display-controller@48010000 {
 		compatible = "st,stm32mp21-ltdc";
@@ -15,7 +29,7 @@
 		clocks = <&rcc CK_BUS_LTDC>, <&rcc CK_KER_LTDC>;
 		clock-names = "bus", "lcd";
 		resets = <&rcc LTDC_R>;
-		power-domains = <&CLUSTER_PD>;
+		power-domains = <&d1_pd>;
 		status = "disabled";
 		access-controllers = <&rifsc 80>;
 		access-controller-names = "cmn";
@@ -27,10 +41,6 @@
 		l3 {
 			access-controllers = <&rifsc 120>;
 			access-controller-names = "l3";
-		};
-		rot {
-			access-controllers = <&rifsc 121>;
-			access-controller-names = "rot";
 		};
 	};
 };
