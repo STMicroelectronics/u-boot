@@ -2455,10 +2455,6 @@ static irqreturn_t dwc3_process_event_buf(struct dwc3 *dwc, u32 buf)
 	evt = dwc->ev_buffs[buf];
 	left = evt->count;
 
-	/* Invalidate the evt->buf area before reading */
-	invalidate_dcache_range((uintptr_t)evt->buf,
-				(uintptr_t)evt->buf + ROUND(evt->length, CACHELINE_SIZE));
-
 	if (!(evt->flags & DWC3_EVENT_PENDING))
 		return IRQ_NONE;
 
