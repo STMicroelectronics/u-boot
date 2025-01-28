@@ -35,6 +35,8 @@
 
 		framebuffer {
 			compatible = "simple-framebuffer";
+			clocks = <&rcc CK_BUS_LTDC>, <&rcc CK_KER_LTDC>,
+				 <&rcc CK_BUS_LVDS>, <&rcc CK_KER_LVDSPHY>;
 			status = "disabled";
 		};
 	};
@@ -136,6 +138,7 @@
 		compatible = "edt,etml0700z9ndha", "panel-lvds";
 		enable-gpios = <&gpioi 4 GPIO_ACTIVE_HIGH>;
 		backlight = <&panel_lvds_backlight>;
+		default-on;
 		status = "okay";
 
 		width-mm = <156>;
@@ -165,7 +168,7 @@
 		compatible = "gpio-backlight";
 		gpios = <&gpioi 7 GPIO_ACTIVE_HIGH>;
 		default-on;
-		default-brightness-level = <0>;
+		default-brightness-level = <1>;
 		status = "okay";
 	};
 
@@ -485,6 +488,7 @@
 };
 
 &ltdc {
+	default-on;
 	status = "okay";
 
 	port {
@@ -504,9 +508,11 @@
 };
 
 &lvds {
-	status = "okay";
+	default-on;
 	vdd-supply =  <&scmi_vddcore>;
 	vdda18-supply = <&scmi_v1v8>;
+	status = "okay";
+
 	ports {
 		#address-cells = <1>;
 		#size-cells = <0>;

@@ -3360,6 +3360,8 @@
 		m0_rproc: m0@0 {
 			compatible = "st,stm32mp2-m0";
 			reg = <0 0>;
+			mboxes = <&ipcc2 2>;
+			mbox-names = "shutdown";
 			clocks = <&rcc CK_CPU3>;
 			resets = <&rcc C3_R>;
 			reset-names = "mcu_rst";

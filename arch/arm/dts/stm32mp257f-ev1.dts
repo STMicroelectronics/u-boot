@@ -622,8 +622,6 @@
 };
 
 &m0_rproc {
-	mboxes = <&ipcc2 0>, <&ipcc2 1>, <&ipcc2 2>;
-	mbox-names = "rx", "tx", "shutdown";
 	memory-region = <&cm0_cube_fw>, <&cm0_cube_data>;
 	clocks = <&rcc CK_CPU3>,
 		 <&rcc CK_CPU3_AM>,
