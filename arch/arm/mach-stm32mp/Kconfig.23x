@@ -30,6 +30,8 @@ if DEBUG_UART
 config DEBUG_UART_BASE
 	default 0x400e0000
 
+config DEBUG_UART_CLOCK
+	default 0
 endif
 
 source "board/st/stm32mp2/Kconfig"
