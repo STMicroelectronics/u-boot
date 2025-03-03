@@ -699,7 +699,7 @@ void *env_sf_get_env_addr(void)
 #if defined(CONFIG_OF_BOARD_FIXUP)
 
 #if defined(CONFIG_STM32MP21X)
-#define SPINAND_NOR_PATH "/soc@0/spi@40430000/flash@0"
+#define SPINAND_NOR_PATH "/soc@0/bus@42080000/spi@40430000/flash@0"
 #else
 #define SPINAND_NOR_PATH "/soc@0/ommanager@40500000/spi@40430000/flash@0"
 #endif
