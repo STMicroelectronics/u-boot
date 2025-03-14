@@ -57,6 +57,7 @@ struct stm32_ltdc_priv {
 	u32 bg_col_argb;
 	const u32 *layer_regs;
 	const u32 *pix_fmt_hw;
+	const u32 *conf_regs;
 	u32 crop_x, crop_y, crop_w, crop_h;
 	u32 alpha;
 	u32 hw_version;
@@ -167,6 +168,28 @@ static const u32 layer_regs_a2[] = {
 	0x178	/* L1 Flexible Pixel Format 1 */
 };
 
+static const u32 ltdc_conf_regs_a0[] = {
+	GENMASK(10, 0),		/* Vertical Synchronization Height */
+	GENMASK(27, 16),	/* Horizontal Synchronization Width */
+	GENMASK(10, 0),		/* Accumulated Vertical Back Porch */
+	GENMASK(27, 16),	/* Accumulated Horizontal Back Porch */
+	GENMASK(10, 0),		/* Accumulated Active Height */
+	GENMASK(27, 16),	/* Accumulated Active Width */
+	GENMASK(10, 0),		/* TOTAL Height */
+	GENMASK(27, 16)		/* TOTAL Width */
+};
+
+static const u32 ltdc_conf_regs_a1[] = {
+	GENMASK(11, 0),		/* Vertical Synchronization Height */
+	GENMASK(27, 16),	/* Horizontal Synchronization Width */
+	GENMASK(11, 0),		/* Accumulated Vertical Back Porch */
+	GENMASK(27, 16),	/* Accumulated Horizontal Back Porch */
+	GENMASK(11, 0),		/* Accumulated Active Height */
+	GENMASK(27, 16),	/* Accumulated Active Width */
+	GENMASK(11, 0),		/* TOTAL Height */
+	GENMASK(27, 16)		/* TOTAL Width */
+};
+
 /* LTDC main registers */
 #define LTDC_IDR	0x00	/* IDentification */
 #define LTDC_LCR	0x04	/* Layer Count */
@@ -224,17 +247,14 @@ static const u32 layer_regs_a2[] = {
 #define LTDC_L1FPF1R	(priv->layer_regs[30])	/* L1 Flexible Pixel Format 1 */
 
 /* Bit definitions */
-#define SSCR_VSH	GENMASK(10, 0)	/* Vertical Synchronization Height */
-#define SSCR_HSW	GENMASK(27, 16)	/* Horizontal Synchronization Width */
-
-#define BPCR_AVBP	GENMASK(10, 0)	/* Accumulated Vertical Back Porch */
-#define BPCR_AHBP	GENMASK(27, 16)	/* Accumulated Horizontal Back Porch */
-
-#define AWCR_AAH	GENMASK(10, 0)	/* Accumulated Active Height */
-#define AWCR_AAW	GENMASK(27, 16)	/* Accumulated Active Width */
-
-#define TWCR_TOTALH	GENMASK(10, 0)	/* TOTAL Height */
-#define TWCR_TOTALW	GENMASK(27, 16)	/* TOTAL Width */
+#define SSCR_VSH	(priv->conf_regs[0])	/* Vertical Synchronization Height */
+#define SSCR_HSW	(priv->conf_regs[1])	/* Horizontal Synchronization Width */
+#define BPCR_AVBP	(priv->conf_regs[2])	/* Accumulated Vertical Back Porch */
+#define BPCR_AHBP	(priv->conf_regs[3])	/* Accumulated Horizontal Back Porch */
+#define AWCR_AAH	(priv->conf_regs[4])	/* Accumulated Active Height */
+#define AWCR_AAW	(priv->conf_regs[5])	/* Accumulated Active Width */
+#define TWCR_TOTALH	(priv->conf_regs[6])	/* TOTAL Height */
+#define TWCR_TOTALW	(priv->conf_regs[7])	/* TOTAL Width */
 
 #define GCR_LTDCEN	BIT(0)		/* LTDC ENable */
 #define GCR_ROTEN	BIT(2)		/* ROTation ENable */
@@ -955,18 +975,25 @@ static int stm32_ltdc_probe(struct udevice *dev)
 
 	switch (priv->hw_version) {
 	case HWVER_10200:
+		priv->layer_regs = layer_regs_a0;
+		priv->pix_fmt_hw = pix_fmt_a0;
+		priv->conf_regs = ltdc_conf_regs_a0;
+		break;
 	case HWVER_10300:
 		priv->layer_regs = layer_regs_a0;
 		priv->pix_fmt_hw = pix_fmt_a0;
+		priv->conf_regs = ltdc_conf_regs_a1;
 		break;
 	case HWVER_20101:
 		priv->layer_regs = layer_regs_a1;
 		priv->pix_fmt_hw = pix_fmt_a1;
+		priv->conf_regs = ltdc_conf_regs_a1;
 		break;
 	case HWVER_40100:
 	case HWVER_40101:
 		priv->layer_regs = layer_regs_a2;
 		priv->pix_fmt_hw = pix_fmt_a2;
+		priv->conf_regs = ltdc_conf_regs_a1;
 		break;
 	default:
 		return -ENODEV;
