@@ -107,6 +107,17 @@ int scmi_read_resp_from_smt(struct udevice *dev, struct scmi_smt *smt,
 void scmi_clear_smt_channel(struct scmi_smt *smt);
 
 /*
+ * Wait SCMI message from a SMT shared memory
+ * @dev: SCMI device
+ * @smt: Reference to shared memory using SMT header
+ * @msg: Output SCMI message received
+ * @timeout_us:	The maximum time to wait for a message to be available, in
+ *		micro-seconds. A value of 0 does not wait at all.
+ */
+int scmi_wait_resp_from_smt(struct udevice *dev, struct scmi_smt *smt,
+			    struct scmi_msg *msg, ulong timeout_us);
+
+/*
  * Write SCMI message to SMT_MSG shared memory
  * @dev: SCMI device
  * @smt: Reference to shared memory using SMT_MSG header

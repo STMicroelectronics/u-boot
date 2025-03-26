@@ -16,6 +16,7 @@
 #include <dm/ofnode.h>
 #include <linux/compat.h>
 #include <linux/io.h>
+#include <linux/iopoll.h>
 #include <linux/ioport.h>
 
 #include "smt.h"
@@ -135,6 +136,26 @@ int scmi_read_resp_from_smt(struct udevice *dev, struct scmi_smt *smt,
 	memcpy_fromio(msg->out_msg, hdr->msg_payload, msg->out_msg_sz);
 
 	return 0;
+}
+
+/**
+ * Wait SCMI message from a SMT shared buffer @smt and copy it into @msg.
+ * Return 0 on success and with a negative errno in case of error.
+ */
+int scmi_wait_resp_from_smt(struct udevice *dev, struct scmi_smt *smt,
+			    struct scmi_msg *msg,  ulong timeout_us)
+{
+	struct scmi_smt_header *hdr = (void *)smt->buf;
+	__le32 status;
+	int ret;
+
+	ret = readl_poll_timeout(&hdr->channel_status, status, status &
+				 SCMI_SHMEM_CHAN_STAT_CHANNEL_FREE,
+				 timeout_us);
+	if (ret)
+		return ret;
+
+	return scmi_read_resp_from_smt(dev, smt, msg);
 }
 
 /**
