@@ -94,6 +94,7 @@ int scmi_write_msg_to_smt(struct udevice *dev, struct scmi_smt *smt,
 	iowrite32(ioread32(&hdr->channel_status) & ~SCMI_SHMEM_CHAN_STAT_CHANNEL_FREE,
 		  &hdr->channel_status);
 	iowrite32(msg->in_msg_sz + sizeof(hdr->msg_header), &hdr->length);
+	iowrite32(0, &hdr->flags);
 	iowrite32(SMT_HEADER_TOKEN(0) |
 		  SMT_HEADER_MESSAGE_TYPE(0) |
 		  SMT_HEADER_PROTOCOL_ID(msg->protocol_id) |
