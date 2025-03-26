@@ -56,14 +56,12 @@ static int scmi_mbox_process_msg(struct udevice *dev,
 		goto out;
 	}
 
+	ret = scmi_wait_resp_from_smt(dev, &chan->smt, msg, chan->timeout_us);
 	/* Receive the response */
-	ret = mbox_recv(&chan->mbox, chan->smt.buf, chan->timeout_us);
-	if (ret) {
+	if (ret == -ETIMEDOUT) {
 		dev_err(dev, "Response failed: %d, abort\n", ret);
 		goto out;
 	}
-
-	ret = scmi_read_resp_from_smt(dev, &chan->smt, msg);
 
 out:
 	scmi_clear_smt_channel(&chan->smt);
