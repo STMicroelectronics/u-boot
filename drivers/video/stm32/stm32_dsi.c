@@ -850,11 +850,13 @@ static int stm32_dsi_get_panel(struct udevice *dev, struct udevice **panel)
 			}
 
 			uclass_get_device_by_ofnode(UCLASS_PANEL, remote, panel);
+			/* Stop parsing the device tree if a panel was found. */
 			if (*panel)
-				break;
+				goto out;
 		}
 	}
 
+out:
 	/* Sanity check, we can get out of the loop without having a clean ofnode */
 	if (!(*panel))
 		ret = -EINVAL;
