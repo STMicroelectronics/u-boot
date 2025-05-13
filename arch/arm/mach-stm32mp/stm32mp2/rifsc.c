@@ -355,6 +355,7 @@ static int stm32_rifsc_remove(struct udevice *bus)
 static const struct udevice_id stm32_rifsc_ids[] = {
 	{ .compatible = "st,stm32mp21-rifsc" },
 	{ .compatible = "st,stm32mp25-rifsc" },
+	{ .compatible = "st,stm32mp21-rifsc" },
 	{},
 };
 
