@@ -480,7 +480,8 @@ int board_interface_eth_init(struct udevice *dev,
 	bool ext_phyclk;
 
 	/* Ethernet PHY have no cristal or need to be clock by RCC */
-	ext_phyclk = dev_read_bool(dev, "st,ext-phyclk");
+	ext_phyclk = dev_read_bool(dev, "st,ext-phyclk") || dev_read_bool(dev, "st,eth-clk-sel") ||
+		     dev_read_bool(dev, "st,eth-ref-clk-sel");
 
 	regmap = syscon_regmap_lookup_by_phandle(dev, "st,syscon");
 
