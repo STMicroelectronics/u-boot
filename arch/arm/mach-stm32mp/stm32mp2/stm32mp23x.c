@@ -162,6 +162,12 @@ void get_soc_name(char name[SOC_NAME_SIZE])
 		case OTP_REVID_2:
 			cpu_r = "B";
 			break;
+		case OTP_REVID_2_1:
+			cpu_r = "Y";
+			break;
+		case OTP_REVID_2_2:
+			cpu_r = "X";
+			break;
 		default:
 			break;
 		}
