@@ -26,6 +26,16 @@ struct mm_region stm32mp2_mem_map[MP2_MEM_MAP_MAX] = {
 			 PTE_BLOCK_PXN | PTE_BLOCK_UXN
 	}, {
 #endif
+#if defined(CONFIG_STM32MP23X)
+		/* VDERAM, RETRAM, SRAMs, SYSRAM: BOOT alias1 */
+		.virt = 0x0A000000UL,
+		.phys = 0x0A000000UL,
+		.size = 0x00200000UL,
+		.attrs = PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
+			 PTE_BLOCK_NON_SHARE |
+			 PTE_BLOCK_PXN | PTE_BLOCK_UXN
+	}, {
+#endif
 #if defined(CONFIG_STM32MP25X)
 		/* VDERAM, RETRAM, SRAMs, SYSRAM: BOOT alias1 */
 		.virt = 0x0A000000UL,
