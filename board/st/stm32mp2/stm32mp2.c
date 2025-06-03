@@ -27,6 +27,7 @@
 #include <dm/uclass.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <linux/delay.h>
+#include <linux/stringify.h>
 
 #define ILITEK_REG_ID		0x40
 #define ILITEK_ID_LEN		7
@@ -516,6 +517,9 @@ int board_late_init(void)
 			}
 		}
 	}
+
+	if (CONFIG_IS_ENABLED(FASTBOOT_FLASH_MMC))
+		env_set("fastboot.mmcdev", __stringify(CONFIG_FASTBOOT_FLASH_MMC_DEV));
 
 	return 0;
 }
