@@ -48,6 +48,7 @@
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/iopoll.h>
+#include <linux/stringify.h>
 #include <power/regulator.h>
 #include <usb/dwc2_udc.h>
 
@@ -919,6 +920,9 @@ int board_late_init(void)
 		/* for DK1/DK2 boards */
 		board_check_usb_power();
 	}
+
+	if (CONFIG_IS_ENABLED(FASTBOOT_FLASH_MMC))
+		env_set("fastboot.mmcdev", __stringify(CONFIG_FASTBOOT_FLASH_MMC_DEV));
 
 	return 0;
 }
