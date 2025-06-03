@@ -38,6 +38,7 @@
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/iopoll.h>
+#include <linux/stringify.h>
 
 #define SYSCFG_ETHCR_ETH_SEL_MII	0
 #define SYSCFG_ETHCR_ETH_SEL_RGMII	BIT(4)
@@ -641,6 +642,9 @@ int board_late_init(void)
 			}
 		}
 	}
+
+	if (CONFIG_IS_ENABLED(FASTBOOT_FLASH_MMC))
+		env_set("fastboot.mmcdev", __stringify(CONFIG_FASTBOOT_FLASH_MMC_DEV));
 
 	return 0;
 }
