@@ -2400,7 +2400,7 @@
 				      <0x10000000 0x8000000>;
 				reg-names = "dbi", "addr_space";
 				st,syscfg = <&syscfg>;
-				clocks = <&rcc CK_BUS_PCIE>;
+				clocks = <&rcc CK_SCMI_ICN_PCIE>;
 				clock-names = "core";
 				resets = <&rcc PCIE_R>;
 				reset-names = "pcie";
@@ -2434,7 +2434,7 @@
 					 <0x02000000 0 0x10020000 0x10020000 0 0x7fe0000>,
 					 <0x42000000 0 0x18000000 0x18000000 0 0x8000000>;
 				bus-range = <0x00 0xff>;
-				clocks = <&rcc CK_BUS_PCIE>;
+				clocks = <&rcc CK_SCMI_ICN_PCIE>;
 				clock-names = "core";
 				resets = <&rcc PCIE_R>;
 				reset-names = "pcie";
