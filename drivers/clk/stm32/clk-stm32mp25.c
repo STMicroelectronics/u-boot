@@ -700,9 +700,6 @@ static const struct clock_config stm32mp25_clock_cfg[] = {
 	STM32_GATE(CK_BUS_OSPIIOM, "ck_icn_p_ospiiom", IDX_ICN_LS_MCU, 0, GATE_OSPIIOM,
 		   SEC_RIFSC(111)),
 
-	/* PCIE */
-	STM32_GATE(CK_BUS_PCIE, "ck_icn_p_pcie", IDX_ICN_LS_MCU, 0, GATE_PCIE, SEC_RIFSC(68)),
-
 	/* PKA */
 	STM32_GATE(CK_BUS_PKA, "ck_icn_p_pka", IDX_ICN_LS_MCU, 0, GATE_PKA, SEC_RIFSC(93)),
 
