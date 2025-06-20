@@ -55,7 +55,7 @@ static int stm32_ospi_tx(struct udevice *omi_dev,
 	struct stm32_omi_priv *omi_priv = dev_get_priv(omi_dev);
 	struct stm32_ospi_priv *priv = dev_get_priv(omi_priv->dev);
 	struct stm32_ospi_flash *flash = &priv->flash[priv->cs_used];
-	u8 *buf;
+	void *buf;
 	u8 dummy = 0xff;
 	int ret;
 
@@ -68,7 +68,7 @@ static int stm32_ospi_tx(struct udevice *omi_dev,
 	if (op->data.dir == SPI_MEM_DATA_IN)
 		buf = op->data.buf.in;
 	else
-		buf = (u8 *)op->data.buf.out;
+		buf = (void *)op->data.buf.out;
 
 	if (flash->octal_dtr && op->addr.val % 2) {
 		/* Read/write dummy byte */
@@ -558,6 +558,9 @@ static int stm32_ospi_probe(struct udevice *bus)
 
 	/* Set dcr devsize to max address */
 	setbits_le32(regs_base + OSPI_DCR1, OSPI_DCR1_DEVSIZE_MASK);
+
+	clrsetbits_le32(regs_base + OSPI_CR, OSPI_CR_FTHRES_MASK,
+			3 << OSPI_CR_FTHRES_SHIFT);
 
 	priv->cs_used = -1;
 	omi_priv->check_transfer = stm32_ospi_readid;

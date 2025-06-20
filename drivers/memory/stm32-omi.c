@@ -286,32 +286,51 @@ int stm32_omi_dlyb_configure(struct udevice *dev,
 	return ret;
 }
 
-static void stm32_omi_read_fifo(u8 *val, phys_addr_t addr)
+static void stm32_omi_read_fifo(void *val, phys_addr_t addr, u8 len)
 {
-	*val = readb(addr);
+	switch (len) {
+	case sizeof(u32):
+		*((u32 *)val) = readl_relaxed(addr);
+		break;
+	case sizeof(u16):
+		*((u16 *)val) = readw_relaxed(addr);
+		break;
+	case sizeof(u8):
+		*((u8 *)val) = readb_relaxed(addr);
+	};
 	schedule();
 }
 
-static void stm32_omi_write_fifo(u8 *val, phys_addr_t addr)
+static void stm32_omi_write_fifo(void *val, phys_addr_t addr, u8 len)
 {
-	writeb(*val, addr);
+	switch (len) {
+	case sizeof(u32):
+		writel_relaxed(*((u32 *)val), addr);
+		break;
+	case sizeof(u16):
+		writew_relaxed(*((u16 *)val), addr);
+		break;
+	case sizeof(u8):
+		writeb_relaxed(*((u8 *)val), addr);
+	};
 }
 
-int stm32_omi_tx_poll(struct udevice *dev, u8 *buf, u32 len, bool read)
+int stm32_omi_tx_poll(struct udevice *dev, void *buf, u32 len, bool read)
 {
 	struct stm32_omi_plat *omi_plat = dev_get_plat(dev);
 	struct stm32_omi_priv *omi_priv = dev_get_priv(dev);
 	phys_addr_t regs_base = omi_plat->regs_base;
-	void (*fifo)(u8 *val, phys_addr_t addr);
+	void (*fifo)(void *val, phys_addr_t addr, u8 len);
 	u32 sr;
 	int ret;
+	u8 step;
 
 	if (read)
 		fifo = stm32_omi_read_fifo;
 	else
 		fifo = stm32_omi_write_fifo;
 
-	while (len--) {
+	while (len) {
 		ret = readl_poll_timeout(regs_base + OSPI_SR, sr,
 					 sr & OSPI_SR_FTF,
 					 OSPI_FIFO_TIMEOUT_US);
@@ -322,7 +341,23 @@ int stm32_omi_tx_poll(struct udevice *dev, u8 *buf, u32 len, bool read)
 			return ret;
 		}
 
-		fifo(buf++, regs_base + OSPI_DR);
+		if (!IS_ALIGNED((uintptr_t)buf, sizeof(u32))) {
+			if (!IS_ALIGNED((uintptr_t)buf, sizeof(u16)))
+				step = sizeof(u8);
+			else
+				step = min((u32)len, (u32)sizeof(u16));
+		}
+		/* Buf is aligned */
+		else if (len >= sizeof(u32))
+			step = sizeof(u32);
+		else if (len >= sizeof(u16))
+			step = sizeof(u16);
+		else if (len)
+			step = sizeof(u8);
+
+		fifo(buf, regs_base + OSPI_DR, step);
+		len -= step;
+		buf += step;
 	}
 
 	return 0;

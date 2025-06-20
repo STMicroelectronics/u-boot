@@ -17,6 +17,7 @@
 #define OSPI_CR_TCEN		BIT(3)
 #define OSPI_CR_FSEL		BIT(7)
 #define OSPI_CR_FTHRES_MASK	GENMASK(13,8)
+#define OSPI_CR_FTHRES_SHIFT	8
 #define OSPI_CR_CSSEL		BIT(24)
 #define OSPI_CR_FMODE_SHIFT	28
 #define OSPI_CR_FMODE_MASK	GENMASK(29, 28)
@@ -177,6 +178,6 @@ int stm32_omi_dlyb_find_tap(struct udevice *dev, bool rx_only, u8 *window_len);
 int stm32_omi_dlyb_set_cr(struct udevice *dev, u32 dlyb_cr);
 void stm32_omi_dlyb_get_cr(struct udevice *dev, u32 *dlyb_cr);
 void stm32_omi_dlyb_stop(struct udevice *dev);
-int stm32_omi_tx_poll(struct udevice *dev, u8 *buf, u32 len, bool read);
+int stm32_omi_tx_poll(struct udevice *dev, void *buf, u32 len, bool read);
 int stm32_omi_wait_cmd(struct udevice *dev);
 int stm32_omi_wait_for_not_busy(struct udevice *dev);
