@@ -44,6 +44,7 @@ struct f_fastboot {
 	/* IN/OUT EP's and corresponding requests */
 	struct usb_ep *in_ep, *out_ep;
 	struct usb_request *in_req, *out_req;
+	bool in_req_queued;
 };
 
 static char fb_ext_prop_name[] = "DeviceInterfaceGUID";
@@ -198,8 +199,10 @@ static void rx_handler_command(struct usb_ep *ep, struct usb_request *req);
 static void fastboot_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	int status = req->status;
-	if (!status)
+	if (!status) {
+		fastboot_func->in_req_queued = false;
 		return;
+	}
 	printf("status: %d ep '%s' trans: %d\n", status, ep->name, req->actual);
 }
 
@@ -403,14 +406,20 @@ static int fastboot_tx_write(const char *buffer, unsigned int buffer_size)
 	struct usb_request *in_req = fastboot_func->in_req;
 	int ret;
 
+	if (fastboot_func->in_req_queued) {
+		usb_ep_dequeue(fastboot_func->in_ep, in_req);
+		fastboot_func->in_req_queued = false;
+	}
+
 	memcpy(in_req->buf, buffer, buffer_size);
 	in_req->length = buffer_size;
-
-	usb_ep_dequeue(fastboot_func->in_ep, in_req);
 
 	ret = usb_ep_queue(fastboot_func->in_ep, in_req, 0);
 	if (ret)
 		printf("Error %d on queue\n", ret);
+	else
+		fastboot_func->in_req_queued = true;
+
 	return 0;
 }
 
