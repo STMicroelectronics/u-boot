@@ -97,7 +97,7 @@
 			label = "User-2";
 			linux,code = <BTN_2>;
 			gpios = <&gpioc 11 GPIO_ACTIVE_HIGH>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		button-wake-up {
