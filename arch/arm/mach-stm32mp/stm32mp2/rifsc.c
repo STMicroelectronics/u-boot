@@ -195,7 +195,7 @@ int stm32_rifsc_grant_access_by_id(ofnode device_node, u32 id)
 	 * If the peripheral is in semaphore mode, take the semaphore so that
 	 * the CID1 has the ownership.
 	 */
-	if (cid_reg_value & CIDCFGR_SEMEN &&
+	if (cid_reg_value & CIDCFGR_CFEN && cid_reg_value & CIDCFGR_SEMEN &&
 	    (FIELD_GET(RIFSC_RISC_SEMWL_MASK, cid_reg_value) & BIT(RIF_CID1))) {
 		err = stm32_rifsc_acquire_semaphore(rifsc_base, id);
 		if (err) {
