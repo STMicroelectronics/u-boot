@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause) */
+/* SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause) */
 /*
  * Copyright (C) 2023, STMicroelectronics - All Rights Reserved
  */
@@ -44,5 +44,12 @@
 #define VOLTD_SCMI_REGU2		28
 #define VOLTD_SCMI_REGU3		29
 #define VOLTD_SCMI_REGU4		30
+
+/* GPO controls */
+#define VOLTD_SCMI_STPMIC_GPO1		31
+#define VOLTD_SCMI_STPMIC_GPO2		32
+#define VOLTD_SCMI_STPMIC_GPO3		33
+#define VOLTD_SCMI_STPMIC_GPO4		34
+#define VOLTD_SCMI_STPMIC_GPO5		35
 
 #endif /*__DT_BINDINGS_REGULATOR_ST_STM32MP25_REGULATOR_H */
