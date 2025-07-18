@@ -22,7 +22,7 @@
 	};
 
 	clocks {
-		txbyteclk {
+		clk_phy_dsi {
 			#clock-cells = <0>;
 			compatible = "fixed-clock";
 			clock-frequency = <27000000>;
