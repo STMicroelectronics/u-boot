@@ -12,6 +12,7 @@
 
 #include <common.h>
 #include <clk.h>
+#include <clk-uclass.h>
 #include <dm.h>
 #include <dsi_host.h>
 #include <log.h>
@@ -138,7 +139,7 @@ struct stm32_dsi_priv {
 	struct mipi_dsi_device device;
 	void __iomem *base;
 	struct udevice *panel;
-	u32 pllref_clk;
+	struct clk pllref;
 	u32 hw_version;
 	int lane_min_kbps;
 	int lane_max_kbps;
@@ -147,6 +148,12 @@ struct stm32_dsi_priv {
 	struct udevice *dsi_host;
 	unsigned int lane_mbps;
 	u32 format;
+};
+
+struct stm32_txbyte_clk {
+	bool enable;
+	struct clk clkp;
+	struct udevice *dsi_phy;
 };
 
 static inline void dsi_write(struct stm32_dsi_priv *dsi, u32 reg, u32 val)
@@ -332,7 +339,7 @@ static int dsi_get_lane_mbps(void *priv_data, struct display_timing *timings,
 		dsi->lane_max_kbps *= 2;
 	}
 
-	pll_in_khz = dsi->pllref_clk / 1000;
+	pll_in_khz = (unsigned int)clk_get_rate(&dsi->pllref) / 1000;
 
 	/* Compute requested pll out */
 	bpp = mipi_dsi_pixel_format_to_bpp(format);
@@ -590,9 +597,17 @@ static int dsi_phy_141_init(void *priv_data)
 	struct mipi_dsi_device *device = priv_data;
 	struct udevice *dev = device->dev;
 	struct stm32_dsi_priv *dsi = dev_get_priv(dev);
-	u32 val, ccf, prop, gmp, int1, bias, vco, ndiv, odf, idf;
-	unsigned int pll_in_khz, pll_out_khz, hsfreq;
-	int ret, i;
+	struct stm32_txbyte_clk *txbyte_clk;
+	struct udevice *clk_dev;
+	int ret;
+
+	ret = uclass_get_device_by_name(UCLASS_CLK, "txbyteclk", &clk_dev);
+	if (ret < 0) {
+		dev_err(dev, "Fail to get txbyte clock device: %d\n", ret);
+		return ret;
+	}
+
+	txbyte_clk = dev_get_priv(clk_dev);
 
 	dev_dbg(dev, "Initialize DSI physical layer\n");
 
@@ -619,70 +634,17 @@ static int dsi_phy_141_init(void *priv_data)
 	dsi_clear(dsi, DSI_PTCR0, PTCR0_TRSEN);
 	mdelay(1);
 
-	/* Compute requested pll out, pll out is the half of the lane data rate */
-	pll_out_khz = dsi->lane_mbps * 1000 / 2;
-	pll_in_khz = dsi->pllref_clk / 1000;
-
-	/* find frequency mapping */
-	for (i = 0; i < ARRAY_SIZE(dppa_map_phy_141); i++) {
-		if (dsi->lane_mbps < dppa_map_phy_141[i].data_rate)
-			break;
+	ret = clk_set_rate(&txbyte_clk->clkp, dsi->lane_mbps * 1000 * 1000 / 2);
+	if (ret < 0) {
+		dev_err(dev, "Set Txbyte clock error %d\n", ret);
+		return ret;
 	}
 
-	/* ODF: Output division factor */
-	switch (dppa_map_phy_141[i].odf) {
-	case(3):
-		odf = 8; break;
-	case(2):
-		odf = 4; break;
-	case(1):
-		odf = 2; break;
-	default:
-		odf = 1; break;
+	ret = clk_enable(&txbyte_clk->clkp);
+	if (ret) {
+		dev_err(dev, "Txbyte clock enable error %d\n", ret);
+		return ret;
 	}
-
-	dsi_phy_141_pll_get_params(dsi, pll_in_khz, pll_out_khz, &idf, &ndiv, &odf);
-
-	ccf = ((pll_in_khz / 1000 - 17)) * 4;
-	hsfreq = dppa_map_phy_141[i].hs_freq;
-
-	vco = dppa_map_phy_141[i].vco;
-	bias = 0x10;
-	int1 = 0x00;
-	gmp = 0x01;
-	prop = dppa_map_phy_141[i].prop;
-
-	/* set DLD, HSFR & CCF */
-	val = (hsfreq << 8) | ccf;
-	dsi_write(dsi, DSI_WPCR1, val);
-
-	val = ((ndiv - 2) << 4) | (idf - 1);
-	dsi_write(dsi, DSI_WRPCR0, val);
-
-	val = (dppa_map_phy_141[i].odf << 28) | (vco << 24) | (bias << 16) | (int1 << 8) |
-	      (gmp << 6) | prop;
-	dsi_write(dsi, DSI_WRPCR1, val);
-
-	dsi_write(dsi, DSI_PCTLR, PCTLR_CKEN);
-
-	dsi_update_bits(dsi, DSI_WRPCR2, WRPCR2_SEL, 0x01);
-
-	dsi_set(dsi, DSI_WRPCR2, WRPCR2_UPD);
-	mdelay(1);
-
-	dsi_clear(dsi, DSI_WRPCR2, WRPCR2_UPD);
-	mdelay(1);
-
-	dsi_set(dsi, DSI_PCTLR, PCTLR_PWEN | PCTLR_DEN);
-
-	ret = readl_poll_timeout(dsi->base + DSI_PSR, val, val & PSR_PSSC, TIMEOUT_US);
-	if (ret)
-		dev_err(dev, "!TIMEOUT! waiting PLL, let's continue\n");
-
-	dev_dbg(dev, "IDF %d ODF %d NDIV %d\n", idf, odf, ndiv);
-	dev_dbg(dev, "VCO %d BIAS %d INT %d GMP %d PROP %d\n", vco, bias, int1, gmp, prop);
-
-	dsi_set(dsi, DSI_WRPCR2, WRPCR2_PLLEN);
 
 	return 0;
 }
@@ -724,7 +686,7 @@ static int dsi_phy_141_get_lane_mbps(void *priv_data, struct display_timing *tim
 	dsi->lane_min_kbps = LANE_MIN_PHY_141_KBPS;
 	dsi->lane_max_kbps = LANE_MAX_PHY_141_KBPS;
 
-	pll_in_khz = dsi->pllref_clk / 1000;
+	pll_in_khz = (unsigned int)clk_get_rate(&dsi->pllref) / 1000;
 
 	/* Compute requested pll out */
 	bpp = mipi_dsi_pixel_format_to_bpp(format);
@@ -950,6 +912,13 @@ static int stm32_dsi_bind(struct udevice *dev)
 {
 	int ret;
 
+	if (device_is_compatible(dev, "st,stm32mp25-dsi")) {
+		ret = device_bind_driver_to_node(dev, "txbyteclk", "txbyteclk",
+						 dev_ofnode(dev), NULL);
+		if (ret)
+			return ret;
+	}
+
 	ret = device_bind_driver_to_node(dev, "dw_mipi_dsi", "dsihost",
 					 dev_ofnode(dev), NULL);
 	if (ret)
@@ -1029,13 +998,11 @@ static int stm32_dsi_probe(struct udevice *dev)
 		goto err_reg;
 	}
 
-	ret = clk_get_by_name(dev, "ref", &clk);
+	ret = clk_get_by_name(dev, "ref", &priv->pllref);
 	if (ret) {
 		dev_err(dev, "pll reference clock get error %d\n", ret);
 		goto err_clk;
 	}
-
-	priv->pllref_clk = (unsigned int)clk_get_rate(&clk);
 
 	ret = reset_get_by_index(device->dev, 0, &rst);
 	if (ret) {
@@ -1088,4 +1055,159 @@ U_BOOT_DRIVER(stm32_dsi) = {
 	.probe				= stm32_dsi_probe,
 	.ops				= &stm32_dsi_ops,
 	.priv_auto		= sizeof(struct stm32_dsi_priv),
+};
+
+static int stm32_txbyte_clk_enable(struct clk *clk)
+{
+	struct stm32_txbyte_clk *txbyte_clk = dev_get_priv(clk->dev);
+	struct stm32_dsi_priv *dsi = dev_get_priv(clk->dev->parent);
+	u32 val;
+	int ret;
+
+	if (txbyte_clk->enable)
+		return 0;
+
+	ret = readl_poll_timeout(dsi->base + DSI_PSR, val, val & PSR_PSSC, TIMEOUT_US);
+	if (ret)
+		dev_err(clk->dev, "!TIMEOUT! waiting PLL, let's continue\n");
+
+	dsi_set(dsi, DSI_WRPCR2, WRPCR2_PLLEN);
+
+	txbyte_clk->enable = true;
+
+	return 0;
+}
+
+static int stm32_txbyte_clk_disable(struct clk *clk)
+{
+	struct stm32_txbyte_clk *txbyte_clk = dev_get_priv(clk->dev);
+	struct stm32_dsi_priv *dsi = dev_get_priv(clk->dev->parent);
+
+	if (!txbyte_clk->enable)
+		return 0;
+
+	/* Disable the DSI PLL */
+	dsi_clear(dsi, DSI_WRPCR2, WRPCR2_PLLEN);
+
+	txbyte_clk->enable = false;
+
+	return 0;
+}
+
+static ulong stm32_txbyte_clk_set_rate(struct clk *clk, ulong rate)
+{
+	struct stm32_txbyte_clk *txbyte_clk = dev_get_priv(clk->dev);
+	struct stm32_dsi_priv *dsi = dev_get_priv(clk->dev->parent);
+	u32 val, ccf, prop, gmp, int1, bias, vco, ndiv, odf, idf;
+	unsigned int pll_in_khz, pll_out_khz, hsfreq;
+	int i;
+
+	if (txbyte_clk->enable)
+		return 0;
+
+	/* Compute requested pll out, pll out is the half of the lane data rate */
+	pll_out_khz = rate / 1000;
+	pll_in_khz = (unsigned int)clk_get_rate(&dsi->pllref) / 1000;
+
+	/* find frequency mapping */
+	for (i = 0; i < ARRAY_SIZE(dppa_map_phy_141); i++) {
+		if (dsi->lane_mbps < dppa_map_phy_141[i].data_rate)
+			break;
+	}
+
+	/* ODF: Output division factor */
+	switch (dppa_map_phy_141[i].odf) {
+	case(3):
+		odf = 8; break;
+	case(2):
+		odf = 4; break;
+	case(1):
+		odf = 2; break;
+	default:
+		odf = 1; break;
+	}
+
+	dsi_phy_141_pll_get_params(dsi, pll_in_khz, pll_out_khz, &idf, &ndiv, &odf);
+
+	ccf = ((pll_in_khz / 1000 - 17)) * 4;
+	hsfreq = dppa_map_phy_141[i].hs_freq;
+
+	vco = dppa_map_phy_141[i].vco;
+	bias = 0x10;
+	int1 = 0x00;
+	gmp = 0x01;
+	prop = dppa_map_phy_141[i].prop;
+
+	/* set DLD, HSFR & CCF */
+	val = (hsfreq << 8) | ccf;
+	dsi_write(dsi, DSI_WPCR1, val);
+
+	val = ((ndiv - 2) << 4) | (idf - 1);
+	dsi_write(dsi, DSI_WRPCR0, val);
+
+	val = (dppa_map_phy_141[i].odf << 28) | (vco << 24) | (bias << 16) | (int1 << 8) |
+	      (gmp << 6) | prop;
+	dsi_write(dsi, DSI_WRPCR1, val);
+
+	dsi_write(dsi, DSI_PCTLR, PCTLR_CKEN);
+
+	dsi_update_bits(dsi, DSI_WRPCR2, WRPCR2_SEL, 0x01);
+
+	dsi_set(dsi, DSI_WRPCR2, WRPCR2_UPD);
+	mdelay(1);
+
+	dsi_clear(dsi, DSI_WRPCR2, WRPCR2_UPD);
+	mdelay(1);
+
+	dsi_set(dsi, DSI_PCTLR, PCTLR_PWEN | PCTLR_DEN);
+
+	dev_dbg(clk->dev, "IDF %d ODF %d NDIV %d\n", idf, odf, ndiv);
+	dev_dbg(clk->dev, "VCO %d BIAS %d INT %d GMP %d PROP %d\n",
+		vco, bias, int1, gmp, prop);
+
+	txbyte_clk->clkp.rate = rate;
+
+	dev_dbg(clk->dev, "rate=%ld\n", rate);
+
+	return rate;
+}
+
+static unsigned long stm32_txbyte_clk_get_rate(struct clk *clk)
+{
+	struct stm32_txbyte_clk *txbyte_clk = dev_get_priv(clk->dev);
+
+	if (!txbyte_clk->enable)
+		return 0;
+
+	return txbyte_clk->clkp.rate;
+}
+
+static struct clk_ops stm32_txbyte_clk_ops = {
+	.enable = stm32_txbyte_clk_enable,
+	.disable = stm32_txbyte_clk_disable,
+	.set_rate = stm32_txbyte_clk_set_rate,
+	.get_rate = stm32_txbyte_clk_get_rate,
+};
+
+static int stm32_txbyte_probe(struct udevice *dev)
+{
+	struct stm32_txbyte_clk *priv = dev_get_priv(dev);
+
+	/* prepare clkp to correctly register clock with CCF */
+	priv->clkp.dev = dev;
+	priv->clkp.id = CLK_ID(dev, 0);
+
+	/* Store back pointer to clk from udevice */
+	/* FIXME: This is not allowed...should be allocated by driver model */
+	dev_set_uclass_priv(dev, &priv->clkp);
+
+	return 0;
+}
+
+U_BOOT_DRIVER(stm32_txbyte_clk) = {
+	.name = "txbyteclk",
+	.id = UCLASS_CLK,
+	.ops = &stm32_txbyte_clk_ops,
+	.probe = &stm32_txbyte_probe,
+	.priv_auto = sizeof(struct stm32_txbyte_clk),
 };
