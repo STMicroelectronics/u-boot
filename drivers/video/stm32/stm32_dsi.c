@@ -156,6 +156,12 @@ struct stm32_txbyte_clk {
 	struct udevice *dsi_phy;
 };
 
+struct stm32_dsi_phy_clk {
+	bool enable;
+	struct clk clkp;
+	struct udevice *dsi_phy;
+};
+
 static inline void dsi_write(struct stm32_dsi_priv *dsi, u32 reg, u32 val)
 {
 	writel(val, dsi->base + reg);
@@ -271,26 +277,29 @@ static int dsi_phy_init(void *priv_data)
 	struct mipi_dsi_device *device = priv_data;
 	struct udevice *dev = device->dev;
 	struct stm32_dsi_priv *dsi = dev_get_priv(dev);
-	u32 val;
+	struct stm32_dsi_phy_clk *dsi_phy_clk;
+	struct udevice *clk_dev;
 	int ret;
 
 	dev_dbg(dev, "Initialize DSI physical layer\n");
 
-	/* Enable the regulator */
-	dsi_set(dsi, DSI_WRPCR, WRPCR_REGEN | WRPCR_BGREN);
-	ret = readl_poll_timeout(dsi->base + DSI_WISR, val, val & WISR_RRS,
-				 TIMEOUT_US);
-	if (ret) {
-		dev_dbg(dev, "!TIMEOUT! waiting REGU\n");
+	ret = uclass_get_device_by_name(UCLASS_CLK, "ck_dsi_phy", &clk_dev);
+	if (ret < 0) {
+		dev_err(dev, "Fail to get dsi phy clock device: %d\n", ret);
 		return ret;
 	}
 
-	/* Enable the DSI PLL & wait for its lock */
-	dsi_set(dsi, DSI_WRPCR, WRPCR_PLLEN);
-	ret = readl_poll_timeout(dsi->base + DSI_WISR, val, val & WISR_PLLLS,
-				 TIMEOUT_US);
+	dsi_phy_clk = dev_get_priv(clk_dev);
+
+	ret = clk_set_rate(&dsi_phy_clk->clkp, dsi->lane_mbps * 1000 * 1000);
+	if (ret < 0) {
+		dev_err(dev, "Set dsi phy clock error %d\n", ret);
+		return ret;
+	}
+
+	ret = clk_enable(&dsi_phy_clk->clkp);
 	if (ret) {
-		dev_dbg(dev, "!TIMEOUT! waiting PLL\n");
+		dev_err(dev, "Dsi phy clock enable error %d\n", ret);
 		return ret;
 	}
 
@@ -329,7 +338,6 @@ static int dsi_get_lane_mbps(void *priv_data, struct display_timing *timings,
 	struct stm32_dsi_priv *dsi = dev_get_priv(dev);
 	int idf, ndiv, odf, pll_in_khz, pll_out_khz;
 	int ret, bpp;
-	u32 val;
 
 	/* Update lane capabilities according to hw version */
 	dsi->lane_min_kbps = LANE_MIN_KBPS;
@@ -372,22 +380,8 @@ static int dsi_get_lane_mbps(void *priv_data, struct display_timing *timings,
 	/* Get the adjusted pll out value */
 	pll_out_khz = dsi_pll_get_clkout_khz(pll_in_khz, idf, ndiv, odf);
 
-	/* Set the PLL division factors */
-	dsi_update_bits(dsi, DSI_WRPCR,	WRPCR_NDIV | WRPCR_IDF | WRPCR_ODF,
-			(ndiv << 2) | (idf << 11) | ((ffs(odf) - 1) << 16));
-
-	/* Compute uix4 & set the bit period in high-speed mode */
-	val = 4000000 / pll_out_khz;
-	dsi_update_bits(dsi, DSI_WPCR0, WPCR0_UIX4, val);
-
-	/* Select video mode by resetting DSIM bit */
-	dsi_clear(dsi, DSI_WCFGR, WCFGR_DSIM);
-
-	/* Select the color coding */
-	dsi_update_bits(dsi, DSI_WCFGR, WCFGR_COLMUX,
-			dsi_color_from_mipi(format) << 1);
-
 	*lane_mbps = pll_out_khz / 1000;
+	dsi->lane_mbps = *lane_mbps;
 
 	dev_dbg(dev, "pll_in %ukHz pll_out %ukHz lane_mbps %uMHz\n",
 		pll_in_khz, pll_out_khz, *lane_mbps);
@@ -917,6 +911,11 @@ static int stm32_dsi_bind(struct udevice *dev)
 						 dev_ofnode(dev), NULL);
 		if (ret)
 			return ret;
+	} else {
+		ret = device_bind_driver_to_node(dev, "ck_dsi_phy", "ck_dsi_phy",
+						 dev_ofnode(dev), NULL);
+		if (ret)
+			return ret;
 	}
 
 	ret = device_bind_driver_to_node(dev, "dw_mipi_dsi", "dsihost",
@@ -1210,4 +1209,140 @@ U_BOOT_DRIVER(stm32_txbyte_clk) = {
 	.ops = &stm32_txbyte_clk_ops,
 	.probe = &stm32_txbyte_probe,
 	.priv_auto = sizeof(struct stm32_txbyte_clk),
+};
+
+static int stm32_dsi_phy_clk_enable(struct clk *clk)
+{
+	struct stm32_dsi_phy_clk *dsi_phy_clk = dev_get_priv(clk->dev);
+	struct stm32_dsi_priv *dsi = dev_get_priv(clk->dev->parent);
+	u32 val;
+	int ret;
+
+	if (dsi_phy_clk->enable)
+		return 0;
+
+	/* Enable the regulator */
+	dsi_set(dsi, DSI_WRPCR, WRPCR_REGEN | WRPCR_BGREN);
+	ret = readl_poll_timeout(dsi->base + DSI_WISR, val, val & WISR_RRS,
+				 TIMEOUT_US);
+	if (ret) {
+		dev_dbg(clk->dev, "!TIMEOUT! waiting REGU\n");
+		return ret;
+	}
+
+	/* Enable the DSI PLL & wait for its lock */
+	dsi_set(dsi, DSI_WRPCR, WRPCR_PLLEN);
+	ret = readl_poll_timeout(dsi->base + DSI_WISR, val, val & WISR_PLLLS,
+				 TIMEOUT_US);
+	if (ret) {
+		dev_dbg(clk->dev, "!TIMEOUT! waiting PLL\n");
+		return ret;
+	}
+
+	dsi_phy_clk->enable = true;
+
+	return 0;
+}
+
+static int stm32_dsi_phy_clk_disable(struct clk *clk)
+{
+	struct stm32_dsi_phy_clk *dsi_phy_clk = dev_get_priv(clk->dev);
+	struct stm32_dsi_priv *dsi = dev_get_priv(clk->dev->parent);
+
+	if (!dsi_phy_clk->enable)
+		return 0;
+
+	/* Disable the DSI PLL */
+	dsi_clear(dsi, DSI_WRPCR, WRPCR_PLLEN);
+
+	/* Disable the regulator */
+	dsi_clear(dsi, DSI_WRPCR, WRPCR_REGEN | WRPCR_BGREN);
+
+	dsi_phy_clk->enable = false;
+
+	return 0;
+}
+
+static ulong stm32_dsi_phy_clk_set_rate(struct clk *clk, ulong rate)
+{
+	struct stm32_dsi_phy_clk *dsi_phy_clk = dev_get_priv(clk->dev);
+	struct stm32_dsi_priv *dsi = dev_get_priv(clk->dev->parent);
+	u32 val, ndiv, odf, idf;
+	unsigned int pll_in_khz, pll_out_khz;
+	int ret;
+
+	if (dsi_phy_clk->enable)
+		return 0;
+
+	/* Compute requested pll out, pll out is the half of the lane data rate */
+	pll_out_khz = rate / 1000;
+	pll_in_khz = (unsigned int)clk_get_rate(&dsi->pllref) / 1000;
+
+	/* Compute best pll parameters */
+	idf = 0;
+	ndiv = 0;
+	odf = 0;
+	ret = dsi_pll_get_params(dsi, pll_in_khz, pll_out_khz,
+				 &idf, &ndiv, &odf);
+	if (ret) {
+		dev_err(clk->dev, "Warning dsi_pll_get_params(): bad params\n");
+		return ret;
+	}
+
+	/* Set the PLL division factors */
+	dsi_update_bits(dsi, DSI_WRPCR,	WRPCR_NDIV | WRPCR_IDF | WRPCR_ODF,
+			(ndiv << 2) | (idf << 11) | ((ffs(odf) - 1) << 16));
+
+	/* Compute uix4 & set the bit period in high-speed mode */
+	val = 4000000 / pll_out_khz;
+	dsi_update_bits(dsi, DSI_WPCR0, WPCR0_UIX4, val);
+
+	/* Select video mode by resetting DSIM bit */
+	dsi_clear(dsi, DSI_WCFGR, WCFGR_DSIM);
+
+	/* Select the color coding */
+	dsi_update_bits(dsi, DSI_WCFGR, WCFGR_COLMUX,
+			dsi_color_from_mipi(dsi->format) << 1);
+
+	dsi_phy_clk->clkp.rate = rate;
+	dev_dbg(clk->dev, "rate=%ld\n", rate);
+
+	return rate;
+}
+
+static unsigned long stm32_dsi_phy_clk_get_rate(struct clk *clk)
+{
+	struct stm32_dsi_phy_clk *dsi_phy_clk = dev_get_priv(clk->dev);
+
+	return dsi_phy_clk->clkp.rate;
+}
+
+static struct clk_ops stm32_dsi_phy_clk_ops = {
+	.enable = stm32_dsi_phy_clk_enable,
+	.disable = stm32_dsi_phy_clk_disable,
+	.set_rate = stm32_dsi_phy_clk_set_rate,
+	.get_rate = stm32_dsi_phy_clk_get_rate,
+};
+
+static int stm32_dsi_phy_probe(struct udevice *dev)
+{
+	struct stm32_dsi_phy_clk *priv = dev_get_priv(dev);
+
+	/* prepare clkp to correctly register clock with CCF */
+	priv->clkp.dev = dev;
+	priv->clkp.id = CLK_ID(dev, 0);
+
+	/* Store back pointer to clk from udevice */
+	/* FIXME: This is not allowed...should be allocated by driver model */
+	dev_set_uclass_priv(dev, &priv->clkp);
+
+	return 0;
+}
+
+U_BOOT_DRIVER(stm32_dsi_phy_clk) = {
+	.name = "ck_dsi_phy",
+	.id = UCLASS_CLK,
+	.ops = &stm32_dsi_phy_clk_ops,
+	.probe = &stm32_dsi_phy_probe,
+	.priv_auto = sizeof(struct stm32_dsi_phy_clk),
 };
