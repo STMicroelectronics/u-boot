@@ -10,7 +10,7 @@ STM32MPU projects do not activate "Github issues" feature for the time being. If
 
 ## 2. Pull Requests
 
-STMicrolectronics is happy to receive contributions from the community, based on an initial Contributor License Agreement (CLA) procedure.
+STMicroelectronics is happy to receive contributions from the community, based on an initial Contributor License Agreement (CLA) procedure.
 
 * If you are an individual writing original source code and you are sure **you own the intellectual property**, then you need to sign an Individual CLA (https://cla.st.com).
 * If you work for a company that wants also to allow you to contribute with your work, your company needs to provide a Corporate CLA (https://cla.st.com) mentioning your GitHub account name.
