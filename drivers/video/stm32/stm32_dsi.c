@@ -554,14 +554,29 @@ static const struct dphy_pll_parameter_map dppa_map_phy_141[] = {
 
 static int dsi_phy_141_pll_get_params(struct stm32_dsi_priv *dsi,
 				      int clkin_khz, int clkout_khz,
-				      int *idf, int *ndiv, int *odf)
+				      int *idf, int *ndiv, int *odf,
+				      int *index)
 {
 	int i, n;
 	int delta, best_delta; /* all in khz */
+	unsigned int lane_mbps = 2 * clkout_khz / 1000; /* in Mhz */
 
 	/* Early checks preventing division by 0 & odd results */
 	if (clkin_khz <= 0 || clkout_khz <= 0)
 		return -EINVAL;
+
+	/* find frequency mapping */
+	for (i = 0; i < ARRAY_SIZE(dppa_map_phy_141); i++) {
+		if (lane_mbps < dppa_map_phy_141[i].data_rate)
+			break;
+	}
+
+	/* Save index only if reference exists */
+	if (index)
+		*index = i;
+
+	/* ODF: Output division factor */
+	*odf = 1 << (dppa_map_phy_141[i].odf & GENMASK(1, 0));
 
 	best_delta = 1000000; /* big started value (1000000khz) */
 
@@ -628,7 +643,7 @@ static int dsi_phy_141_init(void *priv_data)
 	dsi_clear(dsi, DSI_PTCR0, PTCR0_TRSEN);
 	mdelay(1);
 
-	ret = clk_set_rate(&txbyte_clk->clkp, dsi->lane_mbps * 1000 * 1000 / 2);
+	ret = clk_set_rate(&txbyte_clk->clkp, dsi->lane_mbps * 1000 * 1000);
 	if (ret < 0) {
 		dev_err(dev, "Set Txbyte clock error %d\n", ret);
 		return ret;
@@ -674,7 +689,7 @@ static int dsi_phy_141_get_lane_mbps(void *priv_data, struct display_timing *tim
 	struct udevice *dev = device->dev;
 	struct stm32_dsi_priv *dsi = dev_get_priv(dev);
 	int idf, ndiv, odf, pll_in_khz, pll_out_khz;
-	int bpp, i;
+	int bpp;
 
 	/* Update lane capabilities according to hw version */
 	dsi->lane_min_kbps = LANE_MIN_PHY_141_KBPS;
@@ -699,25 +714,7 @@ static int dsi_phy_141_get_lane_mbps(void *priv_data, struct display_timing *tim
 		dev_warn(dev, "Warning min phy mbps is used\n");
 	}
 
-	/* find frequency mapping */
-	for (i = 0; i < ARRAY_SIZE(dppa_map_phy_141); i++) {
-		if (dsi->lane_mbps < dppa_map_phy_141[i].data_rate)
-			break;
-	}
-
-	/* ODF: Output division factor */
-	switch (dppa_map_phy_141[i].odf) {
-	case(3):
-		odf = 8; break;
-	case(2):
-		odf = 4; break;
-	case(1):
-		odf = 2; break;
-	default:
-		odf = 1; break;
-	}
-
-	dsi_phy_141_pll_get_params(dsi, pll_in_khz, pll_out_khz, &idf, &ndiv, &odf);
+	dsi_phy_141_pll_get_params(dsi, pll_in_khz, pll_out_khz, &idf, &ndiv, &odf, NULL);
 
 	/* Get the adjusted lane data rate value, lane data rate = 2 * pll output */
 	*lane_mbps = 2 * dsi_pll_get_clkout_khz(pll_in_khz, idf, ndiv, odf) / 1000;
@@ -1099,43 +1096,25 @@ static ulong stm32_txbyte_clk_set_rate(struct clk *clk, ulong rate)
 	struct stm32_dsi_priv *dsi = dev_get_priv(clk->dev->parent);
 	u32 val, ccf, prop, gmp, int1, bias, vco, ndiv, odf, idf;
 	unsigned int pll_in_khz, pll_out_khz, hsfreq;
-	int i;
+	int idx;
 
 	if (txbyte_clk->enable)
 		return 0;
 
 	/* Compute requested pll out, pll out is the half of the lane data rate */
-	pll_out_khz = rate / 1000;
+	pll_out_khz = rate / (1000 * 2);
 	pll_in_khz = (unsigned int)clk_get_rate(&dsi->pllref) / 1000;
 
-	/* find frequency mapping */
-	for (i = 0; i < ARRAY_SIZE(dppa_map_phy_141); i++) {
-		if (dsi->lane_mbps < dppa_map_phy_141[i].data_rate)
-			break;
-	}
-
-	/* ODF: Output division factor */
-	switch (dppa_map_phy_141[i].odf) {
-	case(3):
-		odf = 8; break;
-	case(2):
-		odf = 4; break;
-	case(1):
-		odf = 2; break;
-	default:
-		odf = 1; break;
-	}
-
-	dsi_phy_141_pll_get_params(dsi, pll_in_khz, pll_out_khz, &idf, &ndiv, &odf);
+	dsi_phy_141_pll_get_params(dsi, pll_in_khz, pll_out_khz, &idf, &ndiv, &odf, &idx);
 
 	ccf = ((pll_in_khz / 1000 - 17)) * 4;
-	hsfreq = dppa_map_phy_141[i].hs_freq;
+	hsfreq = dppa_map_phy_141[idx].hs_freq;
 
-	vco = dppa_map_phy_141[i].vco;
+	vco = dppa_map_phy_141[idx].vco;
 	bias = 0x10;
 	int1 = 0x00;
 	gmp = 0x01;
-	prop = dppa_map_phy_141[i].prop;
+	prop = dppa_map_phy_141[idx].prop;
 
 	/* set DLD, HSFR & CCF */
 	val = (hsfreq << 8) | ccf;
@@ -1144,7 +1123,7 @@ static ulong stm32_txbyte_clk_set_rate(struct clk *clk, ulong rate)
 	val = ((ndiv - 2) << 4) | (idf - 1);
 	dsi_write(dsi, DSI_WRPCR0, val);
 
-	val = (dppa_map_phy_141[i].odf << 28) | (vco << 24) | (bias << 16) | (int1 << 8) |
+	val = (dppa_map_phy_141[idx].odf << 28) | (vco << 24) | (bias << 16) | (int1 << 8) |
 	      (gmp << 6) | prop;
 	dsi_write(dsi, DSI_WRPCR1, val);
 
