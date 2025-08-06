@@ -85,7 +85,7 @@ static int stm32_omm_configure(struct udevice *dev)
 	reset_deassert(&plat->reset_ctl);
 
 	if (plat->mux & CR_MUXEN) {
-		if (!plat->req2ack) {
+		if (plat->req2ack) {
 			req2ack = DIV_ROUND_UP(plat->req2ack,
 					       NSEC_PER_SEC / plat->clk_rate_max) - 1;
 			if (req2ack > 256)
