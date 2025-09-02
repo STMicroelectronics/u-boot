@@ -34,6 +34,10 @@
 			/delete-property/default-state;
 		};
 	};
+
+	gpio-keys {
+		/delete-node/button-user;
+	};
 };
 
 &sdmmc2 {
