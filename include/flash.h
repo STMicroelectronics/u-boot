@@ -97,6 +97,7 @@ void flash_protect(int flag, ulong from, ulong to, flash_info_t *info);
 int flash_write(char *src, ulong addr, ulong cnt);
 flash_info_t *addr2info(ulong addr);
 int write_buff(flash_info_t *info, uchar *src, ulong addr, ulong cnt);
+flash_info_t *flash_get_info(ulong base);
 
 /* drivers/mtd/cfi_mtd.c */
 #ifdef CONFIG_FLASH_CFI_MTD
