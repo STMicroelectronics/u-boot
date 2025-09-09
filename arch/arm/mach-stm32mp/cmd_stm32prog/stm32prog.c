@@ -6,6 +6,9 @@
 #include <command.h>
 #include <console.h>
 #include <dfu.h>
+#ifdef CONFIG_MTD_NOR_FLASH
+#include <flash.h>
+#endif
 #include <image.h>
 #include <malloc.h>
 #include <misc.h>
@@ -1859,6 +1862,21 @@ static int part_delete(struct stm32prog_data *data,
 		}
 		break;
 	case STM32PROG_NOR:
+#if defined(CONFIG_ENV_IS_IN_FLASH)
+		if (!strcmp(part->name, "u-boot-env")) {
+			flash_protect(FLAG_PROTECT_CLEAR,
+				      CONFIG_ENV_ADDR,
+				      CONFIG_ENV_ADDR + CONFIG_ENV_SECT_SIZE - 1,
+				      flash_get_info(CONFIG_ENV_ADDR));
+#ifdef CONFIG_ENV_ADDR_REDUND
+			flash_protect(FLAG_PROTECT_CLEAR,
+				      CONFIG_ENV_ADDR_REDUND,
+				      CONFIG_ENV_ADDR_REDUND + CONFIG_ENV_SECT_SIZE - 1,
+				      flash_get_info(CONFIG_ENV_ADDR_REDUND));
+#endif
+		}
+		fallthrough;
+#endif
 	case STM32PROG_NAND:
 	case STM32PROG_SPI_NAND:
 		if (!IS_ENABLED(CONFIG_MTD)) {
