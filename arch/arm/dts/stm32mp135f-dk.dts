@@ -115,7 +115,6 @@
 		backlight = <&panel_backlight>;
 		power-supply = <&scmi_v3v3_sw>;
 		data-mapping = "bgr666";
-		default-on;
 		status = "okay";
 
 		width-mm = <105>;
@@ -227,6 +226,7 @@
 	phy-handle = <&phy0_eth1>;
 	nvmem-cells = <&ethernet_mac1_address>;
 	nvmem-cell-names = "mac-address";
+	st,phy-wol;
 
 	mdio {
 		#address-cells = <1>;
@@ -239,7 +239,6 @@
 			reset-assert-us = <1000>;
 			reset-deassert-us = <30000>;
 			reg = <0>;
-			wakeup-source;
 		};
 	};
 };
@@ -424,7 +423,6 @@
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&ltdc_pins_a>;
 	pinctrl-1 = <&ltdc_sleep_pins_a>;
-	default-on;
 	status = "okay";
 
 	port {
@@ -496,6 +494,7 @@
 	pinctrl-1 = <&sdmmc2_b4_od_pins_a &sdmmc2_clk_pins_a>;
 	pinctrl-2 = <&sdmmc2_b4_sleep_pins_a>;
 	non-removable;
+	cap-power-off-card;
 	cap-sdio-irq;
 	st,neg-edge;
 	bus-width = <4>;

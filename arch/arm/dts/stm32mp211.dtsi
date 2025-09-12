@@ -22,10 +22,8 @@
 			device_type = "cpu";
 			reg = <0>;
 			enable-method = "psci";
-			clocks = <&scmi_perf 0>;
-			clock-names = "cpu";
-			power-domains = <&cpu0_pd>;
-			power-domain-names = "psci";
+			power-domains = <&cpu0_pd>, <&scmi_perf 0>;
+			power-domain-names = "psci", "perf";
 			#cooling-cells = <2>;
 		};
 
@@ -134,7 +132,7 @@
 
 			scmi_perf: protocol@13 {
 				reg = <0x13>;
-				#clock-cells = <1>;
+				#power-domain-cells = <1>;
 			};
 
 			scmi_clk: protocol@14 {
@@ -257,9 +255,10 @@
 	usb2_phy1: usb2-phy1 {
 		compatible      = "st,stm32mp21-usb2phy";
 		#phy-cells      = <0>;
-		#clock-cells    = <0>;
+		#clock-cells    = <1>;
 		st,syscfg       = <&syscfg 0x2400>;
 		clocks          = <&rcc CK_KER_USB2PHY1>;
+		clock-names     = "core";
 		resets          = <&rcc USB2PHY1_R>;
 		status          = "disabled";
 	};
@@ -267,9 +266,10 @@
 	usb2_phy2: usb2-phy2 {
 		compatible      = "st,stm32mp21-usb2phy";
 		#phy-cells      = <0>;
-		#clock-cells    = <0>;
+		#clock-cells    = <1>;
 		st,syscfg       = <&syscfg 0x2800>;
 		clocks          = <&rcc CK_KER_USB2PHY2EN>;
+		clock-names     = "core";
 		resets          = <&rcc USB2PHY2_R>;
 		interrupts-extended = <&exti1 44 IRQ_TYPE_EDGE_RISING>;
 		wakeup-source;
@@ -872,6 +872,7 @@
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 41>;
 				power-domains = <&d1_pd>;
+				i2c-analog-filter;
 				status = "disabled";
 			};
 
@@ -889,6 +890,7 @@
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 42>;
 				power-domains = <&d1_pd>;
+				i2c-analog-filter;
 				status = "disabled";
 			};
 
@@ -1686,6 +1688,7 @@
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 43>;
 				power-domains = <&d1_pd>;
+				i2c-analog-filter;
 				status = "disabled";
 			};
 
@@ -1882,7 +1885,7 @@
 				usbh_ohci: usb@482e0000 {
 					compatible = "generic-ohci";
 					reg = <0x482e0000 0x1000>;
-					clocks = <&usb2_phy1>, <&rcc CK_BUS_USBHOHCI>;
+					clocks = <&usb2_phy1 1>, <&rcc CK_BUS_USBHOHCI>;
 					resets = <&rcc USBH_R>;
 					interrupts = <GIC_SPI 127 IRQ_TYPE_LEVEL_HIGH>;
 					phys = <&usb2_phy1>;
@@ -1893,7 +1896,7 @@
 				usbh_ehci: usb@482f0000 {
 					compatible = "generic-ehci";
 					reg = <0x482f0000 0x1000>;
-					clocks = <&usb2_phy1>, <&rcc CK_BUS_USBHEHCI>;
+					clocks = <&usb2_phy1 0>, <&rcc CK_BUS_USBHEHCI>;
 					resets = <&rcc USBH_R>;
 					interrupts = <GIC_SPI 126 IRQ_TYPE_LEVEL_HIGH>;
 					companion = <&usbh_ohci>;
@@ -1906,7 +1909,7 @@
 			usbotg_hs: usb@48300000 {
 				compatible = "st,stm32mp21-hsotg", "snps,dwc2";
 				reg = <0x48300000 0x0 0x10000>;
-				clocks = <&rcc CK_BUS_OTG>, <&usb2_phy2>;
+				clocks = <&rcc CK_BUS_OTG>, <&usb2_phy2 0>;
 				clock-names = "otg", "utmi";
 				resets = <&rcc OTG_R>;
 				reset-names = "dwc2";
@@ -2185,7 +2188,7 @@
 		};
 
 		syscfg: syscon@44230000 {
-			compatible = "st,stm32mp25-syscfg", "syscon";
+			compatible = "syscon";
 			reg = <0x44230000 0x0 0x10000>;
 		};
 

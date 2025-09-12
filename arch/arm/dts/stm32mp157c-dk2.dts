@@ -56,7 +56,6 @@
 		reg = <0>;
 		reset-gpios = <&gpioe 4 GPIO_ACTIVE_LOW>;
 		power-supply = <&v3v3>;
-		default-on;
 		status = "okay";
 
 		port {
@@ -91,7 +90,6 @@
 };
 
 &ltdc {
-	default-on;
 	status = "okay";
 
 	port {
@@ -118,6 +116,7 @@
 	pinctrl-1 = <&sdmmc2_b4_od_pins_a>;
 	pinctrl-2 = <&sdmmc2_b4_sleep_pins_a>;
 	non-removable;
+	cap-power-off-card;
 	cap-sdio-irq;
 	st,neg-edge;
 	bus-width = <4>;

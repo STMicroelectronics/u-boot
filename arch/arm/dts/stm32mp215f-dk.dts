@@ -124,7 +124,6 @@
 		compatible = "gpio-backlight";
 		gpios = <&gpiof 9 GPIO_ACTIVE_HIGH>;
 		default-on;
-		default-brightness-level = <1>;
 		status = "okay";
 	};
 
@@ -134,7 +133,6 @@
 		backlight = <&panel_backlight>;
 		power-supply = <&scmi_v3v3>;
 		data-mapping = "bgr666";
-		default-on;
 		status = "okay";
 
 		width-mm = <105>;
@@ -400,7 +398,6 @@
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&ltdc_pins_a>;
 	pinctrl-1 = <&ltdc_sleep_pins_a>;
-	default-on;
 	status = "okay";
 
 	port {
@@ -544,6 +541,7 @@
 	pinctrl-1 = <&sdmmc2_b4_od_pins_a>;
 	pinctrl-2 = <&sdmmc2_b4_sleep_pins_a>;
 	st,neg-edge;
+	cap-power-off-card;
 	cap-sdio-irq;
 	bus-width = <4>;
 	vmmc-supply = <&scmi_v3v3>;

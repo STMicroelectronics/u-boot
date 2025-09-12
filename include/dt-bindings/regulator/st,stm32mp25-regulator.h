@@ -1,6 +1,6 @@
-/* SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause) */
+/* SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause) */
 /*
- * Copyright (C) 2023, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2023-2025, STMicroelectronics - All Rights Reserved
  */
 
 #ifndef __DT_BINDINGS_REGULATOR_ST_STM32MP25_REGULATOR_H

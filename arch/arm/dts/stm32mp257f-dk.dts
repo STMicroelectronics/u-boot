@@ -144,7 +144,6 @@
 		enable-gpios = <&gpioi 4 GPIO_ACTIVE_HIGH>;
 		backlight = <&panel_lvds_backlight>;
 		power-supply = <&scmi_v3v3>;
-		default-on;
 		status = "okay";
 
 		width-mm = <156>;
@@ -442,6 +441,14 @@
 	};
 };
 
+&i3c4 {
+	pinctrl-names = "default", "init", "sleep";
+	pinctrl-0 = <&i3c4_pins_b>;
+	pinctrl-1 = <&i3c4_init_pins_b>;
+	pinctrl-2 = <&i3c4_sleep_pins_b>;
+	status = "disabled";
+};
+
 &ipcc1 {
 	status = "okay";
 };
@@ -460,7 +467,6 @@
 };
 
 &ltdc {
-	default-on;
 	status = "okay";
 
 	port {
@@ -480,7 +486,6 @@
 };
 
 &lvds {
-	default-on;
 	vdd-supply =  <&scmi_vddcore>;
 	vdda18-supply = <&scmi_v1v8>;
 	status = "okay";
@@ -737,6 +742,7 @@
 	bus-width = <4>;
 	vmmc-supply = <&scmi_v3v3>;
 	mmc-pwrseq = <&wifi_pwrseq>;
+	cap-power-off-card;
 	cap-sdio-irq;
 	#address-cells = <1>;
 	#size-cells = <0>;

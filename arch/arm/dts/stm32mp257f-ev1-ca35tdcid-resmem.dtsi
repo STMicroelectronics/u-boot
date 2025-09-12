@@ -23,17 +23,17 @@
 		};
 
 		hpdma1_lli: hpdma1-lli@a020000 {
-			reg = <0x0 0xa020000 0x0 0xf0f0>;
+			reg = <0x0 0xa020000 0x0 0x10000>;
 			no-map;
 		};
 
-		hpdma2_lli: hpdma2-lli@a02f0f0 {
-			reg = <0x0 0xa02f0f0 0x0 0xf0f0>;
+		hpdma2_lli: hpdma2-lli@a030000 {
+			reg = <0x0 0xa030000 0x0 0xe000>;
 			no-map;
 		};
 
-		hpdma3_lli: hpdma3-lli@a03e1e0 {
-			reg = <0x0 0xa03e1e0 0x0 0x1e20>;
+		hpdma3_lli: hpdma3-lli@a03e000 {
+			reg = <0x0 0xa03e000 0x0 0x2000>;
 			no-map;
 		};
 

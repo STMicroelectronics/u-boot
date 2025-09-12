@@ -21,8 +21,8 @@
 			compatible = "arm,cortex-a7";
 			device_type = "cpu";
 			reg = <0>;
-			clocks = <&scmi_perf 0>;
-			clock-names = "cpu";
+			power-domains = <&scmi_perf 0>;
+			power-domain-names = "perf";
 			#cooling-cells = <2>;
 		};
 	};
@@ -58,7 +58,7 @@
 
 			scmi_perf: protocol@13 {
 				reg = <0x13>;
-				#clock-cells = <1>;
+				#power-domain-cells = <1>;
 			};
 
 			scmi_clk: protocol@14 {
@@ -1792,11 +1792,13 @@
 					      "mac-clk-tx",
 					      "mac-clk-rx",
 					      "ethstp",
+					      "ptp_ref",
 					      "eth-ck";
 				clocks = <&rcc ETH1MAC>,
 					 <&rcc ETH1TX>,
 					 <&rcc ETH1RX>,
 					 <&rcc ETH1STP>,
+					 <&rcc ETH1PTP_K>,
 					 <&rcc ETH1CK_K>;
 				st,syscon = <&syscfg 0x4 0xff0000>;
 				snps,mixed-burst;

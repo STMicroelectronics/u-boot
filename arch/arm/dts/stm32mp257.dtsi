@@ -10,10 +10,11 @@
 		#address-cells  = <1>;
 		#size-cells     = <1>;
 		compatible = "st,stm32-deip";
-		clock-names = "ethsw-bus-clk", "ethsw-clk",
+		clock-names = "ethsw-bus-clk", "ethsw-clk", "ethsw-ref-clk",
 			      "ethswacmcfg-bus-clk", "ethswacmmsg-bus-clk";
 		clocks = <&rcc CK_BUS_ETHSW>,
 			 <&rcc CK_KER_ETHSW>,
+			 <&rcc CK_KER_ETHSWREF>,
 			 <&rcc CK_BUS_ETHSWACMCFG>,
 			 <&rcc CK_BUS_ETHSWACMMSG>;
 		st,syscon = <&syscfg 0x3800>;
