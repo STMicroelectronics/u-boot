@@ -173,7 +173,8 @@
 		resets = <&rcc GPU_R>;
 		clock-names = "bus", "core";
 		clocks = <&rcc CK_BUS_GPU>, <&rcc CK_KER_GPU>;
-		power-domains = <&scmi_devpd PD_SCMI_GPU>, <&d1_pd>;
+		power-domains = <&scmi_perf 1>, <&scmi_devpd PD_SCMI_GPU>, <&d1_pd>;
+		power-domain-names = "perf", "scmi_devpd", "d1_pd";
 		access-controllers = <&rifsc 79>;
 		status = "disabled";
 

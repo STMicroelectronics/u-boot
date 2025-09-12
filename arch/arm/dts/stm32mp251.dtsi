@@ -91,8 +91,6 @@
 
 	cs_replicator: replicator {
 		compatible = "arm,coresight-static-replicator";
-		clocks = <&scmi_clk CK_SCMI_SYSATB>;
-		clock-names = "apb_pclk";
 		status = "disabled";
 
 		in-ports {
@@ -125,6 +123,7 @@
 
 	firmware {
 		optee: optee {
+			bootph-all;
 			compatible = "linaro,optee-tz";
 			method = "smc";
 			interrupt-parent = <&intc>;
@@ -134,6 +133,7 @@
 		};
 
 		scmi: scmi {
+			bootph-all;
 			compatible = "linaro,scmi-optee";
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -150,6 +150,7 @@
 			};
 
 			scmi_clk: protocol@14 {
+				bootph-all;
 				reg = <0x14>;
 				#clock-cells = <1>;
 			};
@@ -224,6 +225,7 @@
 	};
 
 	psci {
+		bootph-all;
 		compatible = "arm,psci-1.0";
 		method = "smc";
 
@@ -321,6 +323,7 @@
 	};
 
 	soc@0 {
+		bootph-all;
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -461,6 +464,7 @@
 		};
 
 		rifsc: bus@42080000 {
+			bootph-all;
 			compatible = "st,stm32mp25-rifsc", "simple-bus";
 			reg = <0x42080000 0x1000>;
 			#address-cells = <1>;
@@ -2175,6 +2179,7 @@
 			};
 
 			ltdc: display-controller@48010000 {
+				bootph-all;
 				compatible = "st,stm32mp25-ltdc";
 				reg = <0x48010000 0x400>;
 				st,syscon = <&syscfg>;
@@ -2423,6 +2428,7 @@
 				reset-names = "pcie";
 				phys = <&combophy PHY_TYPE_PCIE>;
 				phy-names = "pcie-phy";
+				msi-map = <0x0 &v2m0 0x0 0x1>;
 				access-controllers = <&rifsc 68>;
 				power-domains = <&d1_pd>;
 				status = "disabled";
@@ -2485,7 +2491,6 @@
 			reg = <0x420f0000 0x1000>;
 			clocks = <&scmi_clk CK_SCMI_ICN_LS_MCU>;
 			st,mem-map = <0xa000000 0x20000>;
-			#access-controller-cells = <1>;
 		};
 
 		risab2: risab@42100000 {
@@ -2493,7 +2498,6 @@
 			reg = <0x42100000 0x1000>;
 			clocks = <&scmi_clk CK_SCMI_ICN_LS_MCU>;
 			st,mem-map = <0xa020000 0x20000>;
-			#access-controller-cells = <1>;
 		};
 
 		risab3: risab@42110000 {
@@ -2501,7 +2505,6 @@
 			reg = <0x42110000 0x1000>;
 			clocks = <&scmi_clk CK_SCMI_ICN_LS_MCU>;
 			st,mem-map = <0xa040000 0x20000>;
-			#access-controller-cells = <1>;
 		};
 
 		risab4: risab@42120000 {
@@ -2509,7 +2512,6 @@
 			reg = <0x42120000 0x1000>;
 			clocks = <&scmi_clk CK_SCMI_ICN_LS_MCU>;
 			st,mem-map = <0xa060000 0x20000>;
-			#access-controller-cells = <1>;
 		};
 
 		risab5: risab@42130000 {
@@ -2517,7 +2519,6 @@
 			reg = <0x42130000 0x1000>;
 			clocks = <&scmi_clk CK_SCMI_ICN_LS_MCU>;
 			st,mem-map = <0xa080000 0x20000>;
-			#access-controller-cells = <1>;
 		};
 
 		risab6: risab@42140000 {
@@ -2525,11 +2526,11 @@
 			reg = <0x42140000 0x1000>;
 			clocks = <&scmi_clk CK_SCMI_ICN_LS_MCU>;
 			st,mem-map = <0xa0a0000 0x20000>;
-			#access-controller-cells = <1>;
 			status = "disabled";
 		};
 
 		bsec: efuse@44000000 {
+			bootph-all;
 			compatible = "st,stm32mp25-bsec";
 			reg = <0x44000000 0x1000>;
 			#address-cells = <1>;
@@ -2565,10 +2566,12 @@
 			compatible = "st,stm32mp-hdp";
 			reg = <0x44090000 0x400>;
 			clocks = <&rcc CK_BUS_HDP>;
+			access-controllers = <&dbg_bus 1>, <&rifsc 57>;
 			status = "disabled";
 		};
 
 		rcc: clock-controller@44200000 {
+			bootph-all;
 			compatible = "st,stm32mp25-rcc";
 			reg = <0x44200000 0x10000>;
 			#clock-cells = <1>;
@@ -2761,12 +2764,14 @@
 		};
 
 		syscfg: syscon@44230000 {
+			bootph-all;
 			compatible = "st,stm32mp25-syscfg", "syscon";
 			reg = <0x44230000 0x10000>;
 			#clock-cells = <1>;
 		};
 
 		pinctrl: pinctrl@44240000 {
+			bootph-all;
 			#address-cells = <1>;
 			#size-cells = <1>;
 			compatible = "st,stm32mp257-pinctrl";
@@ -2783,6 +2788,7 @@
 				<&exti2 12 0>, <&exti2 13 0>, <&exti2 14 0>, <&exti2 15 0>;
 
 			gpioa: gpio@44240000 {
+				bootph-all;
 				gpio-controller;
 				#gpio-cells = <2>;
 				interrupt-controller;
@@ -2794,6 +2800,7 @@
 			};
 
 			gpiob: gpio@44250000 {
+				bootph-all;
 				gpio-controller;
 				#gpio-cells = <2>;
 				interrupt-controller;
@@ -2805,6 +2812,7 @@
 			};
 
 			gpioc: gpio@44260000 {
+				bootph-all;
 				gpio-controller;
 				#gpio-cells = <2>;
 				interrupt-controller;
@@ -2816,6 +2824,7 @@
 			};
 
 			gpiod: gpio@44270000 {
+				bootph-all;
 				gpio-controller;
 				#gpio-cells = <2>;
 				interrupt-controller;
@@ -2827,6 +2836,7 @@
 			};
 
 			gpioe: gpio@44280000 {
+				bootph-all;
 				gpio-controller;
 				#gpio-cells = <2>;
 				interrupt-controller;
@@ -2838,6 +2848,7 @@
 			};
 
 			gpiof: gpio@44290000 {
+				bootph-all;
 				gpio-controller;
 				#gpio-cells = <2>;
 				interrupt-controller;
@@ -2849,6 +2860,7 @@
 			};
 
 			gpiog: gpio@442a0000 {
+				bootph-all;
 				gpio-controller;
 				#gpio-cells = <2>;
 				interrupt-controller;
@@ -2860,6 +2872,7 @@
 			};
 
 			gpioh: gpio@442b0000 {
+				bootph-all;
 				gpio-controller;
 				#gpio-cells = <2>;
 				interrupt-controller;
@@ -2871,6 +2884,7 @@
 			};
 
 			gpioi: gpio@442c0000 {
+				bootph-all;
 				gpio-controller;
 				#gpio-cells = <2>;
 				interrupt-controller;
@@ -2882,6 +2896,7 @@
 			};
 
 			gpioj: gpio@442d0000 {
+				bootph-all;
 				gpio-controller;
 				#gpio-cells = <2>;
 				interrupt-controller;
@@ -2893,6 +2908,7 @@
 			};
 
 			gpiok: gpio@442e0000 {
+				bootph-all;
 				gpio-controller;
 				#gpio-cells = <2>;
 				interrupt-controller;
@@ -2956,6 +2972,7 @@
 		};
 
 		pinctrl_z: pinctrl@46200000 {
+			bootph-all;
 			#address-cells = <1>;
 			#size-cells = <1>;
 			compatible = "st,stm32mp257-z-pinctrl";
@@ -2972,6 +2989,7 @@
 				<&exti2 12 0>, <&exti2 13 0>, <&exti2 14 0>, <&exti2 15 0>;
 
 			gpioz: gpio@46200000 {
+				bootph-all;
 				gpio-controller;
 				#gpio-cells = <2>;
 				interrupt-controller;
@@ -3129,225 +3147,246 @@
 			status = "disabled";
 		};
 
-		cs_funnel: funnel@4a020000 {
-			compatible = "arm,coresight-dynamic-funnel", "arm,primecell";
-			reg = <0x4a020000 0x1000>;
+		dbg_bus: bus@4a000000 {
+			compatible = "st,stm32mp251-dbg-bus";
+			reg = <0x4a000000 0x800000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
 			clocks = <&scmi_clk CK_SCMI_SYSATB>;
-			clock-names = "apb_pclk";
+			ranges;
+			#access-controller-cells = <1>;
 			status = "disabled";
 
-			in-ports {
+			cs_funnel: funnel@4a020000 {
+				compatible = "arm,coresight-dynamic-funnel", "arm,primecell";
+				reg = <0x4a020000 0x1000>;
+				clocks = <&scmi_clk CK_SCMI_SYSATB>;
+				clock-names = "apb_pclk";
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
+
+				in-ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+						funnel_in_port0: endpoint {
+							remote-endpoint = <&etm0_out_port>;
+						};
+					};
+
+					port@2 {
+						reg = <2>;
+						funnel_in_port2: endpoint {
+							remote-endpoint = <&stm_out_port>;
+						};
+					};
+				};
+
+				out-ports {
+					port {
+						funnel_out_port: endpoint {
+							remote-endpoint = <&etf_in_port>;
+						};
+					};
+				};
+			};
+
+			cs_etf: etf@4a030000 {
+				compatible = "arm,coresight-tmc", "arm,primecell";
+				reg = <0x4a030000 0x1000>;
+				clocks = <&scmi_clk CK_SCMI_SYSATB>;
+				clock-names = "apb_pclk";
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
+
+				in-ports {
+					port {
+						etf_in_port: endpoint {
+							remote-endpoint = <&funnel_out_port>;
+						};
+					};
+				};
+
+				out-ports {
+					port {
+						etf_out_port: endpoint {
+							remote-endpoint = <&replicator_in_port>;
+						};
+					};
+				};
+			};
+
+			cs_etr: etr@4a040000 {
+				compatible = "arm,coresight-tmc", "arm,primecell";
+				reg = <0x4a040000 0x1000>;
+				clocks = <&scmi_clk CK_SCMI_BUS_ETR>, <&scmi_clk CK_SCMI_KER_ETR>;
+				clock-names = "apb_pclk", "atclk";
+				arm,max-burst-size = <3>;
+				arm,scatter-gather;
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
+
+				in-ports {
+					port {
+						etr_in_port: endpoint {
+							remote-endpoint = <&replicator_out_port0>;
+						};
+					};
+				};
+			};
+
+			cs_tpiu: tpiu@4a050000 {
+				compatible = "arm,coresight-tpiu", "arm,primecell";
+				reg = <0x4a050000 0x1000>;
+				clocks = <&scmi_clk CK_SCMI_SYSDBG>, <&scmi_clk CK_SCMI_TPIU>;
+				clock-names = "apb_pclk", "atclk";
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
+
+				in-ports {
+					port {
+						tpiu_in_port: endpoint {
+							remote-endpoint = <&replicator_out_port1>;
+						};
+					};
+				};
+			};
+
+			cs_stm: stm@4a080000 {
+				compatible = "arm,coresight-stm", "arm,primecell";
+				reg = <0x4a080000 0x1000>,
+				      <0x4a800000 0x400000>;
+				reg-names = "stm-base", "stm-stimulus-base";
+				clocks = <&scmi_clk CK_SCMI_BUS_STM>, <&scmi_clk CK_SCMI_KER_STM>;
+				clock-names = "apb_pclk", "atclk";
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
+
+				out-ports {
+					port {
+						stm_out_port: endpoint {
+							remote-endpoint = <&funnel_in_port2>;
+						};
+					};
+				};
+			};
+
+			cs_cti0: cti@4a090000 {
+				compatible = "arm,coresight-cti", "arm,primecell";
+				reg = <0x4a090000 0x1000>;
+				clocks = <&scmi_clk CK_SCMI_SYSDBG>;
+				clock-names = "apb_pclk";
 				#address-cells = <1>;
 				#size-cells = <0>;
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
 
-				port@0 {
+				trig-conns@0 {
 					reg = <0>;
-					funnel_in_port0: endpoint {
-						remote-endpoint = <&etm0_out_port>;
-					};
+					arm,trig-in-sigs = <0 1>;
+					arm,trig-in-types = <SNK_FULL
+							     SNK_ACQCOMP>;
+					arm,trig-out-sigs = <0 1>;
+					arm,trig-out-types = <SNK_FLUSHIN
+							      SNK_TRIGIN>;
+					arm,cs-dev-assoc = <&cs_etr>;
 				};
 
-				port@2 {
+				trig-conns@1 {
+					reg = <1>;
+					arm,trig-in-sigs = <2 3>;
+					arm,trig-in-types = <SNK_FULL
+							     SNK_ACQCOMP>;
+					arm,trig-out-sigs = <2 3>;
+					arm,trig-out-types = <SNK_FLUSHIN
+							      SNK_TRIGIN>;
+					arm,cs-dev-assoc = <&cs_etf>;
+				};
+
+				trig-conns@2 {
 					reg = <2>;
-					funnel_in_port2: endpoint {
-						remote-endpoint = <&stm_out_port>;
-					};
+					arm,trig-out-sigs = <4 5>;
+					arm,trig-out-types = <SNK_FLUSHIN
+							      SNK_TRIGIN>;
+					arm,cs-dev-assoc = <&cs_tpiu>;
+				};
+
+				trig-conns@3 {
+					reg = <3>;
+					arm,trig-in-sigs = <4 5 6 7>;
+					arm,trig-in-types = <STM_TOUT_SPTE
+							     STM_TOUT_SW
+							     STM_TOUT_HETE
+							     STM_ASYNCOUT>;
+					arm,cs-dev-assoc = <&cs_stm>;
 				};
 			};
 
-			out-ports {
-				port {
-					funnel_out_port: endpoint {
-						remote-endpoint = <&etf_in_port>;
-					};
+			cs_cti1: cti@4a0a0000 {
+				compatible = "arm,coresight-cti", "arm,primecell";
+				reg = <0x4a0a0000 0x1000>;
+				clocks = <&scmi_clk CK_SCMI_SYSDBG>;
+				clock-names = "apb_pclk";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
+
+				trig-conns@0 {
+					reg = <0>;
+					arm,trig-in-sigs = <0>;
+					arm,trig-in-types = <GEN_IO>;
+					arm,trig-out-sigs = <0>;
+					arm,trig-out-types = <GEN_IO>;
+					arm,trig-conn-name = "dbtrgio";
+				};
+
+				trig-conns@1 {
+					reg = <1>;
+					arm,trig-out-sigs = <1 2>;
+					arm,trig-out-types = <STM_HWEVENT
+							      STM_HWEVENT>;
+					arm,cs-dev-assoc = <&cs_stm>;
 				};
 			};
-		};
 
-		cs_etf: etf@4a030000 {
-			compatible = "arm,coresight-tmc", "arm,primecell";
-			reg = <0x4a030000 0x1000>;
-			clocks = <&scmi_clk CK_SCMI_SYSATB>;
-			clock-names = "apb_pclk";
-			status = "disabled";
-
-			in-ports {
-				port {
-					etf_in_port: endpoint {
-						remote-endpoint = <&funnel_out_port>;
-					};
-				};
+			cs_cpu_debug0: cpu-debug@4a210000 {
+				compatible = "arm,coresight-cpu-debug", "arm,primecell";
+				reg = <0x4a210000 0x1000>;
+				clocks = <&scmi_clk CK_SCMI_SYSDBG>;
+				clock-names = "apb_pclk";
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
 			};
 
-			out-ports {
-				port {
-					etf_out_port: endpoint {
-						remote-endpoint = <&replicator_in_port>;
-					};
-				};
-			};
-		};
-
-		cs_etr: etr@4a040000 {
-			compatible = "arm,coresight-tmc", "arm,primecell";
-			reg = <0x4a040000 0x1000>;
-			clocks = <&scmi_clk CK_SCMI_BUS_ETR>, <&scmi_clk CK_SCMI_KER_ETR>;
-			clock-names = "apb_pclk", "atclk";
-			arm,max-burst-size = <3>;
-			arm,scatter-gather;
-			status = "disabled";
-
-			in-ports {
-				port {
-					etr_in_port: endpoint {
-						remote-endpoint = <&replicator_out_port0>;
-					};
-				};
-			};
-		};
-
-		cs_tpiu: tpiu@4a050000 {
-			compatible = "arm,coresight-tpiu", "arm,primecell";
-			reg = <0x4a050000 0x1000>;
-			clocks = <&scmi_clk CK_SCMI_SYSDBG>, <&scmi_clk CK_SCMI_TPIU>;
-			clock-names = "apb_pclk", "atclk";
-			status = "disabled";
-
-			in-ports {
-				port {
-					tpiu_in_port: endpoint {
-						remote-endpoint = <&replicator_out_port1>;
-					};
-				};
-			};
-		};
-
-		cs_stm: stm@4a080000 {
-			compatible = "arm,coresight-stm", "arm,primecell";
-			reg = <0x4a080000 0x1000>,
-			      <0x4a800000 0x400000>;
-			reg-names = "stm-base", "stm-stimulus-base";
-			clocks = <&scmi_clk CK_SCMI_BUS_STM>, <&scmi_clk CK_SCMI_KER_STM>;
-			clock-names = "apb_pclk", "atclk";
-			status = "disabled";
-
-			out-ports {
-				port {
-					stm_out_port: endpoint {
-						remote-endpoint = <&funnel_in_port2>;
-					};
-				};
-			};
-		};
-
-		cs_cti0: cti@4a090000 {
-			compatible = "arm,coresight-cti", "arm,primecell";
-			reg = <0x4a090000 0x1000>;
-			clocks = <&scmi_clk CK_SCMI_SYSDBG>;
-			clock-names = "apb_pclk";
-			#address-cells = <1>;
-			#size-cells = <0>;
-			status = "disabled";
-
-			trig-conns@0 {
-				reg = <0>;
-				arm,trig-in-sigs = <0 1>;
-				arm,trig-in-types = <SNK_FULL
-						     SNK_ACQCOMP>;
-				arm,trig-out-sigs = <0 1>;
-				arm,trig-out-types = <SNK_FLUSHIN
-						      SNK_TRIGIN>;
-				arm,cs-dev-assoc = <&cs_etr>;
+			cs_cti_cpu0: cti@4a220000 {
+				compatible = "arm,coresight-cti-v8-arch", "arm,coresight-cti",
+					     "arm,primecell";
+				reg = <0x4a220000 0x1000>;
+				clocks = <&scmi_clk CK_SCMI_SYSDBG>;
+				clock-names = "apb_pclk";
+				cpu = <&cpu0>;
+				arm,cs-dev-assoc = <&cs_etm0>;
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
 			};
 
-			trig-conns@1 {
-				reg = <1>;
-				arm,trig-in-sigs = <2 3>;
-				arm,trig-in-types = <SNK_FULL
-						     SNK_ACQCOMP>;
-				arm,trig-out-sigs = <2 3>;
-				arm,trig-out-types = <SNK_FLUSHIN
-						      SNK_TRIGIN>;
-				arm,cs-dev-assoc = <&cs_etf>;
-			};
+			cs_etm0: etm@4a240000 {
+				compatible = "arm,coresight-etm4x", "arm,primecell";
+				reg = <0x4a240000 0x1000>;
+				clocks = <&scmi_clk CK_SCMI_SYSDBG>, <&scmi_clk CK_SCMI_SYSATB>;
+				clock-names = "apb_pclk", "atclk";
+				cpu = <&cpu0>;
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
 
-			trig-conns@2 {
-				reg = <2>;
-				arm,trig-out-sigs = <4 5>;
-				arm,trig-out-types = <SNK_FLUSHIN
-						      SNK_TRIGIN>;
-				arm,cs-dev-assoc = <&cs_tpiu>;
-			};
-
-			trig-conns@3 {
-				reg = <3>;
-				arm,trig-in-sigs = <4 5 6 7>;
-				arm,trig-in-types = <STM_TOUT_SPTE
-						     STM_TOUT_SW
-						     STM_TOUT_HETE
-						     STM_ASYNCOUT>;
-				arm,cs-dev-assoc = <&cs_stm>;
-			};
-		};
-
-		cs_cti1: cti@4a0a0000 {
-			compatible = "arm,coresight-cti", "arm,primecell";
-			reg = <0x4a0a0000 0x1000>;
-			clocks = <&scmi_clk CK_SCMI_SYSDBG>;
-			clock-names = "apb_pclk";
-			#address-cells = <1>;
-			#size-cells = <0>;
-			status = "disabled";
-
-			trig-conns@0 {
-				reg = <0>;
-				arm,trig-in-sigs = <0>;
-				arm,trig-in-types = <GEN_IO>;
-				arm,trig-out-sigs = <0>;
-				arm,trig-out-types = <GEN_IO>;
-				arm,trig-conn-name = "dbtrgio";
-			};
-
-			trig-conns@1 {
-				reg = <1>;
-				arm,trig-out-sigs = <1 2>;
-				arm,trig-out-types = <STM_HWEVENT
-						      STM_HWEVENT>;
-				arm,cs-dev-assoc = <&cs_stm>;
-			};
-		};
-
-		cs_cpu_debug0: cpu-debug@4a210000 {
-			compatible = "arm,coresight-cpu-debug", "arm,primecell";
-			reg = <0x4a210000 0x1000>;
-			clocks = <&scmi_clk CK_SCMI_SYSDBG>;
-			clock-names = "apb_pclk";
-			status = "disabled";
-		};
-
-		cs_cti_cpu0: cti@4a220000 {
-			compatible = "arm,coresight-cti-v8-arch", "arm,coresight-cti",
-				     "arm,primecell";
-			reg = <0x4a220000 0x1000>;
-			clocks = <&scmi_clk CK_SCMI_SYSDBG>;
-			clock-names = "apb_pclk";
-			cpu = <&cpu0>;
-			arm,cs-dev-assoc = <&cs_etm0>;
-			status = "disabled";
-		};
-
-		cs_etm0: etm@4a240000 {
-			compatible = "arm,coresight-etm4x", "arm,primecell";
-			reg = <0x4a240000 0x1000>;
-			clocks = <&scmi_clk CK_SCMI_SYSDBG>, <&scmi_clk CK_SCMI_SYSATB>;
-			clock-names = "apb_pclk", "atclk";
-			cpu = <&cpu0>;
-			status = "disabled";
-
-			out-ports {
-				port {
-					etm0_out_port: endpoint {
-						remote-endpoint = <&funnel_in_port0>;
+				out-ports {
+					port {
+						etm0_out_port: endpoint {
+							remote-endpoint = <&funnel_in_port0>;
+						};
 					};
 				};
 			};

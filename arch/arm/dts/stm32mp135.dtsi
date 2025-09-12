@@ -19,6 +19,7 @@
 	};
 
 	ltdc: display-controller@5a001000 {
+		bootph-some-ram;
 		compatible = "st,stm32-ltdc";
 		reg = <0x5a001000 0x400>;
 		interrupts = <GIC_SPI 88 IRQ_TYPE_LEVEL_HIGH>,

@@ -14,7 +14,7 @@
 #include "stm32mp21xf.dtsi"
 #include "stm32mp21-pinctrl.dtsi"
 #include "stm32mp21xxan-pinctrl.dtsi"
-#include "stm32mp215f-dk-ca35tdcid-resmem.dtsi"
+#include "stm32mp215f-dk-resmem.dtsi"
 
 / {
 	model = "STMicroelectronics STM32MP215F-DK Discovery Board";
@@ -243,6 +243,50 @@
 	status = "okay";
 };
 
+&cs_cpu_debug0 {
+	status = "okay";
+};
+
+&cs_cti0 {
+	status = "okay";
+};
+
+&cs_cti1 {
+	status = "okay";
+};
+
+&cs_cti_cpu0 {
+	status = "okay";
+};
+
+&cs_etf {
+	status = "okay";
+};
+
+&cs_etm0 {
+	status = "okay";
+};
+
+&cs_etr {
+	status = "okay";
+};
+
+&cs_funnel {
+	status = "okay";
+};
+
+&cs_replicator {
+	status = "okay";
+};
+
+&cs_stm {
+	status = "okay";
+};
+
+&cs_tpiu {
+	status = "okay";
+};
+
 &csi {
 	vdd-supply =  <&scmi_vddcore>;
 	vdda18-supply = <&scmi_vdda_1v8>;
@@ -265,6 +309,10 @@
 			};
 		};
 	};
+};
+
+&dbg_bus {
+	status = "okay";
 };
 
 &dcmipp {
@@ -334,8 +382,9 @@
 	goodix: goodix-ts@5d {
 		compatible = "goodix,gt911";
 		reg = <0x5d>;
-		pinctrl-names = "default";
+		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&goodix_pins_a>;
+		pinctrl-1 = <&goodix_sleep_pins_a>;
 		interrupt-parent = <&gpiof>;
 		interrupts = <4 IRQ_TYPE_EDGE_FALLING>;
 		AVDD28-supply = <&scmi_v3v3>;
@@ -395,6 +444,7 @@
 };
 
 &ltdc {
+	bootph-all;
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&ltdc_pins_a>;
 	pinctrl-1 = <&ltdc_sleep_pins_a>;
@@ -482,6 +532,7 @@
 };
 
 &rtc {
+	#clock-cells = <0>;
 	st,lsco = <RTC_OUT1>;
 	pinctrl-0 = <&rtc_out1_pins_a>;
 	pinctrl-names = "default";
@@ -587,7 +638,18 @@
 	status = "disabled";
 };
 
+/* Bluetooth */
+&usart1 {
+	pinctrl-names = "default", "sleep", "idle";
+	pinctrl-0 = <&usart1_pins_a>;
+	pinctrl-1 = <&usart1_sleep_pins_a>;
+	pinctrl-2 = <&usart1_idle_pins_a>;
+	uart-has-rtscts;
+	status = "disabled";
+};
+
 &usart2 {
+	bootph-all;
 	pinctrl-names = "default", "idle", "sleep";
 	pinctrl-0 = <&usart2_pins_a>;
 	pinctrl-1 = <&usart2_idle_pins_a>;
@@ -597,14 +659,14 @@
 	status = "okay";
 };
 
-/* Bluetooth */
-&usart1 {
-	pinctrl-names = "default", "sleep", "idle";
-	pinctrl-0 = <&usart1_pins_a>;
-	pinctrl-1 = <&usart1_sleep_pins_a>;
-	pinctrl-2 = <&usart1_idle_pins_a>;
-	uart-has-rtscts;
-	status = "disabled";
+&usart2_pins_a {
+	bootph-all;
+	pins1 {
+		bootph-all;
+	};
+	pins2 {
+		bootph-all;
+	};
 };
 
 &usart6 {

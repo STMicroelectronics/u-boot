@@ -64,6 +64,13 @@
 		};
 	};
 
+	goodix_sleep_pins_a: goodix_sleep-0 {
+		pins {
+			pinmux = <STM32_PINMUX('I',  8, ANALOG)>,
+				 <STM32_PINMUX('F',  4, ANALOG)>;
+		};
+	};
+
 	i2c2_pins_a: i2c2-0 {
 		pins {
 			pinmux = <STM32_PINMUX('B', 5, AF9)>, /* I2C2_SCL */

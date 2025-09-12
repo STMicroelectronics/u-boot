@@ -7,6 +7,7 @@
 / {
 	firmware {
 		optee: optee {
+			bootph-all;
 			compatible = "linaro,optee-tz";
 			method = "smc";
 			interrupt-parent = <&intc>;
@@ -14,6 +15,7 @@
 		};
 
 		scmi: scmi {
+			bootph-some-ram;
 			compatible = "linaro,scmi-optee";
 			#address-cells = <1>;
 			#size-cells = <0>;
