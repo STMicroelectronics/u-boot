@@ -630,6 +630,16 @@ __weak void fwu_plat_get_bootidx(uint *boot_idx)
 }
 
 /**
+ * fwu_platform_hook() - Platform specific processing with FWU metadata
+ *
+ * Return: 0 if OK, -ve on error
+ */
+__weak int fwu_platform_hook(struct udevice *dev, struct fwu_data *data)
+{
+	return 0;
+}
+
+/**
  * fwu_update_checks_pass() - Check if FWU update can be done
  *
  * Check if the FWU update can be executed. The updates are
@@ -686,6 +696,7 @@ static int fwu_boottime_checks(void *ctx, struct event *event)
 {
 	int ret;
 	u32 boot_idx, active_idx;
+	struct fwu_data *data;
 
 	ret = uclass_first_device_err(UCLASS_FWU_MDATA, &g_dev);
 	if (ret) {
@@ -743,6 +754,13 @@ static int fwu_boottime_checks(void *ctx, struct event *event)
 
 	if (!ret)
 		boottime_check = 1;
+
+	data = fwu_get_data();
+	ret = fwu_platform_hook(g_dev, data);
+	if (ret) {
+		log_err("fwu_platform_hook() failed\n");
+		return ret;
+	}
 
 	return 0;
 }
