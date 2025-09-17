@@ -100,5 +100,6 @@
 };
 
 &syscfg {
+	compatible = "st,stm32mp25-syscfg", "syscon";
 	bootph-all;
 };
