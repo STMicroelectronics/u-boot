@@ -11,6 +11,7 @@
 #include <asm/io.h>
 #include <asm/arch/stm32.h>
 #include <asm/arch/sys_proto.h>
+#include <linux/err.h>
 
 /* SYSCFG register */
 #define SYSCFG_IDC_OFFSET	0x380
@@ -26,6 +27,12 @@
 static u32 read_idc(void)
 {
 	void *syscfg = syscon_get_first_range(STM32MP_SYSCON_SYSCFG);
+
+	if (IS_ERR(syscfg)) {
+		pr_err("Error, can't get SYSCON range (%ld)\n", PTR_ERR(syscfg));
+
+		return PTR_ERR(syscfg);
+	}
 
 	return readl(syscfg + SYSCFG_IDC_OFFSET);
 }
