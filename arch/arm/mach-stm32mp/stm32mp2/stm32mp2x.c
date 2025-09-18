@@ -10,6 +10,7 @@
 #include <syscon.h>
 #include <asm/io.h>
 #include <asm/arch/sys_proto.h>
+#include <linux/err.h>
 
 /* SYSCFG register */
 #define SYSCFG_DEVICEID_OFFSET		0x6400
@@ -30,6 +31,12 @@
 static u32 read_deviceid(void)
 {
 	void *syscfg = syscon_get_first_range(STM32MP_SYSCON_SYSCFG);
+
+	if (IS_ERR(syscfg)) {
+		pr_err("Error, can't get SYSCON range (%ld)\n", PTR_ERR(syscfg));
+
+		return PTR_ERR(syscfg);
+	}
 
 	return readl(syscfg + SYSCFG_DEVICEID_OFFSET);
 }
