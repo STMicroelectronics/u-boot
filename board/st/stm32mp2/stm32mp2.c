@@ -680,6 +680,9 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 	if (nodeoff < 0)
 		return nodeoff;
 
+	if (!detect_etml0700z9ndha)
+		fdt_set_status_by_compatible(blob, "simple-framebuffer", FDT_STATUS_DISABLED);
+
 	/* update HDMI bridge "adi,adv753x" */
 	status = detect_adv753x ? FDT_STATUS_OKAY : FDT_STATUS_DISABLED;
 	nodeoff = fdt_set_status_by_compatible(blob, "adi,adv7533", status);
