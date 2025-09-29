@@ -19,14 +19,6 @@
 		pinctrl1 = &pinctrl_z;
 	};
 
-	clocks {
-		txbyteclk {
-			#clock-cells = <0>;
-			compatible = "fixed-clock";
-			clock-frequency = <27000000>;
-		};
-	};
-
 	firmware {
 		optee {
 			bootph-all;
