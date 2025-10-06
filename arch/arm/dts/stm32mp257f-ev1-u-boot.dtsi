@@ -71,17 +71,3 @@
 &i2c_rpmsg {
        /delete-node/ typec@35;
 };
-
-&usart2 {
-	bootph-all;
-};
-
-&usart2_pins_a {
-	bootph-all;
-	pins1 {
-		bootph-all;
-	};
-	pins2 {
-		bootph-all;
-	};
-};
