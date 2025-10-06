@@ -25,15 +25,6 @@
 		multiple-images;
 	};
 
-	clocks {
-		bootph-all;
-	};
-
-	/* need PSCI for sysreset during board_f */
-	psci {
-		bootph-some-ram;
-	};
-
 	reboot {
 		bootph-all;
 		compatible = "syscon-reboot";
@@ -43,8 +34,6 @@
 	};
 
 	soc {
-		bootph-all;
-
 		ddr: ddr@5a003000 {
 			bootph-all;
 
@@ -58,101 +47,6 @@
 	};
 };
 
-&bsec {
-	bootph-all;
-};
-
-&clk_csi {
-	bootph-all;
-};
-
-&clk_hsi {
-	bootph-all;
-};
-
-&clk_hse {
-	bootph-all;
-};
-
-&clk_lsi {
-	bootph-all;
-};
-
-&clk_lse {
-	bootph-all;
-};
-
-&cpu0_opp_table {
-	bootph-pre-ram;
-	opp-650000000 {
-		bootph-pre-ram;
-	};
-	opp-800000000 {
-		bootph-pre-ram;
-	};
-};
-
-&etzpc {
-	bootph-all;
-};
-
-&gpioa {
-	bootph-all;
-};
-
-&gpiob {
-	bootph-all;
-};
-
-&gpioc {
-	bootph-all;
-};
-
-&gpiod {
-	bootph-all;
-};
-
-&gpioe {
-	bootph-all;
-};
-
-&gpiof {
-	bootph-all;
-};
-
-&gpiog {
-	bootph-all;
-};
-
-&gpioh {
-	bootph-all;
-};
-
-&gpioi {
-	bootph-all;
-};
-
-&gpioj {
-	bootph-all;
-};
-
-&gpiok {
-	bootph-all;
-};
-
-&gpioz {
-	bootph-all;
-};
-
-&iwdg2 {
-	bootph-all;
-};
-
-/* pre-reloc probe = reserve video frame buffer in video_reserve() */
-&ltdc {
-	bootph-some-ram;
-};
-
 /* temp = waiting kernel update */
 &m4_rproc {
 	resets = <&rcc MCU_R>,
@@ -160,20 +54,7 @@
 	reset-names = "mcu_rst", "hold_boot";
 };
 
-&pinctrl {
-	bootph-all;
-};
-
-&pinctrl_z {
-	bootph-all;
-};
-
-&pwr_regulators {
-	bootph-all;
-};
-
 &rcc {
-	bootph-all;
 	#address-cells = <1>;
 	#size-cells = <0>;
 };

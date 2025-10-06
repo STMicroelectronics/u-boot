@@ -25,15 +25,7 @@
 		multiple-images;
 	};
 
-	firmware {
-		optee {
-			bootph-all;
-		};
-	};
-
 	soc {
-		bootph-all;
-
 		ddr: ddr@5a003000 {
 			bootph-all;
 
@@ -45,76 +37,6 @@
 			status = "okay";
 		};
 	};
-
-	/* need PSCI for sysreset during board_f */
-	psci {
-		bootph-some-ram;
-	};
-};
-
-&bsec {
-	bootph-all;
-};
-
-&gpioa {
-	bootph-all;
-};
-
-&gpiob {
-	bootph-all;
-};
-
-&gpioc {
-	bootph-all;
-};
-
-&gpiod {
-	bootph-all;
-};
-
-&gpioe {
-	bootph-all;
-};
-
-&gpiof {
-	bootph-all;
-};
-
-&gpiog {
-	bootph-all;
-};
-
-&gpioh {
-	bootph-all;
-};
-
-&gpioi {
-	bootph-all;
-};
-
-&gpioj {
-	bootph-all;
-};
-
-&gpiok {
-	bootph-all;
-};
-
-&gpioz {
-	bootph-all;
-};
-
-&optee {
-	bootph-some-ram;
-};
-
-&iwdg2 {
-	bootph-all;
-};
-
-/* pre-reloc probe = reserve video frame buffer in video_reserve() */
-&ltdc {
-	bootph-some-ram;
 };
 
 /* temp = waiting kernel update */
@@ -122,22 +44,6 @@
 	resets = <&scmi_reset RST_SCMI_MCU>,
 		 <&scmi_reset RST_SCMI_MCU_HOLD_BOOT>;
 	reset-names = "mcu_rst", "hold_boot";
-};
-
-&pinctrl {
-	bootph-all;
-};
-
-&pinctrl_z {
-	bootph-all;
-};
-
-&rcc {
-	bootph-all;
-};
-
-&scmi {
-	bootph-some-ram;
 };
 
 &usart1 {
