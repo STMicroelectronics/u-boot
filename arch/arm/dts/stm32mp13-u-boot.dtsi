@@ -17,20 +17,8 @@
 		pinctrl0 = &pinctrl;
 	};
 
-	firmware {
-		optee {
-			bootph-all;
-		};
-	};
-
 	/* need PSCI for sysreset during board_f */
-	psci {
-		bootph-some-ram;
-	};
-
 	soc {
-		bootph-all;
-
 		ddr: ddr@5a003000 {
 			bootph-all;
 
@@ -41,89 +29,5 @@
 
 			status = "okay";
 		};
-
-		etzpc: bus@5c007000 {
-			/* pre-reloc probe = reserve video frame buffer in video_reserve() */
-			display-controller@5a001000 {
-				bootph-some-ram;
-			};
-		};
 	};
-};
-
-&bsec {
-	bootph-all;
-};
-
-&etzpc {
-	bootph-all;
-};
-
-&gpioa {
-	bootph-all;
-};
-
-&gpiob {
-	bootph-all;
-};
-
-&gpioc {
-	bootph-all;
-};
-
-&gpiod {
-	bootph-all;
-};
-
-&gpioe {
-	bootph-all;
-};
-
-&gpiof {
-	bootph-all;
-};
-
-&gpiog {
-	bootph-all;
-};
-
-&gpioh {
-	bootph-all;
-};
-
-&gpioi {
-	bootph-all;
-};
-
-&iwdg2 {
-	bootph-all;
-};
-
-&pinctrl {
-	bootph-all;
-};
-
-&rcc {
-	bootph-all;
-};
-
-&scmi {
-	bootph-all;
-};
-
-&scmi_clk {
-	bootph-all;
-};
-
-&scmi_reset {
-	bootph-all;
-};
-
-&syscfg {
-	bootph-all;
-};
-
-&usbphyc {
-	/* stm32-usbphyc-clk = ck_usbo_48m is a source clock of RCC CCF */
-	bootph-all;
 };
