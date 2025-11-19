@@ -203,7 +203,7 @@ struct stm32_sdmmc2_ctx {
 #define SDMMC_IDMACTRL_IDMAEN		BIT(0)
 
 #define SDMMC_CMD_TIMEOUT		0xFFFFFFFF
-#define SDMMC_BUSYD0END_TIMEOUT_US	2000000
+#define SDMMC_BUSYD0END_TIMEOUT_US	10000000
 
 static void stm32_sdmmc2_start_data(struct udevice *dev,
 				    struct mmc_data *data,
@@ -385,12 +385,12 @@ static int stm32_sdmmc2_end_data(struct udevice *dev,
 	u32 mask = SDMMC_STA_DCRCFAIL | SDMMC_STA_DTIMEOUT |
 		   SDMMC_STA_IDMATE | SDMMC_STA_DATAEND;
 	u32 status;
-	unsigned long timeout_msecs = ctx->data_length >> 8;
+	unsigned long timeout_msecs = ctx->data_length >> 6;
 	unsigned long start_timeout;
 
-	/* At least, a timeout of 2 seconds is set */
-	if (timeout_msecs < 2000)
-		timeout_msecs = 2000;
+	/* At least, a timeout of 5 seconds is set */
+	if (timeout_msecs < 5000)
+		timeout_msecs = 5000;
 
 	if (data->flags & MMC_DATA_READ)
 		mask |= SDMMC_STA_RXOVERR;
