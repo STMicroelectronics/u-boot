@@ -16,6 +16,7 @@
 #include <asm/io.h>
 #include <asm/arch/stm32.h>
 #include <asm/arch/sys_proto.h>
+#include <asm/armv8/mmu.h>
 #include <asm/system.h>
 #include <dm/device.h>
 #include <dm/lists.h>
@@ -71,8 +72,21 @@ int mach_cpu_init(void)
 
 void enable_caches(void)
 {
+	struct mm_region *mem = mem_map;
+
 	/* deactivate the data cache, early enabled in arch_cpu_init() */
 	dcache_disable();
+
+	/* Parse mem_map and find DDR entry */
+	while (mem->size) {
+		if (mem->phys == CONFIG_TEXT_BASE) {
+			/* update DDR entry with real DDR size */
+			mem->size = gd->ram_size;
+			break;
+		}
+		mem++;
+	}
+
 	/*
 	 * Force the call of setup_all_pgtables() in mmu_setup() by clearing tlb_fillptr
 	 * to update the TLB location udpated in board_f.c::reserve_mmu
