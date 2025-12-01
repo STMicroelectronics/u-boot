@@ -89,38 +89,6 @@
 		};
 	};
 
-	cs_replicator: replicator {
-		compatible = "arm,coresight-static-replicator";
-		status = "disabled";
-
-		in-ports {
-			port {
-				replicator_in_port: endpoint {
-					remote-endpoint = <&etf_out_port>;
-				};
-			};
-		};
-
-		out-ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			port@0 {
-				reg = <0>;
-				replicator_out_port0: endpoint {
-					remote-endpoint = <&etr_in_port>;
-				};
-			};
-
-			port@1 {
-				reg = <1>;
-				replicator_out_port1: endpoint {
-					remote-endpoint = <&tpiu_in_port>;
-				};
-			};
-		};
-	};
-
 	firmware {
 		optee: optee {
 			bootph-all;
@@ -3141,9 +3109,9 @@
 			};
 		};
 
-		a35ss_syscfg: syscon@48802000  {
-			compatible = "st,stm32mp25-a35ss-syscfg", "syscon";
-			reg = <0x48802000 0xac>;
+		a35ss_syscfg: syscon@48800000  {
+			compatible = "st,stm32mp25-a35ss-syscfg";
+			reg = <0x48800000 0x4000>;
 			status = "disabled";
 		};
 
@@ -3249,6 +3217,40 @@
 					port {
 						tpiu_in_port: endpoint {
 							remote-endpoint = <&replicator_out_port1>;
+						};
+					};
+				};
+			};
+
+			cs_replicator: replicator@4a060000 {
+				compatible = "arm,coresight-static-replicator";
+				reg = <0x4a060000 0x10000>;
+				access-controllers = <&dbg_bus 0>;
+				status = "okay";
+
+				in-ports {
+					port {
+						replicator_in_port: endpoint {
+							remote-endpoint = <&etf_out_port>;
+						};
+					};
+				};
+
+				out-ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+						replicator_out_port0: endpoint {
+							remote-endpoint = <&etr_in_port>;
+						};
+					};
+
+					port@1 {
+						reg = <1>;
+						replicator_out_port1: endpoint {
+							remote-endpoint = <&tpiu_in_port>;
 						};
 					};
 				};

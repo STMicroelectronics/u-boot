@@ -1940,6 +1940,7 @@
 					 <&rcc ETH1STP>,
 					 <&rcc ETH1PTP_K>,
 					 <&rcc ETH1CK_K>;
+				power-domains = <&pd_core>;
 				st,syscon = <&syscfg 0x4 0xff0000>;
 				snps,mixed-burst;
 				snps,pbl = <2>;

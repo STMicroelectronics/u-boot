@@ -89,6 +89,7 @@
 			 <&rcc ETH2STP>,
 			 <&rcc ETH2PTP_K>,
 			 <&rcc ETH2CK_K>;
+		power-domains = <&pd_core>;
 		st,syscon = <&syscfg 0x4 0xff000000>;
 		snps,mixed-burst;
 		snps,pbl = <2>;

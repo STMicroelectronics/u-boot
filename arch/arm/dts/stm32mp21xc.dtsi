@@ -18,4 +18,18 @@
 		power-domains = <&d1_pd>;
 		status = "disabled";
 	};
+
+	cryp2: crypto@42040000 {
+		compatible = "st,stm32mp1-cryp";
+		reg = <0x42040000 0x0 0x400>;
+		interrupts = <GIC_SPI 157 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&rcc CK_BUS_CRYP2>;
+		resets = <&rcc CRYP2_R>;
+		dmas = <&hpdma 108 0x40 0x3021>,
+		       <&hpdma 109 0x43 0x3012>;
+		dma-names = "in", "out";
+		access-controllers = <&rifsc 99>;
+		power-domains = <&d1_pd>;
+		status = "disabled";
+	};
 };

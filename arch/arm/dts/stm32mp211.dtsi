@@ -80,38 +80,6 @@
 		};
 	};
 
-	cs_replicator: replicator {
-		compatible = "arm,coresight-static-replicator";
-		status = "disabled";
-
-		in-ports {
-			port {
-				replicator_in_port: endpoint {
-					remote-endpoint = <&etf_out_port>;
-				};
-			};
-		};
-
-		out-ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			port@0 {
-				reg = <0>;
-				replicator_out_port0: endpoint {
-					remote-endpoint = <&etr_in_port>;
-				};
-			};
-
-			port@1 {
-				reg = <1>;
-				replicator_out_port1: endpoint {
-					remote-endpoint = <&tpiu_in_port>;
-				};
-			};
-		};
-	};
-
 	firmware {
 		optee: optee {
 			bootph-all;
@@ -811,7 +779,7 @@
 				reg = <0x400e0000 0x0 0x400>;
 				interrupts-extended = <&exti1 27 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc CK_KER_USART2>;
-				dmas = <&hpdma 11 0x40 0x12>,
+				dmas = <&hpdma 11 0x40 0x10012>,
 				       <&hpdma 12 0x40 0x3021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 32>;
@@ -825,7 +793,7 @@
 				reg = <0x400f0000 0x0 0x400>;
 				interrupts-extended = <&exti1 28 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc CK_KER_USART3>;
-				dmas = <&hpdma 13 0x40 0x12>,
+				dmas = <&hpdma 13 0x40 0x10012>,
 				       <&hpdma 14 0x40 0x3021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 33>;
@@ -839,7 +807,7 @@
 				reg = <0x40100000 0x0 0x400>;
 				interrupts-extended = <&exti1 30 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc CK_KER_UART4>;
-				dmas = <&hpdma 15 0x40 0x12>,
+				dmas = <&hpdma 15 0x40 0x10012>,
 				       <&hpdma 16 0x40 0x3021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 34>;
@@ -853,7 +821,7 @@
 				reg = <0x40110000 0x0 0x400>;
 				interrupts-extended = <&exti1 31 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc CK_KER_UART5>;
-				dmas = <&hpdma 17 0x40 0x12>,
+				dmas = <&hpdma 17 0x40 0x10012>,
 				       <&hpdma 18 0x40 0x3021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 35>;
@@ -1059,7 +1027,7 @@
 				reg = <0x40220000 0x0 0x400>;
 				interrupts-extended = <&exti1 29 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc CK_KER_USART6>;
-				dmas = <&hpdma 19 0x40 0x12>,
+				dmas = <&hpdma 19 0x40 0x10012>,
 				       <&hpdma 20 0x40 0x3021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 36>;
@@ -1468,7 +1436,7 @@
 				reg = <0x40370000 0x0 0x400>;
 				interrupts-extended = <&exti1 32 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc CK_KER_UART7>;
-				dmas = <&hpdma 21 0x40 0x12>,
+				dmas = <&hpdma 21 0x40 0x10012>,
 				       <&hpdma 22 0x40 0x3021>;
 				dma-names = "rx", "tx";
 				access-controllers = <&rifsc 37>;
@@ -2505,9 +2473,9 @@
 			};
 		};
 
-		a35ss_syscfg: syscon@48802000  {
-			compatible = "st,stm32mp25-a35ss-syscfg", "syscon";
-			reg = <0x48802000 0x0 0xac>;
+		a35ss_syscfg: syscon@48800000  {
+			compatible = "st,stm32mp25-a35ss-syscfg";
+			reg = <0x48800000 0x0 0x4000>;
 			status = "disabled";
 		};
 	};
@@ -2686,6 +2654,40 @@
 					port {
 						tpiu_in_port: endpoint {
 							remote-endpoint = <&replicator_out_port1>;
+						};
+					};
+				};
+			};
+
+			cs_replicator: replicator@4a050000 {
+				compatible = "arm,coresight-static-replicator";
+				access-controllers = <&dbg_bus 0>;
+				reg = <0x4a050000 0x10000>;
+				status = "disabled";
+
+				in-ports {
+					port {
+						replicator_in_port: endpoint {
+							remote-endpoint = <&etf_out_port>;
+						};
+					};
+				};
+
+				out-ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+						replicator_out_port0: endpoint {
+							remote-endpoint = <&etr_in_port>;
+						};
+					};
+
+					port@1 {
+						reg = <1>;
+						replicator_out_port1: endpoint {
+							remote-endpoint = <&tpiu_in_port>;
 						};
 					};
 				};

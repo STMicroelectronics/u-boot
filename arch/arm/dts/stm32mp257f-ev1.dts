@@ -62,6 +62,11 @@
 		};
 	};
 
+	clock_critical: clock_critical {
+		compatible = "st,stm32-hog";
+		clocks = <&rcc CK_LPTIM4_AM>;
+	};
+
 	gpio-keys {
 		compatible = "gpio-keys";
 
@@ -641,7 +646,7 @@
 			<&ipc_shmem_1>, <&vdev0vring0>,
 			<&vdev0vring1>, <&vdev0buffer>,
 			<&cm33_sram2>;
-	st,syscfg-nsvtor = <&a35ss_syscfg 0xa8 0xffffff80>;
+	st,syscfg-nsvtor = <&a35ss_syscfg 0x20a8 0xffffff80>;
 	status = "okay";
 };
 
