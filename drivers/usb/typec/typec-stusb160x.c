@@ -10,6 +10,8 @@
 #include <i2c.h>
 #include <typec.h>
 #include <dm/device_compat.h>
+#include <linux/delay.h>
+#include <power/regulator.h>
 
 #define STUSB160X_ALERT_STATUS			0x0B /* RC */
 #define STUSB160X_CC_CONNECTION			BIT(6)
@@ -92,8 +94,49 @@ static u8 stusb160x_get_nb_connector(struct udevice *dev)
 
 static int stusb160x_probe(struct udevice *dev)
 {
+	struct udevice *vsys_supply, *vdd_supply, *vconn_supply;
 	int power_mode_ctrl;
 	int ret;
+
+	/* Get "vsys", "vdd" and "vconn" optional regulators, enable them. */
+	ret = device_get_supply_regulator(dev, "vsys-supply", &vsys_supply);
+	if (ret && ret != -ENOENT)
+		return ret;
+
+	if (vsys_supply) {
+		ret = regulator_set_enable_if_allowed(vsys_supply, true);
+		if (ret) {
+			dev_err(dev, "Error enabling vsys supply (ret=%d)\n", ret);
+			return ret;
+		}
+	}
+
+	ret = device_get_supply_regulator(dev, "vdd-supply", &vdd_supply);
+	if (ret && ret != -ENOENT)
+		return ret;
+
+	if (vdd_supply) {
+		ret = regulator_set_enable_if_allowed(vdd_supply, true);
+		if (ret) {
+			dev_err(dev, "Error enabling vdd supply (ret=%d)\n", ret);
+			return ret;
+		}
+	}
+
+	ret = device_get_supply_regulator(dev, "vconn-supply", &vconn_supply);
+	if (ret && ret != -ENOENT)
+		return ret;
+
+	if (vconn_supply) {
+		ret = regulator_set_enable_if_allowed(vconn_supply, true);
+		if (ret) {
+			dev_err(dev, "Error enabling vconn supply (ret=%d)\n", ret);
+			return ret;
+		}
+	}
+
+	/* Tload: I2C registers loading time from NVM */
+	mdelay(30);
 
 	/* configure STUSB160X_CC_POWER_MODE_CTRL */
 	power_mode_ctrl = dm_i2c_reg_read(dev, STUSB160X_CC_POWER_MODE_CTRL);
