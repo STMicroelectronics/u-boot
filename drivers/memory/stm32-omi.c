@@ -298,7 +298,6 @@ static void stm32_omi_read_fifo(void *val, phys_addr_t addr, u8 len)
 	case sizeof(u8):
 		*((u8 *)val) = readb_relaxed(addr);
 	};
-	schedule();
 }
 
 static void stm32_omi_write_fifo(void *val, phys_addr_t addr, u8 len)
@@ -358,6 +357,9 @@ int stm32_omi_tx_poll(struct udevice *dev, void *buf, u32 len, bool read)
 		fifo(buf, regs_base + OSPI_DR, step);
 		len -= step;
 		buf += step;
+
+		if (!(len % SZ_1M))
+			schedule();
 	}
 
 	return 0;
