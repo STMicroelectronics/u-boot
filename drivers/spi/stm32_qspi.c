@@ -175,7 +175,6 @@ static void _stm32_qspi_read_fifo(void *val, void __iomem *addr, u8 len)
 	case sizeof(u8):
 		*((u8 *)val) = readb_relaxed(addr);
 	};
-	schedule();
 }
 
 static void _stm32_qspi_write_fifo(void *val, void __iomem *addr, u8 len)
@@ -236,6 +235,9 @@ static int _stm32_qspi_poll(struct stm32_qspi_priv *priv,
 		fifo(buf, &priv->regs->dr, step);
 		len -= step;
 		buf += step;
+
+		if (!(len % SZ_1M))
+			schedule();
 	}
 
 	return 0;
