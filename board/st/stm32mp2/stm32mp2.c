@@ -818,6 +818,7 @@ int fdt_update_fwu_properties(void *blob, int nodeoff,
 {
 	int ret;
 	int storage_off;
+	const fdt32_t *phandle;
 
 	ret = fdt_increase_size(blob, 100);
 	if (ret) {
@@ -837,8 +838,14 @@ int fdt_update_fwu_properties(void *blob, int nodeoff,
 		return nodeoff;
 	}
 
-	ret = fdt_setprop_string(blob, nodeoff, "fwu-mdata-store", storage_path);
+	phandle = fdt_getprop(blob, storage_off, "phandle", NULL);
+	if (!phandle) {
+		log_err("Can't find phandle for %s\n", storage_path);
+		return -ENOENT;
+	}
 
+	ret = fdt_setprop_u32(blob, nodeoff, "fwu-mdata-store",
+			      fdt32_to_cpu(*phandle));
 	if (ret < 0)
 		log_err("Can't set fwu-mdata-store property\n");
 
