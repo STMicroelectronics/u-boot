@@ -445,6 +445,10 @@ static int stm32_spi_xfer(struct udevice *slave, unsigned int bitlen,
 	if (flags & SPI_XFER_BEGIN)
 		stm32_spi_set_cs(bus, slave_plat->cs, false);
 
+	/* If transfer length is 0, jump right to the end */
+	if (xferlen == 0)
+		goto done;
+
 	/* Be sure to have data in fifo before starting data transfer */
 	if (priv->tx_buf)
 		stm32_spi_write_txfifo(bus);
@@ -493,6 +497,7 @@ static int stm32_spi_xfer(struct udevice *slave, unsigned int bitlen,
 	setbits_le32(base + STM32_SPI_IFCR, SPI_IFCR_ALL);
 	stm32_spi_stopxfer(bus);
 
+done:
 	if (flags & SPI_XFER_END)
 		stm32_spi_set_cs(bus, slave_plat->cs, true);
 
