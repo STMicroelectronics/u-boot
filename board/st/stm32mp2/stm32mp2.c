@@ -819,12 +819,36 @@ void *env_sf_get_env_addr(void)
 #define HYPERFLASH_PATH "/soc@0/ommanager@40500000/memory-controller@40430000/flash@0"
 #endif
 
+static int fdt_update_fwu_mtdpart(void *blob, int nodeoff)
+{
+	int ret;
+
+	ret = fdt_increase_size(blob, 100);
+	if (ret) {
+		printf("fdt_increase_size: err=%s\n", fdt_strerror(ret));
+		return ret;
+	}
+
+	ret = fdt_setprop_string(blob, nodeoff, "mdata-parts", "metadata1");
+	if (ret) {
+		log_err("Can't set mdata-parts property to metadata1\n");
+		return ret;
+	}
+
+	ret = fdt_appendprop_string(blob, nodeoff, "mdata-parts", "metadata2");
+	if (ret)
+		log_err("Can't append metadata2 to mdata-parts property\n");
+
+	return ret;
+}
+
 int fdt_update_fwu_properties(void *blob, int nodeoff,
 			      const char *compat_str,
 			      const char *storage_path)
 {
 	int ret;
 	int storage_off;
+	u32 phandle;
 
 	ret = fdt_increase_size(blob, 100);
 	if (ret) {
@@ -844,8 +868,16 @@ int fdt_update_fwu_properties(void *blob, int nodeoff,
 		return nodeoff;
 	}
 
-	ret = fdt_setprop_string(blob, nodeoff, "fwu-mdata-store", storage_path);
+	phandle = fdt_get_phandle(blob, storage_off);
+	if (phandle < 0) {
+		log_err("Can't get phandle: err=%d\n", phandle);
+		return phandle;
+	} else if (phandle == 0) {
+		log_err("Can't get phandle: no phandle\n");
+		return -ENOENT;
+	}
 
+	ret = fdt_setprop_u32(blob, nodeoff, "fwu-mdata-store", phandle);
 	if (ret < 0)
 		log_err("Can't set fwu-mdata-store property\n");
 
@@ -881,11 +913,19 @@ int fdt_update_fwu_mdata(void *blob)
 		/* flash0 */
 		ret = fdt_update_fwu_properties(blob, nodeoff, "u-boot,fwu-mdata-mtd",
 						SPINAND_NOR_PATH);
+		if (ret)
+			return ret;
+
+		ret = fdt_update_fwu_mtdpart(blob, nodeoff);
 		break;
 	case BOOT_FLASH_HYPERFLASH:
 		/* flash0 */
 		ret = fdt_update_fwu_properties(blob, nodeoff, "u-boot,fwu-mdata-mtd",
 						HYPERFLASH_PATH);
+		if (ret)
+			return ret;
+
+		ret = fdt_update_fwu_mtdpart(blob, nodeoff);
 		break;
 	default:
 		/* TF-A firmware update not supported for other boot device */
