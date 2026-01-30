@@ -410,16 +410,6 @@ static int stm32_lvds_enable(struct udevice *dev,
 	if (lvds->link_type & LVDS_SINGLE_LINK_SECONDARY)
 		lvds_cdl2cr = CDL2CR_4DL_DEFAULT;
 
-	/* Set signal polarity */
-	if (timings->flags & DISPLAY_FLAGS_DE_LOW)
-		lvds_cr |= CR_DEPOL;
-
-	if (timings->flags & DISPLAY_FLAGS_HSYNC_LOW)
-		lvds_cr |= CR_HSPOL;
-
-	if (timings->flags & DISPLAY_FLAGS_VSYNC_LOW)
-		lvds_cr |= CR_VSPOL;
-
 	/* Set link phase */
 	switch (lvds->link_type) {
 	case LVDS_DUAL_LINK_EVEN_ODD_PIXELS: /* LKPHA = 0 */
