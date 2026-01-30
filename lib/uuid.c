@@ -105,6 +105,7 @@ static const struct {
 	{"swap",	PARTITION_LINUX_SWAP_GUID},
 	{"lvm",		PARTITION_LINUX_LVM_GUID},
 	{"u-boot-env",	PARTITION_U_BOOT_ENVIRONMENT},
+	{"xbootldr",	PARTITION_XBOOTLDR},
 #endif
 #if defined(CONFIG_CMD_EFIDEBUG) || defined(CONFIG_EFI)
 	{
