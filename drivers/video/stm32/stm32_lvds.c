@@ -394,7 +394,6 @@ static int stm32_lvds_enable(struct udevice *dev)
 {
 	struct stm32_lvds_plat *plat = dev_get_plat(dev);
 	struct stm32_lvds_priv *priv = dev_get_priv(dev);
-	struct display_timing timings = priv->timings;
 	u32 lvds_cdl1cr = 0;
 	u32 lvds_cdl2cr = 0;
 	u32 lvds_dmlcr = 0;
@@ -419,16 +418,6 @@ static int stm32_lvds_enable(struct udevice *dev)
 
 	if (priv->link_type & LVDS_SINGLE_LINK_SECONDARY)
 		lvds_cdl2cr = CDL2CR_4DL_DEFAULT;
-
-	/* Set signal polarity */
-	if (timings.flags & DISPLAY_FLAGS_DE_LOW)
-		lvds_cr |= CR_DEPOL;
-
-	if (timings.flags & DISPLAY_FLAGS_HSYNC_LOW)
-		lvds_cr |= CR_HSPOL;
-
-	if (timings.flags & DISPLAY_FLAGS_VSYNC_LOW)
-		lvds_cr |= CR_VSPOL;
 
 	/* Set link phase */
 	switch (priv->link_type) {
