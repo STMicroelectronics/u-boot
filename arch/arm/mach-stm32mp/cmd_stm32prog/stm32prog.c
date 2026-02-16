@@ -76,6 +76,15 @@ static const efi_guid_t uuid_mmc[3] = {
 /* FIP type partition UUID used by TF-A*/
 #define FIP_TYPE_UUID "19D5DF83-11B0-457B-BE2C-7559C13142A5"
 
+/* unique partition guid (uuid) for metadata partitions */
+#define FWU_METADATA1_UUID \
+	EFI_GUID(0x5F91C128U, 0xE120U, 0x48D7U, \
+		 0xBBU, 0x64U, 0x9FU, 0xA9U, 0xAEU, 0xD4U, 0xC7U, 0xE3U)
+
+#define FWU_METADATA2_UUID \
+	EFI_GUID(0xF469F981U, 0x5985U, 0x4206U, \
+		 0x8FU, 0xB3U, 0x83U, 0x99U, 0x56U, 0x03U, 0x5AU, 0x65U)
+
 /* unique partition guid (uuid) for FIP partitions A/B */
 #define FIP_A_UUID \
 	EFI_GUID(0x4FD84C93, 0x54EF, 0x463F, \
@@ -84,6 +93,16 @@ static const efi_guid_t uuid_mmc[3] = {
 #define FIP_B_UUID \
 	EFI_GUID(0x09C54952, 0xD5BF, 0x45AF, \
 		 0xAC, 0xEE, 0x33, 0x53, 0x03, 0x76, 0x6F, 0xB3)
+
+static const char * const metadata_part_name[] = {
+	"metadata1",
+	"metadata2"
+};
+
+static const efi_guid_t metadata_part_uuid[] = {
+	FWU_METADATA1_UUID,
+	FWU_METADATA2_UUID
+};
 
 static const char * const fip_part_name[] = {
 	"fip-a",
@@ -1160,6 +1179,12 @@ static int create_gpt_partitions(struct stm32prog_data *data)
 				for (j = 0; j < ARRAY_SIZE(fip_part_name); j++)
 					if (!strcmp(part->name, fip_part_name[j])) {
 						uuid_bin = (unsigned char *)fip_part_uuid[j].b;
+						break;
+					}
+			} else if (part->part_type == PART_FWU_MDATA) {
+				for (j = 0; j < ARRAY_SIZE(metadata_part_name); j++)
+					if (!strcmp(part->name, metadata_part_name[j])) {
+						uuid_bin = (unsigned char *)metadata_part_uuid[j].b;
 						break;
 					}
 			}
