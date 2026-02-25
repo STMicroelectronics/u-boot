@@ -89,7 +89,6 @@ config STM32MP21X
 	select OF_BOARD
 	select PINCTRL_STM32
 	select STM32_RCC
-	select STM32_RESET
 	select STM32_SERIAL
 	select STM32MP_TAMP_NVMEM
 	select SYS_ARCH_TIMER
@@ -115,7 +114,6 @@ config STM32MP23X
 	select OF_BOARD
 	select PINCTRL_STM32
 	select STM32_RCC
-	select STM32_RESET
 	select STM32_SERIAL
 	select STM32MP_TAMP_NVMEM
 	select SYS_ARCH_TIMER
