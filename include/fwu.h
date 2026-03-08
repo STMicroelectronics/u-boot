@@ -395,6 +395,9 @@ void fwu_populate_mdata_image_info(struct fwu_data *data);
  */
 int fwu_get_mdata_size(uint32_t *mdata_size);
 
+int fwu_mdata_get_image_guid(efi_guid_t *image_guid, efi_guid_t image_type_guid,
+			     u32 bank_index);
+
 /**
  * fwu_state_machine_updates() - Update FWU state of the platform
  * @trial_state: Is platform transitioning into Trial State
