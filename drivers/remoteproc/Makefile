@@ -5,6 +5,7 @@
 #
 
 obj-$(CONFIG_$(PHASE_)REMOTEPROC) += rproc-uclass.o rproc-elf-loader.o
+obj-$(CONFIG_REMOTEPROC_OPTEE) += rproc-optee.o
 
 # Remote proc drivers - Please keep this list alphabetically sorted.
 obj-$(CONFIG_K3_SYSTEM_CONTROLLER) += k3_system_controller.o

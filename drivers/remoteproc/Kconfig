@@ -12,6 +12,14 @@ config REMOTEPROC
 	bool
 	depends on DM
 
+config REMOTEPROC_OPTEE
+	bool "Support for the remoteproc in OPTEE"
+	depends on REMOTEPROC
+	depends on OPTEE
+	help
+	  Say y here to support remote processor firmware management by the
+	  trusted execution environment.
+
 # Please keep the configuration alphabetically sorted.
 
 config K3_SYSTEM_CONTROLLER
