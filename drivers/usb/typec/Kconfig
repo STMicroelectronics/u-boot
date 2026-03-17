@@ -1,0 +1,11 @@
+menuconfig TYPEC
+	bool "USB Type-C support"
+	depends on DM
+	help
+	  Enable this configurations option if you have USB Type-C connectors on
+	  your system and 1) you know your USB Type-C hardware requires OS
+	  control (a driver) to function, or 2) if you need to be able to read
+	  the status of the USB Type-C ports in your system, or 3) if you need
+	  to be able to swap the power role (decide are you supplying or
+	  consuming power over the cable) or data role (host or device) when
+	  both roles are supported.
