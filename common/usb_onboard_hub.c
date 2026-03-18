@@ -246,22 +246,6 @@ static int usb_onboard_hub_bind(struct udevice *dev)
 	return -ENODEV;
 }
 
-static int usb_onboard_hub_remove(struct udevice *dev)
-{
-	struct onboard_hub *hub = dev_get_priv(dev);
-	int ret = 0;
-
-	if (hub->reset_gpio) {
-		ret = dm_gpio_set_value(hub->reset_gpio, 1);
-		if (ret)
-			dev_err(dev, "can't set gpio %s: %d\n", hub->reset_gpio->dev->name,
-				ret);
-	}
-
-	ret |= usb_onboard_hub_power_off(dev);
-	return ret;
-}
-
 static const struct onboard_hub_data usb2514_data = {
 	.power_on_delay_us = 500,
 	.reset_us = 1,
@@ -308,7 +292,6 @@ U_BOOT_DRIVER(usb_onboard_hub) = {
 	.id	= UCLASS_USB_HUB,
 	.bind   = usb_onboard_hub_bind,
 	.probe = usb_onboard_hub_probe,
-	.remove = usb_onboard_hub_remove,
 	.of_match = usb_onboard_hub_ids,
 	.priv_auto = sizeof(struct onboard_hub),
 };
