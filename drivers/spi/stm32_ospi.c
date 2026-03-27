@@ -8,6 +8,7 @@
 #include <clk.h>
 #include <dm.h>
 #include <log.h>
+#include <mtd.h>
 #include <regmap.h>
 #include <reset.h>
 #include <spi.h>
@@ -15,12 +16,17 @@
 #include <syscon.h>
 #include <asm/io.h>
 #include <dm/device_compat.h>
+#include <dm/device-internal.h>
+#include <dm/lists.h>
+#include <dm/of_access.h>
+#include <dm/read.h>
 #include <linux/bitops.h>
 #include <linux/bitfield.h>
 #include <linux/delay.h>
 #include <linux/iopoll.h>
 #include <linux/ioport.h>
 #include <linux/sizes.h>
+#include <mtd/cfi_flash.h>
 
 /* OCTOSPI control register */
 #define OSPI_CR			0x00
@@ -33,6 +39,9 @@
 #define OSPI_CR_CSSEL		BIT(24)
 #define OSPI_CR_FMODE_SHIFT	28
 #define OSPI_CR_FMODE_MASK	GENMASK(29, 28)
+#define OSPI_CR_FMODE_IND_WRITE	0
+#define OSPI_CR_FMODE_IND_READ	1
+#define OSPI_CR_FMODE_MMAP	3
 
 /* OCTOSPI device configuration register */
 #define OSPI_DCR1		0x08
@@ -44,6 +53,7 @@
 #define OSPI_DCR1_MTYP_MASK	GENMASK(26, 24)
 #define OSPI_DCR1_MTYP_SHIFT	24
 #define OSPI_DCR1_MTYP_MX_MODE	1
+#define OSPI_DCR1_MTYP_HP_MEMMODE	4
 
 /* OCTOSPI device configuration register 2 */
 #define OSPI_DCR2		0x0c
@@ -80,10 +90,14 @@
 #define OSPI_CCR_ISIZE_MASK	GENMASK(5, 4)
 #define OSPI_CCR_ADMODE_SHIFT	8
 #define OSPI_CCR_ADMODE_MASK	GENMASK(10, 8)
+#define OSPI_CCR_ADMODE_8LINES	4
 #define OSPI_CCR_ADDTR		BIT(11)
 #define OSPI_CCR_ADSIZE_SHIFT	12
+#define OSPI_CCR_ADSIZE_MASK	GENMASK(13, 12)
+#define OSPI_CCR_ADSIZE_32BITS	3
 #define OSPI_CCR_DMODE_SHIFT	24
 #define OSPI_CCR_DMODE_MASK	GENMASK(26, 24)
+#define OSPI_CCR_DMODE_8LINES	4
 #define OSPI_CCR_IND_WRITE	0
 #define OSPI_CCR_IND_READ	1
 #define OSPI_CCR_MEM_MAP	3
@@ -99,6 +113,11 @@
 
 /* OCTOSPI instruction register */
 #define OSPI_IR			0x110
+
+/* HyperBus latency configuration register */
+#define OSPI_HLCR		0x200
+#define OSPI_HLCR_WZL		BIT(1)
+#define OSPI_HLCR_TACC_MASK	GENMASK(15, 8)
 
 #define SYSCFG_DLYBOS_CR		0
 #define DLYBOS_CR_EN			BIT(0)
@@ -127,8 +146,20 @@
 #define STM32_DLYBOS_TIMEOUT_MS		1000
 #define STM32_DLYBOS_DELAY_NB		24
 
+#define WRITE	0
+#define READ	1
+
+/* HyperBus Commands */
+#define HYPERBUS_ADDR_UNLOCK1	0x555
+#define HYPERBUS_ADDR_UNLOCK2	0x2AA
+#define HYPERBUS_CMD_UNLOCK1	0xAA
+#define HYPERBUS_CMD_UNLOCK2	0x55
+#define HYPERBUS_CMD_RDSFDP	0x90
+
 #define NSEC_PER_SEC		1000000000L
 #define MACRONIX_ID		0xc2
+
+static struct stm32_ospi_priv *g_stm32_hb_priv;
 
 struct stm32_tap_window {
 	u8 end;
@@ -145,10 +176,12 @@ struct stm32_ospi_flash {
 };
 
 struct stm32_ospi_priv {
+	struct udevice *dev;
 	struct stm32_ospi_flash flash[OSPI_MAX_CHIP];
 	int cs_used;
 	u64 idcode;
 	u32 prescaler[OSPI_MAX_CHIP];
+	ulong bus_freq;
 	int (*check_transfer)(struct udevice * dev);
 	bool is_calibrating;
 };
@@ -161,7 +194,12 @@ struct stm32_ospi_plat {
 	struct reset_ctl_bulk rst_ctl;
 	struct regmap *regmap;
 	ulong clock_rate;
+	ulong flash_freq;		/* flash max supported frequency */
 	u32 dlyb_base;
+	u32 tacc;
+	u32 cs;
+	bool wzl;
+	bool jedec_flash;
 };
 
 static int stm32_ospi_mm(struct udevice *dev,
@@ -651,9 +689,9 @@ static int stm32_ospi_dlyb_set_tap(struct udevice *dev, u8 tap, bool rx_tap)
 	return ret;
 }
 
-int stm32_ospi_dlyb_find_tap(struct udevice *dev, bool rx_only, u8 *window_len)
+int stm32_ospi_dlyb_find_tap(struct stm32_ospi_priv *priv, bool rx_only, u8 *window_len)
 {
-	struct stm32_ospi_priv *priv = dev_get_priv(dev);
+	struct udevice *dev = priv->dev;
 	struct stm32_tap_window rx_tap_w[DLYBOS_TAPSEL_NB];
 	int ret;
 	u8 rx_len, rx_window_len, rx_window_end;
@@ -925,7 +963,7 @@ static int stm32_ospi_str_calibration(struct udevice *bus)
 	if (ret)
 		return ret;
 
-	ret_tcr0 = stm32_ospi_dlyb_find_tap(bus, true, &window_len_tcr0);
+	ret_tcr0 = stm32_ospi_dlyb_find_tap(priv, true, &window_len_tcr0);
 	if (!ret_tcr0)
 		stm32_ospi_dlyb_get_cr(bus, &dlyb_cr);
 
@@ -937,7 +975,7 @@ static int stm32_ospi_str_calibration(struct udevice *bus)
 
 	setbits_le32(regs_base + OSPI_TCR, OSPI_TCR_SSHIFT);
 
-	ret_tcr1 = stm32_ospi_dlyb_find_tap(bus, true, &window_len_tcr1);
+	ret_tcr1 = stm32_ospi_dlyb_find_tap(priv, true, &window_len_tcr1);
 	if (ret_tcr0 && ret_tcr1) {
 		dev_info(bus, "Calibration phase failed\n");
 		return ret_tcr0;
@@ -958,6 +996,7 @@ static int stm32_ospi_str_calibration(struct udevice *bus)
 
 static int stm32_ospi_dtr_calibration(struct udevice *bus)
 {
+	struct stm32_ospi_priv *priv = dev_get_priv(bus);
 	struct stm32_ospi_plat *plat = dev_get_plat(bus);
 	phys_addr_t regs_base = plat->regs_base;
 	u32 dcr2, prescaler;
@@ -987,10 +1026,10 @@ static int stm32_ospi_dtr_calibration(struct udevice *bus)
 
 	if (bypass_mode || prescaler)
 		/* Perform only RX TAP selection */
-		ret = stm32_ospi_dlyb_find_tap(bus, true, &window_len);
+		ret = stm32_ospi_dlyb_find_tap(priv, true, &window_len);
 	else
 		/* Perform RX/TX TAP selection */
-		ret = stm32_ospi_dlyb_find_tap(bus, false, &window_len);
+		ret = stm32_ospi_dlyb_find_tap(priv, false, &window_len);
 
 	if (ret) {
 		dev_err(bus, "Calibration failed\n");
@@ -1044,6 +1083,8 @@ static int stm32_ospi_probe(struct udevice *bus)
 	phys_addr_t regs_base = plat->regs_base;
 	ofnode child;
 	int ret;
+
+	priv->dev = bus;
 
 	ret = clk_enable(&plat->clk);
 	if (ret) {
@@ -1232,6 +1273,7 @@ static int stm32_ospi_of_to_plat(struct udevice *dev)
 	struct stm32_ospi_plat *plat = dev_get_plat(dev);
 	struct resource res;
 	struct ofnode_phandle_args args;
+	ofnode flash_node;
 	const fdt32_t *reg;
 	int ret, len;
 
@@ -1294,21 +1336,383 @@ static int stm32_ospi_of_to_plat(struct udevice *dev)
 			dev_err(dev, "Can't read delay block base address\n");
 	}
 
-	return ret;
-};
+	flash_node = dev_read_first_subnode(dev);
+	if (ofnode_device_is_compatible(flash_node, "cypress,hyperflash")) {
 
-static const struct udevice_id stm32_ospi_ids[] = {
-	{ .compatible = "st,stm32mp25-ospi" },
-	{ }
+		ret = ofnode_read_u32(flash_node, "reg", &plat->cs);
+		if (ret) {
+			dev_err(dev, "could not retrieve reg property: %d\n", ret);
+			return ret;
+		}
+
+		plat->flash_freq = ofnode_read_u32_default(flash_node, "st,max-frequency", 0);
+		if (!plat->flash_freq) {
+			dev_err(dev, "Can't find st,max-frequency property\n");
+			return -ENOENT;
+		}
+
+		plat->tacc = ofnode_read_u32_default(flash_node, "st,tacc-ns", 0);
+		plat->wzl = ofnode_read_bool(flash_node, "st,wzl");
+	}
+
+	return ret;
 };
 
 U_BOOT_DRIVER(stm32_ospi) = {
 	.name = "stm32_ospi",
 	.id = UCLASS_SPI,
-	.of_match = stm32_ospi_ids,
 	.of_to_plat = stm32_ospi_of_to_plat,
 	.ops = &stm32_ospi_ops,
 	.plat_auto = sizeof(struct stm32_ospi_plat),
 	.priv_auto = sizeof(struct stm32_ospi_priv),
 	.probe = stm32_ospi_probe,
+};
+
+static int stm32_hb_xfer(void *addr, u16 wdata, u16 *rdata,
+			 bool read)
+{
+	struct stm32_ospi_priv *priv = g_stm32_hb_priv;
+	struct stm32_ospi_plat *plat = dev_get_plat(priv->dev);
+	phys_addr_t regs_base = plat->regs_base;
+	int ret;
+	u32 cr;
+	u32 offset;
+
+	/* exit from memory map mode by setting ABORT bit */
+	setbits_le32(regs_base + OSPI_CR, OSPI_CR_ABORT);
+
+	/* Wait clear of abort bit by hw */
+	ret = readl_poll_timeout(regs_base + OSPI_CR, cr, !(cr & OSPI_CR_ABORT),
+				 OSPI_ABT_TIMEOUT_US);
+
+	if (ret) {
+		dev_err(priv->dev, "%s abort timeout:%d\n", __func__, ret);
+		return ret;
+	}
+
+	offset = (u32)(long)addr - plat->mm_base;
+
+	clrsetbits_le32(regs_base + OSPI_CR, OSPI_CR_FMODE_MASK,
+			FIELD_PREP(OSPI_CR_FMODE_MASK,
+				   read ? OSPI_CR_FMODE_IND_READ :
+				   OSPI_CR_FMODE_IND_WRITE));
+
+	writel((uintptr_t)offset, regs_base + OSPI_AR);
+
+	ret = stm32_ospi_tx_poll(priv->dev, read ? (u8 *)rdata : (u8 *)&wdata, 2, read);
+	if (ret)
+		return ret;
+
+	/* Wait end of tx in indirect mode */
+	ret = stm32_ospi_wait_cmd(priv->dev);
+	if (ret)
+		return ret;
+
+	dev_dbg(priv->dev, "%s: %s 0x%x @ 0x%x\n", __func__,
+		read ? "read" : "write",
+		read ? *rdata : wdata, offset >> 1);
+
+	clrsetbits_le32(regs_base + OSPI_CR, OSPI_CR_FMODE_MASK,
+			FIELD_PREP(OSPI_CR_FMODE_MASK, OSPI_CR_FMODE_MMAP));
+
+	return ret;
+}
+
+u16 flash_read16(void *addr)
+{
+	struct stm32_ospi_priv *priv = g_stm32_hb_priv;
+	struct stm32_ospi_plat *plat = dev_get_plat(priv->dev);
+	phys_addr_t mm_base = plat->mm_base;
+	resource_size_t mm_size = plat->mm_size;
+	int ret;
+	u16 rdata = 0;
+
+	/*
+	 * Before going further, check if this read is accessing DDR or Flash
+	 */
+	if (((u32)(long)addr < mm_base) ||
+	    ((u32)(long)addr > mm_base + mm_size))
+		return readw(addr);
+
+	ret = stm32_hb_xfer(addr, 0, &rdata, READ);
+	if (ret)
+		dev_err(priv->dev, "%s failed, ret=%i\n", __func__, ret);
+
+	return rdata;
+}
+
+void flash_write16(u16 value, void *addr)
+{
+	struct stm32_ospi_priv *priv = g_stm32_hb_priv;
+	int ret;
+
+	ret = stm32_hb_xfer(addr, value, 0, WRITE);
+	if (ret)
+		dev_err(priv->dev, "%s failed, ret=%i\n", __func__, ret);
+};
+
+static int stm32_hb_test_sfdp(struct udevice *dev)
+{
+	struct stm32_ospi_priv *priv = g_stm32_hb_priv;
+	struct stm32_ospi_plat *plat = dev_get_plat(priv->dev);
+	phys_addr_t mm_base = plat->mm_base;
+	int ret = -EIO;
+	u16 sfdp[2];
+
+	/* Reset */
+	flash_write16(AMD_CMD_RESET, (void *)mm_base);
+	flash_write16(HYPERBUS_CMD_UNLOCK1, (void *)mm_base + (HYPERBUS_ADDR_UNLOCK1 << 1));
+	flash_write16(HYPERBUS_CMD_UNLOCK2, (void *)mm_base + (HYPERBUS_ADDR_UNLOCK2 << 1));
+	flash_write16(HYPERBUS_CMD_RDSFDP, (void *)mm_base + (HYPERBUS_ADDR_UNLOCK1 << 1));
+
+	sfdp[0] = readw(mm_base);
+	sfdp[1] = readw(mm_base + 0x2);
+
+	/* compare with "SF" & "DP" */
+	if (sfdp[0] == 0x4653 && sfdp[1] == 0x5044)
+		ret = 0;
+
+	/* Reset CFI */
+	flash_write16(AMD_CMD_RESET, (void *)mm_base);
+
+	return ret;
+}
+
+static int stm32_hb_test_cfi(struct udevice *dev)
+{
+	struct stm32_ospi_plat *plat = dev_get_plat(dev);
+	phys_addr_t mm_base = plat->mm_base;
+	int ret = -EIO;
+	u16 qry[3];
+
+	/* Reset/Enter in CFI */
+	flash_write16(AMD_CMD_RESET, (void *)mm_base);
+	flash_write16(FLASH_CMD_CFI, (void *)mm_base + 0xaa);
+
+	qry[0] = readw(mm_base + 0x20);
+	qry[1] = readw(mm_base + 0x22);
+	qry[2] = readw(mm_base + 0x24);
+	if (qry[0] == 'Q' && qry[1] == 'R' && qry[2] == 'Y')
+		ret = 0;
+
+	/* Reset/Exit from CFI */
+	flash_write16(AMD_CMD_RESET, (void *)mm_base);
+	flash_write16(FLASH_CMD_RESET, (void *)mm_base);
+
+	return ret;
+}
+
+static int stm32_hb_check_transfer(struct udevice *dev)
+{
+	struct stm32_ospi_plat *plat = dev_get_plat(dev);
+
+	if (plat->jedec_flash)
+		return stm32_hb_test_sfdp(dev);
+	else
+		return stm32_hb_test_cfi(dev);
+}
+
+static int stm32_hb_calibrate(struct udevice *dev)
+{
+	struct stm32_ospi_plat *plat = dev_get_plat(dev);
+	struct stm32_ospi_priv *priv = dev_get_priv(dev);
+	u32 prescaler;
+	u16 period_ps = 0;
+	u8 window_len = 0;
+	int ret;
+	bool bypass_mode = false;
+
+	prescaler = FIELD_GET(OSPI_DCR2_PRESC_MASK,
+			      readl(plat->regs_base + OSPI_DCR2));
+	if (prescaler)
+		setbits_le32(plat->regs_base + OSPI_TCR, OSPI_TCR_DHQC);
+
+	if (priv->bus_freq <= STM32_DLYB_FREQ_THRESHOLD) {
+		bypass_mode = true;
+		period_ps = NSEC_PER_SEC / (priv->bus_freq / 1000);
+	}
+
+	ret = stm32_ospi_dlyb_configure(dev, bypass_mode, period_ps);
+	if (ret)
+		return ret;
+
+	if (bypass_mode || prescaler)
+		/* perform only RX TAP selection */
+		ret = stm32_ospi_dlyb_find_tap(priv, true, &window_len);
+	else
+		/* perform RX/TX TAP selection */
+		ret = stm32_ospi_dlyb_find_tap(priv, false, &window_len);
+
+	if (ret) {
+		dev_err(dev, "Calibration failed\n");
+		if (!bypass_mode)
+			/* stop delay block when configured in lock mode */
+			stm32_ospi_dlyb_stop(dev);
+	}
+
+	return ret;
+}
+
+static void stm32_hb_init(struct udevice *dev)
+{
+	struct stm32_ospi_priv *priv = dev_get_priv(dev);
+	struct stm32_ospi_plat *plat = dev_get_plat(dev);
+	phys_addr_t regs_base = plat->regs_base;
+	unsigned long period;
+	u32 ccr, dcr1, hlcr, prescaler;
+
+	/* enable IP */
+	setbits_le32(regs_base + OSPI_CR, OSPI_CR_EN);
+
+	clrsetbits_le32(regs_base + OSPI_CR, OSPI_CR_CSSEL,
+			FIELD_PREP(OSPI_CR_CSSEL, plat->cs));
+
+	/* set MTYP to HyperBus memory-map mode */
+	dcr1 = FIELD_PREP(OSPI_DCR1_MTYP_MASK, OSPI_DCR1_MTYP_HP_MEMMODE);
+	/* set DEVSIZE to memory map size */
+	dcr1 |= FIELD_PREP(OSPI_DCR1_DEVSIZE_MASK, ffs(plat->mm_size) - 1);
+	writel(dcr1, regs_base + OSPI_DCR1);
+
+	prescaler = DIV_ROUND_UP(plat->clock_rate, plat->flash_freq) - 1;
+	if (prescaler > 255)
+		prescaler = 255;
+
+	clrsetbits_le32(regs_base + OSPI_DCR2, OSPI_DCR2_PRESC_MASK,
+			FIELD_PREP(OSPI_DCR2_PRESC_MASK, prescaler));
+	priv->bus_freq = plat->clock_rate / (prescaler + 1);
+
+	writel(1, regs_base + OSPI_DLR);
+
+	/* set access time latency */
+	period = NSEC_PER_SEC / priv->bus_freq;
+	hlcr = FIELD_PREP(OSPI_HLCR_TACC_MASK, DIV_ROUND_UP(plat->tacc, period));
+	/* set write zero latency */
+	if (plat->wzl)
+		hlcr |= OSPI_HLCR_WZL;
+
+	writel(hlcr, regs_base + OSPI_HLCR);
+
+	ccr = OSPI_CCR_DQSE | OSPI_CCR_DDTR | OSPI_CCR_ADDTR;
+	ccr |= FIELD_PREP(OSPI_CCR_DMODE_MASK, OSPI_CCR_DMODE_8LINES);
+	ccr |= FIELD_PREP(OSPI_CCR_ADSIZE_MASK, OSPI_CCR_ADSIZE_32BITS);
+	ccr |= FIELD_PREP(OSPI_CCR_ADMODE_MASK, OSPI_CCR_ADMODE_8LINES);
+	writel(ccr, regs_base + OSPI_CCR);
+
+	/* Set FMODE to memory map mode */
+	clrsetbits_le32(regs_base + OSPI_CR, OSPI_CR_FMODE_MASK,
+			FIELD_PREP(OSPI_CR_FMODE_MASK, OSPI_CR_FMODE_MMAP));
+}
+
+static int stm32_hb_probe(struct udevice *dev)
+{
+	struct stm32_ospi_priv *priv = dev_get_priv(dev);
+	struct stm32_ospi_plat *plat = dev_get_plat(dev);
+	int ret;
+
+	g_stm32_hb_priv = priv;
+	priv->dev = dev;
+	priv->check_transfer = stm32_hb_check_transfer;
+	plat->jedec_flash = dev_get_driver_data(dev);
+
+	/* mandatory for HyperFlash */
+	if (!plat->mm_size) {
+		dev_err(dev, "Memory-map region not found\n");
+		return -EINVAL;
+	}
+
+	/* mandatory for HyperFlash */
+	if (!plat->dlyb_base) {
+		dev_err(dev, "Incorrect delay block base address\n");
+		return -EINVAL;
+	}
+
+	ret = clk_enable(&plat->clk);
+	if (ret) {
+		dev_err(dev, "failed to enable HyperBus clock\n");
+		return ret;
+	}
+
+	reset_assert_bulk(&plat->rst_ctl);
+	udelay(2);
+	reset_deassert_bulk(&plat->rst_ctl);
+
+	stm32_hb_init(dev);
+
+	return stm32_hb_calibrate(dev);
+}
+
+U_BOOT_DRIVER(stm32_hyperbus) = {
+	.name		= "stm32_hyperbus",
+	.id		= UCLASS_MTD,
+	.bind		= dm_scan_fdt_dev,
+	.of_to_plat	= stm32_ospi_of_to_plat,
+	.plat_auto	= sizeof(struct stm32_ospi_plat),
+	.priv_auto	= sizeof(struct stm32_ospi_priv),
+	.probe		= stm32_hb_probe,
+};
+
+static int stm32_ospi_intf_bind(struct udevice *dev)
+{
+	ofnode child;
+	struct driver *drv;
+	char *drv_name;
+	u8 spi_flash_count = 0;
+	u8 hyperflash_count = 0;
+	bool jedec_flash = false;
+
+	/* Find memory type on each child node (SPI NOR/SPI NAND/Hyperflash) */
+	dev_for_each_subnode(child, dev) {
+		if (ofnode_device_is_compatible(child, "jedec,spi-nor") ||
+		    ofnode_device_is_compatible(child, "spi-nand"))
+			spi_flash_count++;
+
+		if (ofnode_device_is_compatible(child, "cfi-flash"))
+			hyperflash_count++;
+
+		if (ofnode_device_is_compatible(child, "jedec-flash")) {
+			hyperflash_count++;
+			jedec_flash = true;
+		}
+	}
+
+	if (!hyperflash_count && !spi_flash_count) {
+		dev_err(dev, "Missing flash node\n");
+		return -ENODEV;
+	}
+
+	if ((hyperflash_count && spi_flash_count) || hyperflash_count > 1) {
+		dev_err(dev, "Flash node configuration not supported\n");
+		return -EINVAL;
+	}
+
+	if (!hyperflash_count && (spi_flash_count == 0 || spi_flash_count > 2)) {
+		dev_err(dev, "Incorrect DT flash node\n");
+		return -ENODEV;
+	}
+
+	if (hyperflash_count)
+		drv_name = "stm32_hyperbus";
+	else
+		drv_name = "stm32_ospi";
+
+	drv = lists_driver_lookup_name(drv_name);
+	if (!drv) {
+		dev_err(dev, "Cannot find driver '%s'\n", drv_name);
+		return -ENOENT;
+	}
+
+	return device_bind_with_driver_data(dev, drv, dev->name, jedec_flash,
+					    dev_ofnode(dev), NULL);
+}
+
+static const struct udevice_id stm32_ospi_intf_ids[] = {
+{ .compatible = "st,stm32mp25-ospi" },
+	{ }
+};
+
+U_BOOT_DRIVER(stm32_ospi_intf) = {
+	.name = "stm32_ospi_intf",
+	.id = UCLASS_NOP,
+	.of_match = stm32_ospi_intf_ids,
+	.bind = stm32_ospi_intf_bind,
 };
