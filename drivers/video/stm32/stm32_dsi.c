@@ -156,7 +156,7 @@ static int dsi_pll_get_clkout_khz(int clkin_khz, int idf, int ndiv, int odf)
 	return DIV_ROUND_CLOSEST(clkin_khz * ndiv, divisor);
 }
 
-static int dsi_pll_get_params(struct stm32_dsi_priv *dsi,
+static int dsi_pll_get_params(struct stm32_dsi_priv *priv,
 			      int clkin_khz, int clkout_khz,
 			      int *idf, int *ndiv, int *odf)
 {
@@ -167,8 +167,8 @@ static int dsi_pll_get_params(struct stm32_dsi_priv *dsi,
 	if (clkin_khz <= 0 || clkout_khz <= 0)
 		return -EINVAL;
 
-	fvco_min = dsi->lane_min_kbps * 2 * ODF_MAX;
-	fvco_max = dsi->lane_max_kbps * 2 * ODF_MIN;
+	fvco_min = priv->lane_min_kbps * 2 * ODF_MAX;
+	fvco_max = priv->lane_max_kbps * 2 * ODF_MIN;
 
 	best_delta = 1000000; /* big started value (1000000khz) */
 
@@ -216,15 +216,15 @@ static int dsi_phy_init(void *priv_data)
 {
 	struct mipi_dsi_device *device = priv_data;
 	struct udevice *dev = device->dev;
-	struct stm32_dsi_plat *dsi = dev_get_plat(dev);
+	struct stm32_dsi_plat *plat = dev_get_plat(dev);
 	u32 val;
 	int ret;
 
 	dev_dbg(dev, "Initialize DSI physical layer\n");
 
 	/* Enable the regulator */
-	dsi_set(dsi->base, DSI_WRPCR, WRPCR_REGEN | WRPCR_BGREN);
-	ret = readl_poll_timeout(dsi->base + DSI_WISR, val, val & WISR_RRS,
+	dsi_set(plat->base, DSI_WRPCR, WRPCR_REGEN | WRPCR_BGREN);
+	ret = readl_poll_timeout(plat->base + DSI_WISR, val, val & WISR_RRS,
 				 TIMEOUT_US);
 	if (ret) {
 		dev_dbg(dev, "!TIMEOUT! waiting REGU\n");
@@ -232,8 +232,8 @@ static int dsi_phy_init(void *priv_data)
 	}
 
 	/* Enable the DSI PLL & wait for its lock */
-	dsi_set(dsi->base, DSI_WRPCR, WRPCR_PLLEN);
-	ret = readl_poll_timeout(dsi->base + DSI_WISR, val, val & WISR_PLLLS,
+	dsi_set(plat->base, DSI_WRPCR, WRPCR_PLLEN);
+	ret = readl_poll_timeout(plat->base + DSI_WISR, val, val & WISR_PLLLS,
 				 TIMEOUT_US);
 	if (ret) {
 		dev_dbg(dev, "!TIMEOUT! waiting PLL\n");
@@ -247,13 +247,13 @@ static void dsi_phy_post_set_mode(void *priv_data, unsigned long mode_flags)
 {
 	struct mipi_dsi_device *device = priv_data;
 	struct udevice *dev = device->dev;
-	struct stm32_dsi_plat *dsi = dev_get_plat(dev);
+	struct stm32_dsi_plat *plat = dev_get_plat(dev);
 
-	dev_dbg(dev, "Set mode %p enable %ld\n", dsi,
-		mode_flags & MIPI_DSI_MODE_VIDEO);
-
-	if (!dsi)
+	if (!plat)
 		return;
+
+	dev_dbg(dev, "Set mode %p enable %ld\n", plat,
+	mode_flags & MIPI_DSI_MODE_VIDEO);
 
 	/*
 	 * DSI wrapper must be enabled in video mode & disabled in command mode.
@@ -262,9 +262,9 @@ static void dsi_phy_post_set_mode(void *priv_data, unsigned long mode_flags)
 	 */
 
 	if (mode_flags & MIPI_DSI_MODE_VIDEO)
-		dsi_set(dsi->base, DSI_WCR, WCR_DSIEN);
+		dsi_set(plat->base, DSI_WCR, WCR_DSIEN);
 	else
-		dsi_clear(dsi->base, DSI_WCR, WCR_DSIEN);
+		dsi_clear(plat->base, DSI_WCR, WCR_DSIEN);
 }
 
 static int dsi_get_lane_mbps(void *priv_data, struct display_timing *timings,
