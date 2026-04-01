@@ -27,4 +27,4 @@ config RESET_STM32MP25
 	default y
 	help
 	  Support for reset controllers on STMicroelectronics STM32MP2 family SoCs.
-	  This reset driver is compatible with STM32MP25 SoCs.
+	  This reset driver is compatible with STM32MP23 and STM32MP25 SoCs.
