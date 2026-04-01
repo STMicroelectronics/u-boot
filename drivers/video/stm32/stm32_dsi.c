@@ -909,7 +909,8 @@ static int stm32_dsi_attach(struct udevice *dev)
 		return ret;
 	}
 
-	if (priv->hw_version == HWVER_141 && IS_ENABLED(CONFIG_STM32MP25X)) {
+	if (priv->hw_version == HWVER_141 &&
+	    (IS_ENABLED(CONFIG_STM32MP25X) || IS_ENABLED(CONFIG_STM32MP23X))) {
 		ret = dsi_host_init(plat->dsi_host, device, &timings, 4,
 				    &dsi_stm_phy_141_ops);
 		if (ret) {
