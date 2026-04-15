@@ -455,7 +455,7 @@ static int stm32_ospi_dtr_calibration(struct udevice *bus)
 	phys_addr_t regs_base = omi_plat->regs_base;
 	u32 dcr2, prescaler;
 	uint bus_freq;
-	u16 period_ps = 0;
+	u32 period_ps = 0;
 	u8 window_len = 0;
 	int ret;
 	bool bypass_mode = false;
