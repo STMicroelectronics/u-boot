@@ -131,10 +131,6 @@
 	};
 };
 
-&crc1 {
-	status = "okay";
-};
-
 &cryp1 {
 	status = "okay";
 };
@@ -372,7 +368,6 @@
 	interrupt-parent = <&exti>;
 	interrupts = <68 1>;
 	interrupt-names = "wdg";
-	recovery;
 	status = "okay";
 };
 

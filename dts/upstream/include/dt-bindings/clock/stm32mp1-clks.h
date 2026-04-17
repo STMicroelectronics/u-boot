@@ -179,6 +179,12 @@
 #define DAC12_K		168
 #define ETHPTP_K	169
 
+#define PCLK1		170
+#define PCLK2		171
+#define PCLK3		172
+#define PCLK4		173
+#define PCLK5		174
+
 /* PLL */
 #define PLL1		176
 #define PLL2		177
@@ -270,5 +276,16 @@
 #define CK_SCMI_RTCAPB		18
 #define CK_SCMI_SPI6		19
 #define CK_SCMI_USART1		20
+#define CK_SCMI_GPIOA		21
+#define CK_SCMI_GPIOB		22
+#define CK_SCMI_GPIOC		23
+#define CK_SCMI_GPIOD		24
+#define CK_SCMI_GPIOE		25
+#define CK_SCMI_GPIOF		26
+#define CK_SCMI_GPIOG		27
+#define CK_SCMI_GPIOH		28
+#define CK_SCMI_GPIOI		29
+#define CK_SCMI_GPIOJ		30
+#define CK_SCMI_GPIOK		31
 
 #endif /* _DT_BINDINGS_STM32MP1_CLKS_H_ */

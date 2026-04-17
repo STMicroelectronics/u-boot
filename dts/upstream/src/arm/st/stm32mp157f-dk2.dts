@@ -11,7 +11,9 @@
 #include "stm32mp15-pinctrl.dtsi"
 #include "stm32mp15xxac-pinctrl.dtsi"
 #include "stm32mp15xx-dkx.dtsi"
-#include "stm32mp157f-dk2-scmi.dtsi"
+#include "stm32mp157-scmi.dtsi"
+#include "stm32mp15xc-scmi.dtsi"
+#include <dt-bindings/regulator/st,stm32mp15-regulator.h>
 
 / {
 	model = "STMicroelectronics STM32MP157F-DK2 Discovery Board";
@@ -23,16 +25,35 @@
 	};
 
 	chosen {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
 		stdout-path = "serial0:115200n8";
+
+		framebuffer {
+			compatible = "simple-framebuffer";
+			clocks = <&rcc LTDC_PX>, <&rcc DSI>, <&rcc DSI_PX>;
+			status = "disabled";
+		};
+	};
+
+	reserved-memory {
+		optee@de000000 {
+			reg = <0xde000000 0x2000000>;
+			no-map;
+		};
 	};
 
 	wifi_pwrseq: wifi-pwrseq {
 		compatible = "mmc-pwrseq-simple";
 		reset-gpios = <&gpioh 4 GPIO_ACTIVE_LOW>;
+		clocks = <&rtc>;
+		clock-names = "ext_clock";
 	};
 };
 
 &arm_wdt {
+	bootph-all;
 	timeout-sec = <32>;
 	status = "okay";
 };
@@ -46,11 +67,11 @@
 	#size-cells = <0>;
 	status = "okay";
 
-	panel@0 {
+	panel: panel@0 {
 		compatible = "orisetech,otm8009a";
 		reg = <0>;
 		reset-gpios = <&gpioe 4 GPIO_ACTIVE_LOW>;
-		power-supply = <&scmi_v3v3>;
+		power-supply = <&v3v3>;
 
 		port {
 			panel_in: endpoint {
@@ -68,6 +89,12 @@
 	remote-endpoint = <&panel_in>;
 };
 
+&hdp {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&hdp2_gpo &hdp2_pins_a>;
+	pinctrl-1 = <&hdp2_sleep_pins_a>;
+};
+
 &i2c1 {
 	touchscreen@38 {
 		compatible = "focaltech,ft6236";
@@ -76,27 +103,38 @@
 		interrupt-parent = <&gpiof>;
 		touchscreen-size-x = <480>;
 		touchscreen-size-y = <800>;
+		vcc-supply = <&v3v3>;
+		iovcc-supply = <&v3v3>;
+		panel = <&panel>;
 	};
 };
 
-/* I2C4 is managed by OP-TEE */
 &i2c4 {
 	status = "disabled";
 
-	/* i2c4 subnodes, which won't be managed by Linux */
 	typec@28 {
 		status = "disabled";
-		connector {
-			status = "disabled";
-		};
+
+		/delete-node/ connector;
 	};
 
-	stpmic@33 {
+	pmic@33 {
 		status = "disabled";
+
+		/delete-node/ regulators;
+	};
+};
+
+&lptimer4 {
+	status = "okay";
+
+	timer {
+		status = "okay";
 	};
 };
 
 &ltdc {
+	bootph-some-ram;
 	status = "okay";
 
 	port {
@@ -111,12 +149,66 @@
 };
 
 &rtc {
+	#clock-cells = <0>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&rtc_rsvd_pins_a>;
+	pinctrl-0 = <&rtc_rsvd_pins_a &rtc_lsco_pins_a>;
 
 	rtc_lsco_pins_a: rtc-lsco-0 {
 		pins = "out2_rmp";
 		function = "lsco";
+	};
+};
+
+&scmi_regu {
+	vddcore: regulator@3 {
+		reg = <VOLTD_SCMI_STPMIC1_BUCK1>;
+		regulator-name = "vddcore";
+	};
+
+	vdd: regulator@5 {
+		reg = <VOLTD_SCMI_STPMIC1_BUCK3>;
+		regulator-name = "vdd";
+	};
+
+	v3v3: regulator@6 {
+		reg = <VOLTD_SCMI_STPMIC1_BUCK4>;
+		regulator-name = "v3v3";
+	};
+
+	v1v8_audio: regulator@7 {
+		reg = <VOLTD_SCMI_STPMIC1_LDO1>;
+		regulator-name = "v1v8_audio";
+	};
+
+	v3v3_hdmi: regulator@8 {
+		reg = <VOLTD_SCMI_STPMIC1_LDO2>;
+		regulator-name = "v3v3_hdmi";
+	};
+
+	vdd_usb: regulator@a {
+		reg = <VOLTD_SCMI_STPMIC1_LDO4>;
+		regulator-name = "vdd_usb";
+	};
+
+	vdda: regulator@b {
+		reg = <VOLTD_SCMI_STPMIC1_LDO5>;
+		regulator-name = "vdda";
+		regulator-boot-on;
+	};
+
+	v1v2_hdmi: regulator@c {
+		reg = <VOLTD_SCMI_STPMIC1_LDO6>;
+		regulator-name = "v1v2_hdmi";
+	};
+
+	vbus_otg: regulator@f {
+		reg = <VOLTD_SCMI_STPMIC1_PWR_SW1>;
+		regulator-name = "vbus_otg";
+	};
+
+	vbus_sw: regulator@10 {
+		reg = <VOLTD_SCMI_STPMIC1_PWR_SW2>;
+		regulator-name = "vbus_sw";
 	};
 };
 
@@ -127,10 +219,11 @@
 	pinctrl-1 = <&sdmmc2_b4_od_pins_a>;
 	pinctrl-2 = <&sdmmc2_b4_sleep_pins_a>;
 	non-removable;
+	cap-power-off-card;
 	cap-sdio-irq;
 	st,neg-edge;
 	bus-width = <4>;
-	vmmc-supply = <&scmi_v3v3>;
+	vmmc-supply = <&v3v3>;
 	mmc-pwrseq = <&wifi_pwrseq>;
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -139,8 +232,6 @@
 	brcmf: wifi@1 {
 		reg = <1>;
 		compatible = "brcm,bcm4329-fmac";
-		pinctrl-names = "default";
-		pinctrl-0 = <&rtc_lsco_pins_a>;
 	};
 };
 
@@ -156,13 +247,14 @@
 	bluetooth {
 		shutdown-gpios = <&gpioz 6 GPIO_ACTIVE_HIGH>;
 		compatible = "brcm,bcm43438-bt";
-		max-speed = <3000000>;
-		vbat-supply = <&scmi_v3v3>;
-		vddio-supply = <&scmi_v3v3>;
+		clocks = <&rtc>;
+		clock-names = "lpo";
+		max-speed = <2000000>;
+		vbat-supply = <&v3v3>;
+		vddio-supply = <&v3v3>;
 	};
 };
 
-/* Since I2C4 is disabled, STUSB1600 is also disabled so there is no Type-C support */
 &usbotg_hs {
 	dr_mode = "peripheral";
 	role-switch-default-mode = "peripheral";
@@ -174,4 +266,6 @@
 	 * disabled here.
 	 */
 	status = "disabled";
+
+	/delete-node/ port;
 };

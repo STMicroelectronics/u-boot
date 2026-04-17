@@ -9,7 +9,7 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/leds/common.h>
-#include <dt-bindings/regulator/st,stm32mp13-regulator.h>
+#include <dt-bindings/pwm/pwm.h>
 #include "stm32mp135.dtsi"
 #include "stm32mp13xf.dtsi"
 #include "stm32mp13-pinctrl.dtsi"
@@ -20,6 +20,7 @@
 
 	aliases {
 		ethernet0 = &ethernet1;
+		ethernet1 = &ethernet2;
 		serial0 = &uart4;
 		serial1 = &usart1;
 		serial2 = &uart8;
@@ -28,6 +29,16 @@
 
 	chosen {
 		stdout-path = "serial0:115200n8";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		framebuffer {
+			compatible = "simple-framebuffer";
+			clocks = <&rcc LTDC_PX>, <&rcc TIM1_K>;
+			lcd-supply =  <&scmi_v3v3_sw>;
+			status = "disabled";
+		};
 	};
 
 	clocks {
@@ -63,29 +74,45 @@
 	gpio-keys {
 		compatible = "gpio-keys";
 
-		button-user {
-			label = "User-PA13";
-			linux,code = <BTN_1>;
-			gpios = <&gpioa 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+		button-wakeup {
+			label = "wake-up";
+			linux,code = <KEY_WAKEUP>;
+			interrupts-extended = <&optee 0>;
+			wakeup-source;
 		};
 	};
 
 	leds {
 		compatible = "gpio-leds";
 
-		led-blue {
+		led_blue: led-blue {
 			function = LED_FUNCTION_HEARTBEAT;
 			color = <LED_COLOR_ID_BLUE>;
 			gpios = <&gpioa 14 GPIO_ACTIVE_LOW>;
 			linux,default-trigger = "heartbeat";
 			default-state = "off";
 		};
+
+		led-red {
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_RED>;
+			gpios = <&gpioa 13 GPIO_ACTIVE_LOW>;
+		};
+	};
+
+	options {
+		u-boot {
+			compatible = "u-boot,config";
+			boot-led = <&led_blue>;
+		};
 	};
 
 	panel_backlight: panel-backlight {
-		compatible = "gpio-backlight";
-		gpios = <&gpioe 12 GPIO_ACTIVE_HIGH>;
-		default-on;
+		compatible = "pwm-backlight";
+		pwms = <&pwm1 2 1000000 PWM_POLARITY_INVERTED>;
+		brightness-levels = <0 16 22 30 40 55 75 102 138 188 255>;
+		default-brightness-level = <10>;
+		power-supply = <&scmi_v3v3_sw>;
 		status = "okay";
 	};
 
@@ -133,6 +160,8 @@
 	wifi_pwrseq: wifi-pwrseq {
 		compatible = "mmc-pwrseq-simple";
 		reset-gpios = <&mcp23017 11 GPIO_ACTIVE_LOW>;
+		clocks = <&rtc>;
+		clock-names = "ext_clock";
 	};
 };
 
@@ -161,11 +190,41 @@
 	};
 };
 
-&crc1 {
+&arm_wdt {
+	bootph-all;
+	timeout-sec = <32>;
 	status = "okay";
 };
 
+&bsec {
+	bootph-all;
+};
+
 &cryp {
+	status = "okay";
+};
+
+&cs_cti_cpu0 {
+	status = "okay";
+};
+
+&cs_cti_trace {
+	status = "okay";
+};
+
+&cs_etf {
+	status = "okay";
+};
+
+&cs_etm0 {
+	status = "okay";
+};
+
+&cs_tpiu {
+	status = "okay";
+};
+
+&dbg_bus {
 	status = "okay";
 };
 
@@ -182,8 +241,13 @@
 			hsync-active = <0>;
 			vsync-active = <0>;
 			pclk-sample = <0>;
+			pclk-max-frequency = <120000000>;
 		};
 	};
+};
+
+&dts {
+	status = "okay";
 };
 
 &ethernet1 {
@@ -192,7 +256,11 @@
 	pinctrl-1 = <&eth1_rmii_sleep_pins_a>;
 	pinctrl-names = "default", "sleep";
 	phy-mode = "rmii";
+	max-speed = <100>;
 	phy-handle = <&phy0_eth1>;
+	st,phy-wol;
+	nvmem-cells = <&ethernet_mac1_address>;
+	nvmem-cell-names = "mac-address";
 
 	mdio {
 		#address-cells = <1>;
@@ -203,9 +271,77 @@
 			compatible = "ethernet-phy-id0007.c131";
 			reg = <0>;
 			reset-gpios = <&mcp23017 9 GPIO_ACTIVE_LOW>;
-			wakeup-source;
+			reset-assert-us = <1000>;
+			reset-deassert-us = <30000>;
 		};
 	};
+};
+
+&ethernet2 {
+	status = "okay";
+	pinctrl-0 = <&eth2_rmii_pins_a>;
+	pinctrl-1 = <&eth2_rmii_sleep_pins_a>;
+	pinctrl-names = "default", "sleep";
+	phy-mode = "rmii";
+	max-speed = <100>;
+	phy-handle = <&phy0_eth2>;
+	st,ext-phyclk;
+	phy-supply = <&scmi_v3v3_sw>;
+	nvmem-cells = <&ethernet_mac2_address>;
+	nvmem-cell-names = "mac-address";
+
+	mdio {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "snps,dwmac-mdio";
+		phy0_eth2: ethernet-phy@0 {
+			compatible = "ethernet-phy-id0007.c131";
+			reg = <0>;
+			reset-gpios = <&mcp23017 10 GPIO_ACTIVE_LOW>;
+			reset-assert-us = <1000>;
+			reset-deassert-us = <30000>;
+		};
+	};
+};
+
+&etzpc {
+	bootph-all;
+};
+
+&gpioa {
+	bootph-all;
+};
+
+&gpiob {
+	bootph-all;
+};
+
+&gpioc {
+	bootph-all;
+};
+
+&gpiod {
+	bootph-all;
+};
+
+&gpioe {
+	bootph-all;
+};
+
+&gpiof {
+	bootph-all;
+};
+
+&gpiog {
+	bootph-all;
+};
+
+&gpioh {
+	bootph-all;
+};
+
+&gpioi {
+	bootph-all;
 };
 
 &i2c1 {
@@ -237,13 +373,10 @@
 	typec@53 {
 		compatible = "st,stm32g0-typec";
 		reg = <0x53>;
-		/* Alert pin on PI2 */
-		interrupts = <2 IRQ_TYPE_EDGE_FALLING>;
-		interrupt-parent = <&gpioi>;
-		/* Internal pull-up on PI2 */
-		pinctrl-names = "default";
-		pinctrl-0 = <&stm32g0_intn_pins_a>;
+		/* Alert pin on PI2 (PWR wakeup pin), managed by optee */
+		interrupts-extended = <&optee 1>;
 		firmware-name = "stm32g0-ucsi.mp135f-dk.fw";
+		wakeup-source;
 		connector {
 			compatible = "usb-c-connector";
 			label = "USB-C";
@@ -328,8 +461,9 @@
 	goodix: goodix-ts@5d {
 		compatible = "goodix,gt911";
 		reg = <0x5d>;
-		pinctrl-names = "default";
+		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&goodix_pins_a>;
+		pinctrl-1 = <&goodix_sleep_pins_a>;
 		interrupt-parent = <&gpiof>;
 		interrupts = <5 IRQ_TYPE_EDGE_FALLING>;
 		AVDD28-supply = <&scmi_v3v3_sw>;
@@ -345,10 +479,19 @@
 	status = "okay";
 };
 
+&lptimer4 {
+	status = "okay";
+
+	timer {
+		status = "okay";
+	};
+};
+
 &ltdc {
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&ltdc_pins_a>;
 	pinctrl-1 = <&ltdc_sleep_pins_a>;
+	bootph-some-ram;
 	status = "okay";
 
 	port {
@@ -358,9 +501,26 @@
 	};
 };
 
+&optee {
+	bootph-all;
+};
+
+&pinctrl {
+	bootph-all;
+};
+
+&psci {
+	bootph-some-ram;
+};
+
+&rcc {
+	bootph-all;
+};
+
 &rtc {
+	#clock-cells = <0>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&rtc_rsvd_pins_a>;
+	pinctrl-0 = <&rtc_rsvd_pins_a &rtc_lsco_pins_a>;
 	status = "okay";
 
 	rtc_lsco_pins_a: rtc-lsco-0 {
@@ -369,27 +529,51 @@
 	};
 };
 
+&scmi {
+	bootph-all;
+};
+
+&scmi_clk {
+	bootph-all;
+};
+
 &scmi_regu {
-	scmi_vdd_adc: regulator@10 {
+	scmi_vddcpu: regulator@6 {
+		reg = <VOLTD_SCMI_STPMIC1_BUCK1>;
+		regulator-name = "vddcpu";
+	};
+	scmi_vdd: regulator@8 {
+		reg = <VOLTD_SCMI_STPMIC1_BUCK3>;
+		regulator-name = "vdd";
+	};
+	scmi_vddcore: regulator@9 {
+		reg = <VOLTD_SCMI_STPMIC1_BUCK4>;
+		regulator-name = "vddcore";
+	};
+	scmi_vdd_adc: regulator@a {
 		reg = <VOLTD_SCMI_STPMIC1_LDO1>;
 		regulator-name = "vdd_adc";
 	};
-	scmi_vdd_usb: regulator@13 {
+	scmi_vdd_usb: regulator@d {
 		reg = <VOLTD_SCMI_STPMIC1_LDO4>;
 		regulator-name = "vdd_usb";
 	};
-	scmi_vdd_sd: regulator@14 {
+	scmi_vdd_sd: regulator@e {
 		reg = <VOLTD_SCMI_STPMIC1_LDO5>;
 		regulator-name = "vdd_sd";
 	};
-	scmi_v1v8_periph: regulator@15 {
+	scmi_v1v8_periph: regulator@f {
 		reg = <VOLTD_SCMI_STPMIC1_LDO6>;
 		regulator-name = "v1v8_periph";
 	};
-	scmi_v3v3_sw: regulator@19 {
+	scmi_v3v3_sw: regulator@13 {
 		reg = <VOLTD_SCMI_STPMIC1_PWR_SW2>;
 		regulator-name = "v3v3_sw";
 	};
+};
+
+&scmi_reset {
+	bootph-all;
 };
 
 &sdmmc1 {
@@ -402,7 +586,22 @@
 	st,neg-edge;
 	bus-width = <4>;
 	vmmc-supply = <&scmi_vdd_sd>;
+	bootph-pre-ram;
 	status = "okay";
+};
+
+&sdmmc1_b4_pins_a {
+	bootph-pre-ram;
+	pins {
+		bootph-pre-ram;
+	};
+};
+
+&sdmmc1_clk_pins_a {
+	bootph-pre-ram;
+	pins {
+		bootph-pre-ram;
+	};
 };
 
 /* Wifi */
@@ -412,6 +611,7 @@
 	pinctrl-1 = <&sdmmc2_b4_od_pins_a &sdmmc2_clk_pins_a>;
 	pinctrl-2 = <&sdmmc2_b4_sleep_pins_a>;
 	non-removable;
+	cap-power-off-card;
 	cap-sdio-irq;
 	st,neg-edge;
 	bus-width = <4>;
@@ -424,8 +624,6 @@
 	brcmf: wifi@1 {
 		reg = <1>;
 		compatible = "brcm,bcm4329-fmac";
-		pinctrl-names = "default";
-		pinctrl-0 = <&rtc_lsco_pins_a>;
 	};
 };
 
@@ -433,7 +631,36 @@
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&spi5_pins_a>;
 	pinctrl-1 = <&spi5_sleep_pins_a>;
+	dmas = <&dmamux1 85 0x400 0x01>,
+	       <&dmamux1 86 0x400 0x01>,
+	       <&mdma 0 0x3 0x1200000a 0 0>;
+	dma-names = "rx", "tx", "rxm2m";
+	sram = <&spi5_dma_pool>;
 	status = "disabled";
+};
+
+&sram2 {
+	spi5_dma_pool: dma-sram@1000 {
+		reg = <0x1000 0x1000>;
+		pool;
+	};
+};
+
+&syscfg {
+	bootph-all;
+};
+
+&timers1 {
+	/* spare dmas for other usage */
+	/delete-property/dmas;
+	/delete-property/dma-names;
+	status = "okay";
+	pwm1: pwm {
+		pinctrl-0 = <&pwm1_ch3n_pins_a>;
+		pinctrl-1 = <&pwm1_ch3n_sleep_pins_a>;
+		pinctrl-names = "default", "sleep";
+		status = "okay";
+	};
 };
 
 &timers3 {
@@ -517,7 +744,18 @@
 	pinctrl-2 = <&uart4_idle_pins_a>;
 	/delete-property/dmas;
 	/delete-property/dma-names;
+	bootph-all;
 	status = "okay";
+};
+
+&uart4_pins_a {
+	bootph-all;
+	pins1 {
+		bootph-all;
+	};
+	pins2 {
+		bootph-all;
+	};
 };
 
 &uart8 {
@@ -551,7 +789,9 @@
 	bluetooth {
 		shutdown-gpios = <&mcp23017 13 GPIO_ACTIVE_HIGH>;
 		compatible = "brcm,bcm43438-bt";
-		max-speed = <3000000>;
+		clocks = <&rtc>;
+		clock-names = "lpo";
+		max-speed = <2000000>;
 		vbat-supply = <&v3v3_ao>;
 		vddio-supply = <&v3v3_ao>;
 	};
@@ -567,6 +807,7 @@
 		compatible = "usb424,2514";
 		reg = <1>;
 		vdd-supply = <&scmi_v3v3_sw>;
+		vdda-supply = <&scmi_v3v3_sw>;
 	};
 };
 
@@ -583,6 +824,7 @@
 };
 
 &usbphyc {
+	bootph-all;
 	status = "okay";
 };
 

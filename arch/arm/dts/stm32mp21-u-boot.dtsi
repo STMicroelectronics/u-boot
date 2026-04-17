@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR BSD-3-Clause
+/*
+ * Copyright (C) 2024, STMicroelectronics - All Rights Reserved
+ */
+
+/ {
+	aliases {
+		gpio0 = &gpioa;
+		gpio1 = &gpiob;
+		gpio2 = &gpioc;
+		gpio3 = &gpiod;
+		gpio4 = &gpioe;
+		gpio5 = &gpiof;
+		gpio6 = &gpiog;
+		gpio7 = &gpioh;
+		gpio8 = &gpioi;
+		gpio25 = &gpioz;
+		pinctrl0 = &pinctrl;
+		pinctrl1 = &pinctrl_z;
+	};
+};
+
+&syscfg {
+	compatible = "st,stm32mp25-syscfg", "syscon";
+};

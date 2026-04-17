@@ -37,10 +37,6 @@
 	};
 };
 
-&crc1 {
-	status = "okay";
-};
-
 &dts {
 	status = "okay";
 };
@@ -131,6 +127,7 @@
 };
 
 &ltdc {
+	bootph-some-ram;
 	status = "okay";
 
 	port {

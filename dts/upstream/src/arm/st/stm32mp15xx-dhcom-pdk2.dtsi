@@ -201,6 +201,7 @@
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&ltdc_pins_b>;
 	pinctrl-1 = <&ltdc_sleep_pins_b>;
+	bootph-some-ram;
 	status = "okay";
 
 	port {
@@ -234,6 +235,7 @@
 				dai-tdm-slot-width = <16>;
 				frame-master;
 				mclk-fs = <256>;
+				system-clock-direction-out;
 			};
 		};
 	};

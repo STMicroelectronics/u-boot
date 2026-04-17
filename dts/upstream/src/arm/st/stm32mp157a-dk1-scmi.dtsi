@@ -4,21 +4,21 @@
  * Author: Alexandre Torgue <alexandre.torgue@foss.st.com> for STMicroelectronics.
  */
 
-/dts-v1/;
-
-#include "stm32mp157c-ed1.dts"
 #include "stm32mp15-scmi.dtsi"
 
 / {
-	model = "STMicroelectronics STM32MP157C-ED1 SCMI eval daughter";
-	compatible = "st,stm32mp157c-ed1-scmi", "st,stm32mp157";
-
 	reserved-memory {
-		optee@fe000000 {
-			reg = <0xfe000000 0x2000000>;
+		optee@de000000 {
+			reg = <0xde000000 0x2000000>;
 			no-map;
 		};
 	};
+};
+
+&arm_wdt {
+	bootph-all;
+	timeout-sec = <32>;
+	status = "okay";
 };
 
 &cpu0 {
@@ -29,13 +29,52 @@
 	clocks = <&scmi_clk CK_SCMI_MPU>;
 };
 
-&cryp1 {
-	clocks = <&scmi_clk CK_SCMI_CRYP1>;
-	resets = <&scmi_reset RST_SCMI_CRYP1>;
-};
-
 &dsi {
 	clocks = <&rcc DSI>, <&scmi_clk CK_SCMI_HSE>, <&rcc DSI_PX>;
+};
+
+&gpioa {
+	clocks = <&scmi_clk CK_SCMI_GPIOA>;
+};
+
+&gpiob {
+	clocks = <&scmi_clk CK_SCMI_GPIOB>;
+};
+
+&gpioc {
+	clocks = <&scmi_clk CK_SCMI_GPIOC>;
+};
+
+&gpiod {
+	clocks = <&scmi_clk CK_SCMI_GPIOD>;
+};
+
+&gpioe {
+	clocks = <&scmi_clk CK_SCMI_GPIOE>;
+};
+
+&gpiof {
+	clocks = <&scmi_clk CK_SCMI_GPIOF>;
+};
+
+&gpiog {
+	clocks = <&scmi_clk CK_SCMI_GPIOG>;
+};
+
+&gpioh {
+	clocks = <&scmi_clk CK_SCMI_GPIOH>;
+};
+
+&gpioi {
+	clocks = <&scmi_clk CK_SCMI_GPIOI>;
+};
+
+&gpioj {
+	clocks = <&scmi_clk CK_SCMI_GPIOJ>;
+};
+
+&gpiok {
+	clocks = <&scmi_clk CK_SCMI_GPIOK>;
 };
 
 &gpioz {
@@ -45,6 +84,7 @@
 &hash1 {
 	clocks = <&scmi_clk CK_SCMI_HASH1>;
 	resets = <&scmi_reset RST_SCMI_HASH1>;
+	post-init-providers = <&scmi_clk>, <&scmi_reset>;
 };
 
 &i2c4 {
@@ -52,12 +92,13 @@
 	resets = <&scmi_reset RST_SCMI_I2C4>;
 };
 
-&iwdg2 {
-	clocks = <&rcc IWDG2>, <&scmi_clk CK_SCMI_LSI>;
+&i2c6 {
+	clocks = <&scmi_clk CK_SCMI_I2C6>;
+	resets = <&scmi_reset RST_SCMI_I2C6>;
 };
 
-&mdma1 {
-	resets = <&scmi_reset RST_SCMI_MDMA>;
+&iwdg2 {
+	clocks = <&rcc IWDG2>, <&scmi_clk CK_SCMI_LSI>;
 };
 
 &m4_rproc {
@@ -67,9 +108,14 @@
 	reset-names = "mcu_rst", "hold_boot";
 };
 
+&mdma1 {
+	resets = <&scmi_reset RST_SCMI_MDMA>;
+};
+
 &optee {
 	interrupt-parent = <&intc>;
 	interrupts = <GIC_PPI 15 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_LOW)>;
+	bootph-some-ram;
 };
 
 &rcc {
@@ -85,8 +131,27 @@
 &rng1 {
 	clocks = <&scmi_clk CK_SCMI_RNG1>;
 	resets = <&scmi_reset RST_SCMI_RNG1>;
+	post-init-providers = <&scmi_clk>, <&scmi_reset>;
 };
 
 &rtc {
 	clocks = <&scmi_clk CK_SCMI_RTCAPB>, <&scmi_clk CK_SCMI_RTC>;
+};
+
+&scmi {
+	bootph-some-ram;
+};
+
+&uart4 {
+	bootph-all;
+};
+
+&uart4_pins_a {
+	bootph-all;
+	pins1 {
+		bootph-all;
+	};
+	pins2 {
+		bootph-all;
+	};
 };

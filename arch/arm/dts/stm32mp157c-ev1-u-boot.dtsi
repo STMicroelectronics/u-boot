@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0+ OR BSD-3-Clause
+// SPDX-License-Identifier: GPL-2.0-or-later OR BSD-3-Clause
 /*
- * Copyright : STMicroelectronics 2018
+ * Copyright : STMicroelectronics 2022
  */
 
 #include "stm32mp157c-ed1-u-boot.dtsi"
@@ -33,11 +33,11 @@
 			label = "fsbl1";
 			reg = <0x00000000 0x00040000>;
 		};
-		partition@40000 {
+		partition@80000 {
 			label = "fsbl2";
 			reg = <0x00040000 0x00040000>;
 		};
-		partition@80000 {
+		partition@100000 {
 			label = "ssbl";
 			reg = <0x00080000 0x00200000>;
 		};
@@ -59,16 +59,28 @@
 			reg = <0x00040000 0x00040000>;
 		};
 		partition@80000 {
-			label = "fip";
-			reg = <0x00080000 0x00400000>;
+			label = "metadata1";
+			reg = <0x00080000 0x00040000>;
 		};
-		partition@480000 {
-			label = "u-boot-env";
-			reg = <0x00480000 0x00080000>;
+		partition@c0000 {
+			label = "metadata2";
+			reg = <0x000c0000 0x00040000>;
+		};
+		partition@100000 {
+			label = "fip-a";
+			reg = <0x00100000 0x00400000>;
 		};
 		partition@500000 {
+			label = "fip-b";
+			reg = <0x00500000 0x00400000>;
+		};
+		partition@900000 {
+			label = "u-boot-env";
+			reg = <0x00900000 0x00080000>;
+		};
+		partition@980000 {
 			label = "nor-user";
-			reg = <0x00500000 0x03b00000>;
+			reg = <0x00980000 0x03680000>;
 		};
 #endif
 	};
@@ -101,20 +113,40 @@
 				};
 #else
 				partition@0 {
-					label = "fsbl";
-					reg = <0x00000000 0x00200000>;
+					label = "fsbl1";
+					reg = <0x00000000 0x00080000>;
+				};
+				partition@80000 {
+					label = "fsbl2";
+					reg = <0x00080000 0x00080000>;
+				};
+				partition@100000 {
+					label = "metadata1";
+					reg = <0x00100000 0x00080000>;
+				};
+				partition@180000 {
+					label = "metadata2";
+					reg = <0x00180000 0x00080000>;
 				};
 				partition@200000 {
-					label = "fip1";
+					label = "fip-a1";
 					reg = <0x00200000 0x00400000>;
 				};
 				partition@600000 {
-					label = "fip2";
+					label = "fip-a2";
 					reg = <0x00600000 0x00400000>;
 				};
 				partition@a00000 {
+					label = "fip-b1";
+					reg = <0x00a00000 0x00400000>;
+				};
+				partition@e00000 {
+					label = "fip-b2";
+					reg = <0x00e00000 0x00400000>;
+				};
+				partition@1200000 {
 					label = "UBI";
-					reg = <0x00a00000 0x3f600000>;
+					reg = <0x01200000 0x3ee00000>;
 				};
 #endif
 			};
@@ -122,41 +154,3 @@
 	};
 };
 
-&qspi {
-	bootph-pre-ram;
-};
-
-&qspi_clk_pins_a {
-	bootph-pre-ram;
-	pins {
-		bootph-pre-ram;
-	};
-};
-
-&qspi_bk1_pins_a {
-	bootph-pre-ram;
-	pins {
-		bootph-pre-ram;
-	};
-};
-
-&qspi_cs1_pins_a {
-	bootph-pre-ram;
-	pins {
-		bootph-pre-ram;
-	};
-};
-
-&qspi_bk2_pins_a {
-	bootph-pre-ram;
-	pins {
-		bootph-pre-ram;
-	};
-};
-
-&qspi_cs2_pins_a {
-	bootph-pre-ram;
-	pins {
-		bootph-pre-ram;
-	};
-};

@@ -13,40 +13,33 @@
 	config {
 		u-boot,mmc-env-partition = "u-boot-env";
 		st,adc_usb_pd = <&adc1 6>, <&adc1 12>;
+		st,fastboot-gpios = <&gpioa 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+		st,stm32prog-gpios = <&gpioa 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 	};
 
-	gpio-keys {
-		button-user-1 {
-			label = "User-1";
-			linux,code = <BTN_2>;
-			gpios = <&gpioa 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
-		};
-
-		button-user {
-			/* update label to match the label requested in board_key_check() */
-			label = "User-2";
-		};
+	fwu-mdata {
+		compatible = "u-boot,fwu-mdata-gpt";
+		fwu-mdata-store = <&sdmmc1>;
 	};
 
 	leds {
+		led-red {
+			label = "error";
+			gpios = <&gpioa 13 GPIO_ACTIVE_LOW>;
+		};
+
 		led-blue {
 			/delete-property/default-state;
 		};
 	};
+
+	gpio-keys {
+		/delete-node/button-user;
+	};
 };
 
-&uart4 {
-	bootph-all;
-};
-
-&uart4_pins_a {
-	bootph-all;
-	pins1 {
-		bootph-all;
-	};
-	pins2 {
-		bootph-all;
-	};
+&sdmmc2 {
+	status = "disabled";
 };
 
 &usbotg_hs {

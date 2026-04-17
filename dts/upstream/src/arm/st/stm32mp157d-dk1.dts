@@ -1,0 +1,133 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause)
+/*
+ * Copyright (C) STMicroelectronics 2026 - All Rights Reserved
+ * Author: Amelie Delaunay <amelie.delaunay@foss.st.com> for STMicroelectronics.
+ */
+
+/dts-v1/;
+
+#include "stm32mp157.dtsi"
+#include "stm32mp15xd.dtsi"
+#include "stm32mp15-pinctrl.dtsi"
+#include "stm32mp15xxac-pinctrl.dtsi"
+#include "stm32mp15xx-dkx.dtsi"
+#include "stm32mp157-scmi.dtsi"
+#include <dt-bindings/regulator/st,stm32mp15-regulator.h>
+
+/ {
+	model = "STMicroelectronics STM32MP157D-DK1 Discovery Board";
+	compatible = "st,stm32mp157d-dk1", "st,stm32mp157";
+
+	aliases {
+		ethernet0 = &ethernet0;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	reserved-memory {
+		optee@de000000 {
+			reg = <0xde000000 0x2000000>;
+			no-map;
+		};
+	};
+};
+
+&arm_wdt {
+	bootph-all;
+	timeout-sec = <32>;
+	status = "okay";
+};
+
+&i2c4 {
+	status = "disabled";
+
+	typec@28 {
+		status = "disabled";
+
+		/delete-node/ connector;
+	};
+
+	pmic@33 {
+		status = "disabled";
+
+		/delete-node/ regulators;
+	};
+};
+
+&lptimer4 {
+	status = "okay";
+
+	timer {
+		status = "okay";
+	};
+};
+
+&scmi_regu {
+	vddcore: regulator@3 {
+		reg = <VOLTD_SCMI_STPMIC1_BUCK1>;
+		regulator-name = "vddcore";
+	};
+
+	vdd: regulator@5 {
+		reg = <VOLTD_SCMI_STPMIC1_BUCK3>;
+		regulator-name = "vdd";
+	};
+
+	v3v3: regulator@6 {
+		reg = <VOLTD_SCMI_STPMIC1_BUCK4>;
+		regulator-name = "v3v3";
+	};
+
+	v1v8_audio: regulator@7 {
+		reg = <VOLTD_SCMI_STPMIC1_LDO1>;
+		regulator-name = "v1v8_audio";
+	};
+
+	v3v3_hdmi: regulator@8 {
+		reg = <VOLTD_SCMI_STPMIC1_LDO2>;
+		regulator-name = "v3v3_hdmi";
+	};
+
+	vdd_usb: regulator@a {
+		reg = <VOLTD_SCMI_STPMIC1_LDO4>;
+		regulator-name = "vdd_usb";
+	};
+
+	vdda: regulator@b {
+		reg = <VOLTD_SCMI_STPMIC1_LDO5>;
+		regulator-name = "vdda";
+		regulator-boot-on;
+	};
+
+	v1v2_hdmi: regulator@c {
+		reg = <VOLTD_SCMI_STPMIC1_LDO6>;
+		regulator-name = "v1v2_hdmi";
+	};
+
+	vbus_otg: regulator@f {
+		reg = <VOLTD_SCMI_STPMIC1_PWR_SW1>;
+		regulator-name = "vbus_otg";
+	};
+
+	vbus_sw: regulator@10 {
+		reg = <VOLTD_SCMI_STPMIC1_PWR_SW2>;
+		regulator-name = "vbus_sw";
+	};
+};
+
+&usbotg_hs {
+	dr_mode = "peripheral";
+	role-switch-default-mode = "peripheral";
+	/*
+	 * Forcing dr_mode = "peripheral"/"role-switch-default-mode = "peripheral";
+	 * will cause the pull-up on D+/D- to be raised as soon as the OTG is configured at runtime,
+	 * regardless of the presence of VBUS. Notice that on self-powered devices like
+	 * stm32mp157f-dk2, this isn't compliant with the USB standard. That's why usbotg_hs is kept
+	 * disabled here.
+	 */
+	status = "disabled";
+
+	/delete-node/ port;
+};

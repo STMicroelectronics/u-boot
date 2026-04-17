@@ -3,6 +3,7 @@
  * Copyright (C) STMicroelectronics 2017 - All Rights Reserved
  * Author: Ludovic Barre <ludovic.barre@st.com> for STMicroelectronics.
  */
+#include <dt-bindings/arm/coresight-cti-dt.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/stm32mp1-clks.h>
 #include <dt-bindings/reset/stm32mp1-resets.h>
@@ -17,9 +18,34 @@
 
 		cpu0: cpu@0 {
 			compatible = "arm,cortex-a7";
-			clock-frequency = <650000000>;
 			device_type = "cpu";
 			reg = <0>;
+			clocks = <&rcc CK_MPU>;
+			clock-names = "cpu";
+			operating-points-v2 = <&cpu0_opp_table>;
+			nvmem-cells = <&cpu_speed_grade>;
+			nvmem-cell-names = "speed_grade";
+			#cooling-cells = <2>;
+		};
+	};
+
+	cpu0_opp_table: opp-table-cpu0 {
+		bootph-pre-ram;
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-650000000 {
+			bootph-pre-ram;
+			opp-hz = /bits/ 64 <650000000>;
+			opp-microvolt = <1200000>;
+			opp-supported-hw = <0x3>;
+		};
+
+		opp-800000000 {
+			bootph-pre-ram;
+			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt = <1350000>;
+			opp-supported-hw = <0x2>;
 		};
 	};
 
@@ -30,7 +56,7 @@
 		interrupt-parent = <&intc>;
 	};
 
-	psci {
+	psci: psci {
 		compatible = "arm,psci-1.0";
 		method = "smc";
 	};
@@ -92,15 +118,9 @@
 			thermal-sensors = <&dts>;
 
 			trips {
-				cpu_alert1: cpu-alert1 {
-					temperature = <85000>;
-					hysteresis = <0>;
-					type = "passive";
-				};
-
 				cpu-crit {
 					temperature = <120000>;
-					hysteresis = <0>;
+					hysteresis = <1000>;
 					type = "critical";
 				};
 			};
@@ -123,6 +143,22 @@
 		interrupt-parent = <&intc>;
 		ranges;
 
+		sram4: sram@10050000 {
+			compatible = "mmio-sram";
+			reg = <0x10050000 0x10000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x10050000 0x10000>;
+		};
+
+		hsem: hwspinlock@4c000000 {
+			compatible = "st,stm32-hwspinlock";
+			#hwlock-cells = <2>;
+			reg = <0x4c000000 0x400>;
+			clocks = <&rcc HSEM>;
+			clock-names = "hsem";
+		};
+
 		ipcc: mailbox@4c001000 {
 			compatible = "st,stm32mp1-ipcc";
 			#mbox-cells = <1>;
@@ -142,11 +178,16 @@
 			reg = <0x50000000 0x1000>;
 			#clock-cells = <1>;
 			#reset-cells = <1>;
+
+			clock-names = "hse", "hsi", "csi", "lse", "lsi";
+			clocks = <&clk_hse>, <&clk_hsi>, <&clk_csi>,
+				 <&clk_lse>, <&clk_lsi>;
 		};
 
 		pwr_regulators: pwr@50001000 {
 			compatible = "st,stm32mp1,pwr-reg";
 			reg = <0x50001000 0x10>;
+			st,tzcr = <&rcc 0x0 0x1>;
 
 			reg11: reg11 {
 				regulator-name = "reg11";
@@ -172,11 +213,143 @@
 			reg = <0x50001014 0x4>;
 		};
 
+		pinctrl: pinctrl@50002000 {
+			compatible = "st,stm32mp157-pinctrl";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x50002000 0xa400>;
+			interrupt-parent = <&exti>;
+			hwlocks = <&hsem 0 0>;
+
+			gpioa: gpio@50002000 {
+				reg = <0x0 0x400>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				clocks = <&rcc GPIOA>;
+				st,bank-name = "GPIOA";
+				status = "disabled";
+			};
+
+			gpiob: gpio@50003000 {
+				reg = <0x1000 0x400>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				clocks = <&rcc GPIOB>;
+				st,bank-name = "GPIOB";
+				status = "disabled";
+			};
+
+			gpioc: gpio@50004000 {
+				reg = <0x2000 0x400>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				clocks = <&rcc GPIOC>;
+				st,bank-name = "GPIOC";
+				status = "disabled";
+			};
+
+			gpiod: gpio@50005000 {
+				reg = <0x3000 0x400>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				clocks = <&rcc GPIOD>;
+				st,bank-name = "GPIOD";
+				status = "disabled";
+			};
+
+			gpioe: gpio@50006000 {
+				reg = <0x4000 0x400>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				clocks = <&rcc GPIOE>;
+				st,bank-name = "GPIOE";
+				status = "disabled";
+			};
+
+			gpiof: gpio@50007000 {
+				reg = <0x5000 0x400>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				clocks = <&rcc GPIOF>;
+				st,bank-name = "GPIOF";
+				status = "disabled";
+			};
+
+			gpiog: gpio@50008000 {
+				reg = <0x6000 0x400>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				clocks = <&rcc GPIOG>;
+				st,bank-name = "GPIOG";
+				status = "disabled";
+			};
+
+			gpioh: gpio@50009000 {
+				reg = <0x7000 0x400>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				clocks = <&rcc GPIOH>;
+				st,bank-name = "GPIOH";
+				status = "disabled";
+			};
+
+			gpioi: gpio@5000a000 {
+				reg = <0x8000 0x400>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				clocks = <&rcc GPIOI>;
+				st,bank-name = "GPIOI";
+				status = "disabled";
+			};
+
+			gpioj: gpio@5000b000 {
+				reg = <0x9000 0x400>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				clocks = <&rcc GPIOJ>;
+				st,bank-name = "GPIOJ";
+				status = "disabled";
+			};
+
+			gpiok: gpio@5000c000 {
+				reg = <0xa000 0x400>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				clocks = <&rcc GPIOK>;
+				st,bank-name = "GPIOK";
+				status = "disabled";
+			};
+		};
+
 		exti: interrupt-controller@5000d000 {
-			compatible = "st,stm32mp1-exti", "syscon";
+			compatible = "st,stm32mp1-exti";
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			reg = <0x5000d000 0x400>;
+			hwlocks = <&hsem 1 0>;
+
 			interrupts-extended =
 				<&intc GIC_SPI 6   IRQ_TYPE_LEVEL_HIGH>,	/* EXTI_0 */
 				<&intc GIC_SPI 7   IRQ_TYPE_LEVEL_HIGH>,
@@ -221,8 +394,8 @@
 				<0>,						/* EXTI_40 */
 				<0>,
 				<0>,
-				<0>,
-				<0>,
+				<&intc GIC_SPI 75  IRQ_TYPE_LEVEL_HIGH>,
+				<&intc GIC_SPI 98  IRQ_TYPE_LEVEL_HIGH>,
 				<0>,
 				<&intc GIC_SPI 151 IRQ_TYPE_LEVEL_HIGH>,
 				<&intc GIC_SPI 93  IRQ_TYPE_LEVEL_HIGH>,
@@ -247,7 +420,7 @@
 				<0>,
 				<0>,
 				<&intc GIC_SPI 143 IRQ_TYPE_LEVEL_HIGH>,
-				<0>,
+				<&intc GIC_SPI 94  IRQ_TYPE_LEVEL_HIGH>,
 				<&intc GIC_SPI 62  IRQ_TYPE_LEVEL_HIGH>,	/* EXTI_70 */
 				<0>,
 				<0>,
@@ -274,7 +447,199 @@
 			compatible = "st,stm32mp151-hdp";
 			reg = <0x5002a000 0x400>;
 			clocks = <&rcc HDP>;
+			access-controllers = <&dbg_bus 1>;
 			status = "disabled";
+		};
+
+		dbg_bus: bus@50080000 {
+			compatible = "st,stm32mp151-dbg-bus";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			#access-controller-cells = <1>;
+			ranges = <0x50080000 0x50080000 0x3f80000>,
+				 <0x90000000 0x90000000 0x1000000>;
+			status = "disabled";
+
+			cs_funnel: funnel@50091000 {
+				compatible = "arm,coresight-dynamic-funnel", "arm,primecell";
+				reg = <0x50091000 0x1000>;
+				clocks = <&rcc CK_DBG>, <&rcc CK_TRACE>;
+				clock-names = "apb_pclk", "atclk";
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
+
+				in-ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						reg = <0>;
+						funnel_in_port0: endpoint {
+							remote-endpoint = <&stm_out_port>;
+						};
+					};
+
+					port@1 {
+						reg = <1>;
+						funnel_in_port1: endpoint {
+							remote-endpoint = <&etm0_out>;
+						};
+					};
+				};
+
+				out-ports {
+					port {
+						funnel_out_port: endpoint {
+							remote-endpoint = <&etf_in_port>;
+						};
+					};
+				};
+			};
+
+			cs_etf: etf@50092000 {
+				compatible = "arm,coresight-tmc", "arm,primecell";
+				reg = <0x50092000 0x1000>;
+				clocks = <&rcc CK_DBG>;
+				clock-names = "apb_pclk";
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
+
+				in-ports {
+					port {
+						etf_in_port: endpoint {
+							remote-endpoint = <&funnel_out_port>;
+						};
+					};
+				};
+
+				out-ports {
+					port {
+						etf_out_port: endpoint {
+							remote-endpoint = <&tpiu_in_port>;
+						};
+					};
+				};
+			};
+
+			cs_tpiu: tpiu@50093000 {
+				compatible = "arm,coresight-tpiu", "arm,primecell";
+				reg = <0x50093000 0x1000>;
+				clocks = <&rcc CK_DBG>, <&rcc CK_TRACE>;
+				clock-names = "apb_pclk", "atclk";
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
+
+				in-ports {
+					port {
+						tpiu_in_port: endpoint {
+							remote-endpoint = <&etf_out_port>;
+						};
+					};
+				};
+			};
+
+			cs_cti_trace: cti@50094000 {
+				compatible = "arm,coresight-cti", "arm,primecell";
+				reg = <0x50094000 0x1000>;
+				clocks = <&rcc CK_DBG>;
+				clock-names = "apb_pclk";
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
+			};
+
+			cs_stm: stm@500a0000 {
+				compatible = "arm,coresight-stm", "arm,primecell";
+				reg = <0x500a0000 0x00001000>,
+				      <0x90000000 0x01000000>;
+				reg-names = "stm-base", "stm-stimulus-base";
+				clocks = <&rcc CK_DBG>, <&rcc CK_TRACE>;
+				clock-names = "apb_pclk", "atclk";
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
+
+				out-ports {
+					port {
+						stm_out_port: endpoint {
+							remote-endpoint = <&funnel_in_port0>;
+						};
+					};
+				};
+			};
+
+			cs_cti_cpu0: cti@500d8000 {
+				compatible = "arm,coresight-cti", "arm,primecell";
+				reg = <0x500d8000 0x1000>;
+				clocks = <&rcc CK_DBG>;
+				clock-names = "apb_pclk";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
+
+				trig-conns@0 {
+					reg = <0>;
+					arm,trig-in-sigs = <0 4 5>;
+					arm,trig-in-types = <PE_DBGTRIGGER
+							     GEN_IO
+							     GEN_IO>;
+					arm,trig-out-sigs = <0 7>;
+					arm,trig-out-types = <PE_EDBGREQ
+							      PE_DBGRESTART>;
+					cpu = <&cpu0>;
+				};
+
+				trig-conns@2 {
+					reg = <2>;
+					arm,trig-in-sigs = <2 3 6>;
+					arm,trig-in-types = <ETM_EXTOUT
+							     ETM_EXTOUT
+							     ETM_EXTOUT>;
+					arm,trig-out-sigs = <1 2 3 4>;
+					arm,trig-out-types = <ETM_EXTIN
+							      ETM_EXTIN
+							      ETM_EXTIN
+							      ETM_EXTIN>;
+					arm,cs-dev-assoc = <&cs_etm0>;
+				};
+			};
+
+			cs_etm0: etm@500dc000 {
+				compatible = "arm,coresight-etm3x", "arm,primecell";
+				reg = <0x500dc000 0x1000>;
+				cpu = <&cpu0>;
+				clocks = <&rcc CK_DBG>, <&rcc CK_TRACE>;
+				clock-names = "apb_pclk", "atclk";
+				access-controllers = <&dbg_bus 0>;
+				status = "disabled";
+
+				out-ports {
+					port {
+						etm0_out: endpoint {
+							remote-endpoint = <&funnel_in_port1>;
+						};
+					};
+				};
+			};
+		};
+
+		pinctrl_z: pinctrl@54004000 {
+			compatible = "st,stm32mp157-z-pinctrl";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x54004000 0x400>;
+			interrupt-parent = <&exti>;
+			hwlocks = <&hsem 0 1>;
+
+			gpioz: gpio@54004000 {
+				reg = <0 0x400>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				clocks = <&rcc GPIOZ>;
+				st,bank-name = "GPIOZ";
+				st,bank-ioport = <11>;
+				status = "disabled";
+			};
 		};
 
 		mdma1: dma-controller@58000000 {
@@ -316,13 +681,6 @@
 			status = "disabled";
 		};
 
-		crc1: crc@58009000 {
-			compatible = "st,stm32f7-crc";
-			reg = <0x58009000 0x400>;
-			clocks = <&rcc CRC1>;
-			status = "disabled";
-		};
-
 		usbh_ohci: usb@5800c000 {
 			compatible = "generic-ohci";
 			reg = <0x5800c000 0x1000>;
@@ -339,10 +697,11 @@
 			reg = <0x5800d000 0x1000>;
 			clocks = <&usbphyc>, <&rcc USBH>;
 			resets = <&rcc USBH_R>;
-			interrupts = <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts-extended = <&exti 43 IRQ_TYPE_LEVEL_HIGH>;
 			companion = <&usbh_ohci>;
 			phys = <&usbphyc_port0>;
 			phy-names = "usb";
+			wakeup-source;
 			status = "disabled";
 		};
 
@@ -390,6 +749,22 @@
 			};
 		};
 
+		ddrperfm: perf@5a007000 {
+			compatible = "st,stm32mp151-ddr-pmu", "st,stm32mp131-ddr-pmu";
+			reg = <0x5a007000 0x400>;
+			clocks = <&rcc DDRPERFM>;
+			resets = <&rcc DDRPERFM_R>;
+		};
+
+		iwdg1: watchdog@5c003000 {
+			compatible = "st,stm32mp1-iwdg";
+			reg = <0x5c003000 0x400>;
+			interrupts = <GIC_SPI 150 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&rcc IWDG1>, <&rcc CK_LSI>;
+			clock-names = "pclk", "lsi";
+			status = "disabled";
+		};
+
 		rtc: rtc@5c004000 {
 			compatible = "st,stm32mp1-rtc";
 			reg = <0x5c004000 0x400>;
@@ -404,7 +779,8 @@
 			reg = <0x5c005000 0x400>;
 			#address-cells = <1>;
 			#size-cells = <1>;
-			part_number_otp: part-number-otp@4 {
+
+			cpu_speed_grade: cpu-speed-grade@4 {
 				reg = <0x4 0x1>;
 			};
 			vrefint: vrefin-cal@52 {
@@ -415,6 +791,9 @@
 			};
 			ts_cal2: calib@5e {
 				reg = <0x5e 0x2>;
+			};
+			ethernet_mac_address: mac@e4 {
+				reg = <0xe4 0x6>;
 			};
 		};
 
@@ -741,6 +1120,11 @@
 					compatible = "st,stm32-lptimer-counter";
 					status = "disabled";
 				};
+
+				timer {
+					compatible = "st,stm32-lptimer-timer";
+					status = "disabled";
+				};
 			};
 
 			i2s2: audio-controller@4000b000 {
@@ -763,8 +1147,8 @@
 				interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc SPI2_K>;
 				resets = <&rcc SPI2_R>;
-				dmas = <&dmamux1 39 0x400 0x05>,
-				       <&dmamux1 40 0x400 0x05>;
+				dmas = <&dmamux1 39 0x400 0x01>,
+				       <&dmamux1 40 0x400 0x01>;
 				dma-names = "rx", "tx";
 				access-controllers = <&etzpc 27>;
 				status = "disabled";
@@ -790,8 +1174,8 @@
 				interrupts = <GIC_SPI 51 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc SPI3_K>;
 				resets = <&rcc SPI3_R>;
-				dmas = <&dmamux1 61 0x400 0x05>,
-				       <&dmamux1 62 0x400 0x05>;
+				dmas = <&dmamux1 61 0x400 0x01>,
+				       <&dmamux1 62 0x400 0x01>;
 				dma-names = "rx", "tx";
 				access-controllers = <&etzpc 28>;
 				status = "disabled";
@@ -867,12 +1251,15 @@
 				compatible = "st,stm32mp15-i2c";
 				reg = <0x40012000 0x400>;
 				interrupt-names = "event", "error";
-				interrupts = <GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>,
-					     <GIC_SPI 32 IRQ_TYPE_LEVEL_HIGH>;
+				interrupts-extended = <&exti 21 IRQ_TYPE_LEVEL_HIGH>,
+						      <&intc GIC_SPI 32 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc I2C1_K>;
 				resets = <&rcc I2C1_R>;
 				#address-cells = <1>;
 				#size-cells = <0>;
+				dmas = <&dmamux1 33 0x400 0x1>,
+				       <&dmamux1 34 0x400 0x1>;
+				dma-names = "rx", "tx";
 				st,syscfg-fmp = <&syscfg 0x4 0x1>;
 				wakeup-source;
 				i2c-analog-filter;
@@ -884,12 +1271,15 @@
 				compatible = "st,stm32mp15-i2c";
 				reg = <0x40013000 0x400>;
 				interrupt-names = "event", "error";
-				interrupts = <GIC_SPI 33 IRQ_TYPE_LEVEL_HIGH>,
-					     <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
+				interrupts-extended = <&exti 22 IRQ_TYPE_LEVEL_HIGH>,
+						      <&intc GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc I2C2_K>;
 				resets = <&rcc I2C2_R>;
 				#address-cells = <1>;
 				#size-cells = <0>;
+				dmas = <&dmamux1 35 0x400 0x1>,
+				       <&dmamux1 36 0x400 0x1>;
+				dma-names = "rx", "tx";
 				st,syscfg-fmp = <&syscfg 0x4 0x2>;
 				wakeup-source;
 				i2c-analog-filter;
@@ -901,12 +1291,15 @@
 				compatible = "st,stm32mp15-i2c";
 				reg = <0x40014000 0x400>;
 				interrupt-names = "event", "error";
-				interrupts = <GIC_SPI 72 IRQ_TYPE_LEVEL_HIGH>,
-					     <GIC_SPI 73 IRQ_TYPE_LEVEL_HIGH>;
+				interrupts-extended = <&exti 23 IRQ_TYPE_LEVEL_HIGH>,
+						      <&intc GIC_SPI 73 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc I2C3_K>;
 				resets = <&rcc I2C3_R>;
 				#address-cells = <1>;
 				#size-cells = <0>;
+				dmas = <&dmamux1 73 0x400 0x1>,
+				       <&dmamux1 74 0x400 0x1>;
+				dma-names = "rx", "tx";
 				st,syscfg-fmp = <&syscfg 0x4 0x4>;
 				wakeup-source;
 				i2c-analog-filter;
@@ -918,12 +1311,15 @@
 				compatible = "st,stm32mp15-i2c";
 				reg = <0x40015000 0x400>;
 				interrupt-names = "event", "error";
-				interrupts = <GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH>,
-					     <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>;
+				interrupts-extended = <&exti 25 IRQ_TYPE_LEVEL_HIGH>,
+						      <&intc GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc I2C5_K>;
 				resets = <&rcc I2C5_R>;
 				#address-cells = <1>;
 				#size-cells = <0>;
+				dmas = <&dmamux1 115 0x400 0x1>,
+				       <&dmamux1 116 0x400 0x1>;
+				dma-names = "rx", "tx";
 				st,syscfg-fmp = <&syscfg 0x4 0x10>;
 				wakeup-source;
 				i2c-analog-filter;
@@ -1083,7 +1479,7 @@
 				clocks = <&rcc USART6_K>;
 				wakeup-source;
 				dmas = <&dmamux1 71 0x400 0x15>,
-				<&dmamux1 72 0x400 0x11>;
+				       <&dmamux1 72 0x400 0x11>;
 				dma-names = "rx", "tx";
 				access-controllers = <&etzpc 51>;
 				status = "disabled";
@@ -1095,7 +1491,7 @@
 				reg = <0x44004000 0x400>;
 				interrupts = <GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH>;
 				dmas = <&dmamux1 37 0x400 0x01>,
-				<&dmamux1 38 0x400 0x01>;
+				       <&dmamux1 38 0x400 0x01>;
 				dma-names = "rx", "tx";
 				access-controllers = <&etzpc 52>;
 				status = "disabled";
@@ -1109,8 +1505,8 @@
 				interrupts = <GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc SPI1_K>;
 				resets = <&rcc SPI1_R>;
-				dmas = <&dmamux1 37 0x400 0x05>,
-				<&dmamux1 38 0x400 0x05>;
+				dmas = <&dmamux1 37 0x400 0x01>,
+				       <&dmamux1 38 0x400 0x01>;
 				dma-names = "rx", "tx";
 				access-controllers = <&etzpc 52>;
 				status = "disabled";
@@ -1124,8 +1520,8 @@
 				interrupts = <GIC_SPI 84 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc SPI4_K>;
 				resets = <&rcc SPI4_R>;
-				dmas = <&dmamux1 83 0x400 0x05>,
-				<&dmamux1 84 0x400 0x05>;
+				dmas = <&dmamux1 83 0x400 0x01>,
+				       <&dmamux1 84 0x400 0x01>;
 				dma-names = "rx", "tx";
 				access-controllers = <&etzpc 53>;
 				status = "disabled";
@@ -1176,7 +1572,7 @@
 				clocks = <&rcc TIM16_K>;
 				clock-names = "int";
 				dmas = <&dmamux1 109 0x400 0x1>,
-				<&dmamux1 110 0x400 0x1>;
+				       <&dmamux1 110 0x400 0x1>;
 				dma-names = "ch1", "up";
 				access-controllers = <&etzpc 55>;
 				status = "disabled";
@@ -1209,7 +1605,7 @@
 				clocks = <&rcc TIM17_K>;
 				clock-names = "int";
 				dmas = <&dmamux1 111 0x400 0x1>,
-				<&dmamux1 112 0x400 0x1>;
+				       <&dmamux1 112 0x400 0x1>;
 				dma-names = "ch1", "up";
 				access-controllers = <&etzpc 56>;
 				status = "disabled";
@@ -1240,8 +1636,8 @@
 				interrupts = <GIC_SPI 85 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc SPI5_K>;
 				resets = <&rcc SPI5_R>;
-				dmas = <&dmamux1 85 0x400 0x05>,
-				<&dmamux1 86 0x400 0x05>;
+				dmas = <&dmamux1 85 0x400 0x01>,
+				       <&dmamux1 86 0x400 0x01>;
 				dma-names = "rx", "tx";
 				access-controllers = <&etzpc 57>;
 				status = "disabled";
@@ -1539,13 +1935,14 @@
 				clock-names = "otg", "utmi";
 				resets = <&rcc USBO_R>;
 				reset-names = "dwc2";
-				interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
+				interrupts-extended = <&exti 44 IRQ_TYPE_LEVEL_HIGH>;
 				g-rx-fifo-size = <512>;
 				g-np-tx-fifo-size = <32>;
 				g-tx-fifo-size = <256 16 16 16 16 16 16 16>;
 				dr_mode = "otg";
 				otg-rev = <0x200>;
 				usb33d-supply = <&usb33>;
+				wakeup-source;
 				access-controllers = <&etzpc 85>;
 				status = "disabled";
 			};
@@ -1591,6 +1988,11 @@
 					compatible = "st,stm32-lptimer-counter";
 					status = "disabled";
 				};
+
+				timer {
+					compatible = "st,stm32-lptimer-timer";
+					status = "disabled";
+				};
 			};
 
 			lptimer3: timer@50022000 {
@@ -1616,6 +2018,11 @@
 					reg = <2>;
 					status = "disabled";
 				};
+
+				timer {
+					compatible = "st,stm32-lptimer-timer";
+					status = "disabled";
+				};
 			};
 
 			lptimer4: timer@50023000 {
@@ -1633,6 +2040,11 @@
 					#pwm-cells = <3>;
 					status = "disabled";
 				};
+
+				timer {
+					compatible = "st,stm32-lptimer-timer";
+					status = "disabled";
+				};
 			};
 
 			lptimer5: timer@50024000 {
@@ -1648,6 +2060,11 @@
 				pwm {
 					compatible = "st,stm32-pwm-lp";
 					#pwm-cells = <3>;
+					status = "disabled";
+				};
+
+				timer {
+					compatible = "st,stm32-lptimer-timer";
 					status = "disabled";
 				};
 			};
@@ -1756,8 +2173,8 @@
 				reg = <0x58003000 0x1000>, <0x70000000 0x10000000>;
 				reg-names = "qspi", "qspi_mm";
 				interrupts = <GIC_SPI 92 IRQ_TYPE_LEVEL_HIGH>;
-				dmas = <&mdma1 22 0x2 0x10100002 0x0 0x0>,
-				       <&mdma1 22 0x2 0x10100008 0x0 0x0>;
+				dmas = <&mdma1 22 0x2 0x12000002 0x0 0x0>,
+				       <&mdma1 22 0x2 0x12000008 0x0 0x0>;
 				dma-names = "tx", "rx";
 				clocks = <&rcc QSPI_K>;
 				resets = <&rcc QSPI_R>;
@@ -1771,8 +2188,10 @@
 				compatible = "st,stm32mp1-dwmac", "snps,dwmac-4.20a";
 				reg = <0x5800a000 0x2000>;
 				reg-names = "stmmaceth";
-				interrupts-extended = <&intc GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>;
-				interrupt-names = "macirq";
+				interrupts-extended = <&intc GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>,
+						      <&exti 70 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "macirq",
+						  "eth_wake_irq";
 				clock-names = "stmmaceth",
 					      "mac-clk-tx",
 					      "mac-clk-rx",
@@ -1790,6 +2209,7 @@
 				snps,pbl = <2>;
 				snps,axi-config = <&stmmac_axi_config_0>;
 				snps,tso;
+				wakeup-source;
 				access-controllers = <&etzpc 94>;
 				status = "disabled";
 
@@ -1829,12 +2249,15 @@
 				compatible = "st,stm32mp15-i2c";
 				reg = <0x5c002000 0x400>;
 				interrupt-names = "event", "error";
-				interrupts = <GIC_SPI 95 IRQ_TYPE_LEVEL_HIGH>,
-					     <GIC_SPI 96 IRQ_TYPE_LEVEL_HIGH>;
+				interrupts-extended = <&exti 24 IRQ_TYPE_LEVEL_HIGH>,
+						      <&intc GIC_SPI 96 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc I2C4_K>;
 				resets = <&rcc I2C4_R>;
 				#address-cells = <1>;
 				#size-cells = <0>;
+				dmas = <&mdma1 36 0x0 0x40008 0x0 0x0>,
+				       <&mdma1 37 0x0 0x40002 0x0 0x0>;
+				dma-names = "rx", "tx";
 				st,syscfg-fmp = <&syscfg 0x4 0x8>;
 				wakeup-source;
 				i2c-analog-filter;
@@ -1846,12 +2269,15 @@
 				compatible = "st,stm32mp15-i2c";
 				reg = <0x5c009000 0x400>;
 				interrupt-names = "event", "error";
-				interrupts = <GIC_SPI 135 IRQ_TYPE_LEVEL_HIGH>,
-					     <GIC_SPI 136 IRQ_TYPE_LEVEL_HIGH>;
+				interrupts-extended = <&exti 54 IRQ_TYPE_LEVEL_HIGH>,
+						      <&intc GIC_SPI 136 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&rcc I2C6_K>;
 				resets = <&rcc I2C6_R>;
 				#address-cells = <1>;
 				#size-cells = <0>;
+				dmas = <&mdma1 38 0x0 0x40008 0x0 0x0>,
+				       <&mdma1 39 0x0 0x40002 0x0 0x0>;
+				dma-names = "rx", "tx";
 				st,syscfg-fmp = <&syscfg 0x4 0x20>;
 				wakeup-source;
 				i2c-analog-filter;
@@ -1862,161 +2288,102 @@
 
 		tamp: tamp@5c00a000 {
 			compatible = "st,stm32-tamp", "syscon", "simple-mfd";
+			#address-cells = <1>;
+			#size-cells = <1>;
 			reg = <0x5c00a000 0x400>;
-		};
+			ranges;
 
-		/*
-		 * Break node order to solve dependency probe issue between
-		 * pinctrl and exti.
-		 */
-		pinctrl: pinctrl@50002000 {
-			#address-cells = <1>;
-			#size-cells = <1>;
-			compatible = "st,stm32mp157-pinctrl";
-			ranges = <0 0x50002000 0xa400>;
-			interrupt-parent = <&exti>;
-			st,syscfg = <&exti 0x60 0xff>;
+			nvram: nvram@5c00a100 {
+				compatible = "st,stm32mp15-tamp-nvram";
+				reg = <0x5c00a100 0x80>;
 
-			gpioa: gpio@50002000 {
-				gpio-controller;
-				#gpio-cells = <2>;
-				interrupt-controller;
-				#interrupt-cells = <2>;
-				reg = <0x0 0x400>;
-				clocks = <&rcc GPIOA>;
-				st,bank-name = "GPIOA";
-				status = "disabled";
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+					wakeup_sec: tamp-bkp@0 {
+						reg = <0x0 0x4>;
+					};
+
+					m4_security_perimeter_exti1: tamp-bkp@4 {
+						/* see cortex-m4 wake up feature */
+						reg = <0x4 0x4>;
+					};
+
+					m4_security_perimeter_exti2: tamp-bkp@8 {
+						/* see cortex-m4 wake up feature */
+						reg = <0x8 0x4>;
+					};
+
+					m4_security_perimeter_exti3: tamp-bkp@c {
+						/* see cortex-m4 wtake up feature */
+						reg = <0xc 0x4>;
+					};
+
+					magic_number: tamp-bkp@10 {
+						/* see ddr and cpu wake up management feature */
+						reg = <0x10 0x4>;
+					};
+
+					branch_address: tamp-bkp@14 {
+						/* see ddr and cpu wake up management feature */
+						reg = <0x14 0x4>;
+					};
+
+					fwu_info: tamp-bkp@28 {
+						/* see firmware update info feature */
+						reg = <0x28 0x4>;
+					};
+
+					copro_rsc_tbl_address: tamp-bkp@44 {
+						/* see cortex-m4 management feature */
+						reg = <0x44 0x4>;
+					};
+
+					cortex_m_state: tamp-bkp@48 {
+						/* see cortex-m4 management feature */
+						reg = <0x48 0x4>;
+					};
+
+					boot_mode: tamp-bkp@50 {
+						/* see boot mode selection feature */
+						reg = <0x50 0x4>;
+					};
+
+					boot_counter: tamp-bkp@54 {
+						/* see boot counter feature */
+						reg = <0x54 0x4>;
+					};
+
+					m4_wakeup_area_start: tamp-bkp@58 {
+						/* see cortex-m4 wake up feature */
+						reg = <0x58 0x4>;
+					};
+
+					m4_wakeup_area_length: tamp-bkp@5c {
+						/* see cortex-m4 wake up feature */
+						reg = <0x5c 0x4>;
+					};
+
+					m4_wakeup_area_hash: tamp-bkp@60 {
+						/* SHA-0x100 value see Cortex-M4 wake up feature */
+						reg = <0x60 0x20>;
+					};
+				};
 			};
 
-			gpiob: gpio@50003000 {
-				gpio-controller;
-				#gpio-cells = <2>;
-				interrupt-controller;
-				#interrupt-cells = <2>;
-				reg = <0x1000 0x400>;
-				clocks = <&rcc GPIOB>;
-				st,bank-name = "GPIOB";
-				status = "disabled";
-			};
-
-			gpioc: gpio@50004000 {
-				gpio-controller;
-				#gpio-cells = <2>;
-				interrupt-controller;
-				#interrupt-cells = <2>;
-				reg = <0x2000 0x400>;
-				clocks = <&rcc GPIOC>;
-				st,bank-name = "GPIOC";
-				status = "disabled";
-			};
-
-			gpiod: gpio@50005000 {
-				gpio-controller;
-				#gpio-cells = <2>;
-				interrupt-controller;
-				#interrupt-cells = <2>;
-				reg = <0x3000 0x400>;
-				clocks = <&rcc GPIOD>;
-				st,bank-name = "GPIOD";
-				status = "disabled";
-			};
-
-			gpioe: gpio@50006000 {
-				gpio-controller;
-				#gpio-cells = <2>;
-				interrupt-controller;
-				#interrupt-cells = <2>;
-				reg = <0x4000 0x400>;
-				clocks = <&rcc GPIOE>;
-				st,bank-name = "GPIOE";
-				status = "disabled";
-			};
-
-			gpiof: gpio@50007000 {
-				gpio-controller;
-				#gpio-cells = <2>;
-				interrupt-controller;
-				#interrupt-cells = <2>;
-				reg = <0x5000 0x400>;
-				clocks = <&rcc GPIOF>;
-				st,bank-name = "GPIOF";
-				status = "disabled";
-			};
-
-			gpiog: gpio@50008000 {
-				gpio-controller;
-				#gpio-cells = <2>;
-				interrupt-controller;
-				#interrupt-cells = <2>;
-				reg = <0x6000 0x400>;
-				clocks = <&rcc GPIOG>;
-				st,bank-name = "GPIOG";
-				status = "disabled";
-			};
-
-			gpioh: gpio@50009000 {
-				gpio-controller;
-				#gpio-cells = <2>;
-				interrupt-controller;
-				#interrupt-cells = <2>;
-				reg = <0x7000 0x400>;
-				clocks = <&rcc GPIOH>;
-				st,bank-name = "GPIOH";
-				status = "disabled";
-			};
-
-			gpioi: gpio@5000a000 {
-				gpio-controller;
-				#gpio-cells = <2>;
-				interrupt-controller;
-				#interrupt-cells = <2>;
-				reg = <0x8000 0x400>;
-				clocks = <&rcc GPIOI>;
-				st,bank-name = "GPIOI";
-				status = "disabled";
-			};
-
-			gpioj: gpio@5000b000 {
-				gpio-controller;
-				#gpio-cells = <2>;
-				interrupt-controller;
-				#interrupt-cells = <2>;
-				reg = <0x9000 0x400>;
-				clocks = <&rcc GPIOJ>;
-				st,bank-name = "GPIOJ";
-				status = "disabled";
-			};
-
-			gpiok: gpio@5000c000 {
-				gpio-controller;
-				#gpio-cells = <2>;
-				interrupt-controller;
-				#interrupt-cells = <2>;
-				reg = <0xa000 0x400>;
-				clocks = <&rcc GPIOK>;
-				st,bank-name = "GPIOK";
-				status = "disabled";
-			};
-		};
-
-		pinctrl_z: pinctrl@54004000 {
-			#address-cells = <1>;
-			#size-cells = <1>;
-			compatible = "st,stm32mp157-z-pinctrl";
-			ranges = <0 0x54004000 0x400>;
-			interrupt-parent = <&exti>;
-			st,syscfg = <&exti 0x60 0xff>;
-
-			gpioz: gpio@54004000 {
-				gpio-controller;
-				#gpio-cells = <2>;
-				interrupt-controller;
-				#interrupt-cells = <2>;
-				reg = <0 0x400>;
-				clocks = <&rcc GPIOZ>;
-				st,bank-name = "GPIOZ";
-				st,bank-ioport = <11>;
-				status = "disabled";
+			reboot_mode: reboot-mode {
+				compatible = "nvmem-reboot-mode";
+				nvmem-cells = <&boot_mode>;
+				nvmem-cell-names = "reboot-mode";
+				mode-normal = <0x00>;
+				mode-fastboot = <0x01>;
+				mode-recovery = <0x02>;
+				mode-stm32cubeprogrammer = <0x03>;
+				mode-ums_mmc0 = <0x10>;
+				mode-ums_mmc1 = <0x11>;
+				mode-ums_mmc2 = <0x12>;
+				mode-romcode_serial = <0xff>;
 			};
 		};
 	};
@@ -2040,7 +2407,7 @@
 			st,syscfg-holdboot = <&rcc 0x10C 0x1>;
 			st,syscfg-pdds = <&pwr_mcu 0x0 0x1>;
 			st,syscfg-rsc-tbl = <&tamp 0x144 0xFFFFFFFF>;
-			st,syscfg-m4-state = <&tamp 0x148 0xFFFFFFFF>;
+			st,syscfg-cm-state = <&tamp 0x148 0xFFFFFFFF>;
 			status = "disabled";
 		};
 	};

@@ -5,13 +5,26 @@
  */
 
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/linux-event-codes.h>
+#include <dt-bindings/leds/common.h>
 #include <dt-bindings/mfd/st,stpmic1.h>
 
 / {
 	aliases {
+		ethernet0 = &ethernet0;
 		serial0 = &uart4;
 		serial1 = &usart3;
 		serial2 = &uart7;
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		button-user {
+			label = "User-1";
+			linux,code = <BTN_1>;
+			gpios = <&gpioa 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+		};
 	};
 
 	memory@c0000000 {
@@ -59,15 +72,43 @@
 			reg = <0x38000000 0x10000>;
 			no-map;
 		};
+
+		gpu_reserved: gpu@d4000000 {
+			reg = <0xd4000000 0x4000000>;
+			no-map;
+		};
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x8000000>;
+			alignment = <0x2000>;
+			linux,cma-default;
+		};
 	};
 
 	led {
 		compatible = "gpio-leds";
-		led-blue {
-			label = "heartbeat";
+		led_blue: led-blue {
+			function = LED_FUNCTION_HEARTBEAT;
+			color = <LED_COLOR_ID_BLUE>;
 			gpios = <&gpiod 11 GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "heartbeat";
 			default-state = "off";
+		};
+
+		led-red {
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_RED>;
+			gpios = <&gpioa 13 GPIO_ACTIVE_LOW>;
+		};
+	};
+
+	options {
+		u-boot {
+			compatible = "u-boot,config";
+			boot-led = <&led_blue>;
 		};
 	};
 
@@ -129,6 +170,10 @@
 	};
 };
 
+&bsec {
+	bootph-all;
+};
+
 &cec {
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&cec_pins_b>;
@@ -136,7 +181,71 @@
 	status = "okay";
 };
 
-&crc1 {
+&clk_csi {
+	bootph-all;
+};
+
+&clk_hse {
+	bootph-all;
+};
+
+&clk_hsi {
+	bootph-all;
+};
+
+&clk_lse {
+	bootph-all;
+};
+
+&clk_lsi {
+	bootph-all;
+};
+
+&cpu0 {
+	cpu-supply = <&vddcore>;
+};
+
+&cpu1 {
+	cpu-supply = <&vddcore>;
+};
+
+&cs_cti_cpu0 {
+	status = "okay";
+};
+
+&cs_cti_cpu1 {
+	status = "okay";
+};
+
+&cs_cti_trace {
+	status = "okay";
+};
+
+&cs_etf {
+	status = "okay";
+};
+
+&cs_etm0 {
+	status = "okay";
+};
+
+&cs_etm1 {
+	status = "okay";
+};
+
+&cs_funnel {
+	status = "okay";
+};
+
+&cs_stm {
+	status = "okay";
+};
+
+&cs_tpiu {
+	status = "okay";
+};
+
+&dbg_bus {
 	status = "okay";
 };
 
@@ -152,6 +261,8 @@
 	phy-mode = "rgmii-id";
 	max-speed = <1000>;
 	phy-handle = <&phy0>;
+	nvmem-cells = <&ethernet_mac_address>;
+	nvmem-cell-names = "mac-address";
 
 	mdio {
 		#address-cells = <1>;
@@ -161,6 +272,58 @@
 			reg = <0>;
 		};
 	};
+};
+
+&gpioa {
+	bootph-all;
+};
+
+&gpiob {
+	bootph-all;
+};
+
+&gpioc {
+	bootph-all;
+};
+
+&gpiod {
+	bootph-all;
+};
+
+&gpioe {
+	bootph-all;
+};
+
+&gpiof {
+	bootph-all;
+};
+
+&gpiog {
+	bootph-all;
+};
+
+&gpioh {
+	bootph-all;
+};
+
+&gpioi {
+	bootph-all;
+};
+
+&gpioj {
+	bootph-all;
+};
+
+&gpiok {
+	bootph-all;
+};
+
+&gpioz {
+	bootph-all;
+};
+
+&gpu {
+	contiguous-area = <&gpu_reserved>;
 };
 
 &hash1 {
@@ -249,6 +412,7 @@
 	i2c-scl-rising-time-ns = <185>;
 	i2c-scl-falling-time-ns = <20>;
 	clock-frequency = <400000>;
+	bootph-all;
 	status = "okay";
 	/* spare dmas for other usage */
 	/delete-property/dmas;
@@ -278,12 +442,13 @@
 		};
 	};
 
-	pmic: stpmic@33 {
+	pmic@33 {
 		compatible = "st,stpmic1";
 		reg = <0x33>;
-		interrupts-extended = <&gpioa 0 IRQ_TYPE_EDGE_FALLING>;
+		interrupts-extended = <&exti 55 IRQ_TYPE_EDGE_FALLING>;
 		interrupt-controller;
 		#interrupt-cells = <2>;
+		bootph-all;
 		status = "okay";
 
 		regulators {
@@ -422,6 +587,13 @@
 	};
 };
 
+&i2c4_pins_a {
+	bootph-all;
+	pins {
+		bootph-all;
+	};
+};
+
 &i2c5 {
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&i2c5_pins_a>;
@@ -456,6 +628,12 @@
 	status = "okay";
 };
 
+&iwdg1 {
+	bootph-all;
+	timeout-sec = <32>;
+	status = "disabled";
+};
+
 &iwdg2 {
 	timeout-sec = <32>;
 	status = "okay";
@@ -465,6 +643,7 @@
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&ltdc_pins_a>;
 	pinctrl-1 = <&ltdc_sleep_pins_a>;
+	bootph-some-ram;
 	status = "okay";
 
 	port {
@@ -486,13 +665,26 @@
 	status = "okay";
 };
 
+&pinctrl {
+	bootph-all;
+};
+
+&pinctrl_z {
+	bootph-all;
+};
+
+&psci {
+	bootph-some-ram;
+};
+
 &pwr_regulators {
 	vdd-supply = <&vdd>;
 	vdd_3v3_usbfs-supply = <&vdd_usb>;
+	bootph-all;
 };
 
-&rng1 {
-	status = "okay";
+&rcc {
+	bootph-all;
 };
 
 &rtc {
@@ -553,7 +745,18 @@
 	st,neg-edge;
 	bus-width = <4>;
 	vmmc-supply = <&v3v3>;
+	bootph-pre-ram;
 	status = "okay";
+};
+
+&sdmmc1_b4_pins_a {
+	bootph-pre-ram;
+	pins1 {
+		bootph-pre-ram;
+	};
+	pins2 {
+		bootph-pre-ram;
+	};
 };
 
 &sdmmc3 {
@@ -566,6 +769,32 @@
 	bus-width = <4>;
 	vmmc-supply = <&v3v3>;
 	status = "disabled";
+};
+
+&spi4 {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&spi4_pins_b>;
+	pinctrl-1 = <&spi4_sleep_pins_b>;
+	dmas = <&dmamux1 83 0x400 0x01>,
+	       <&dmamux1 84 0x400 0x01>,
+	       <&mdma1 0 0x3 0x1200000a 0 0>;
+	dma-names = "rx", "tx", "rxm2m";
+	sram = <&spi4_dma_pool>;
+	status = "disabled";
+};
+
+&spi5 {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&spi5_pins_a>;
+	pinctrl-1 = <&spi5_sleep_pins_a>;
+	status = "disabled";
+};
+
+&sram4 {
+	spi4_dma_pool: dma-sram@9000 {
+		reg = <0x9000 0x1000>;
+		pool;
+	};
 };
 
 &timers1 {
@@ -676,9 +905,20 @@
 	pinctrl-0 = <&uart4_pins_a>;
 	pinctrl-1 = <&uart4_sleep_pins_a>;
 	pinctrl-2 = <&uart4_idle_pins_a>;
+	bootph-all;
 	/delete-property/dmas;
 	/delete-property/dma-names;
 	status = "okay";
+};
+
+&uart4_pins_a {
+	bootph-all;
+	pins1 {
+		bootph-all;
+	};
+	pins2 {
+		bootph-all;
+	};
 };
 
 &uart7 {
@@ -709,6 +949,7 @@
 		compatible = "usb424,2514";
 		reg = <1>;
 		vdd-supply = <&v3v3>;
+		vdda-supply = <&v3v3>;
 	};
 };
 

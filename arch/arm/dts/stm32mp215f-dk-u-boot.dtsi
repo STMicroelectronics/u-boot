@@ -1,19 +1,29 @@
 // SPDX-License-Identifier: GPL-2.0-or-later OR BSD-3-Clause
 /*
- * Copyright (C) STMicroelectronics 2026 - All Rights Reserved
+ * Copyright (C) STMicroelectronics 2024 - All Rights Reserved
  */
+
+#include "stm32mp21-u-boot.dtsi"
 
 / {
 	config {
-		u-boot,boot-led = "led-blue";
 		u-boot,mmc-env-partition = "u-boot-env";
 	};
+
+	fwu-mdata {
+		compatible = "u-boot,fwu-mdata-gpt";
+		fwu-mdata-store = <&sdmmc1>;
+	};
+
+	/delete-node/ typec;
 };
 
-&syscfg {
-	bootph-all;
+/* pre-reloc probe = reserve video frame buffer in video_reserve() */
+&ltdc {
+	clocks = <&rcc CK_BUS_LTDC>, <&rcc CK_KER_LTDC>;
+	clock-names = "bus", "lcd";
 };
 
-&usart2 {
-	bootph-all;
+&usbotg_hs {
+	/delete-node/ port;
 };
