@@ -69,8 +69,8 @@ static int clk_stm32_resolve_clk_name(struct udevice *dev, int idx, const char *
 
 	ret = dev_read_phandle_with_args(dev, "clocks", "#clock-cells", 0, idx, &args);
 	if (ret) {
-		dev_err(dev, "%s: dev_read_phandle_with_args failed: err=%d\n",
-			__func__, ret);
+		dev_dbg(dev, "%s: dev_read_phandle_with_args failed with idx %d: err=%d\n",
+			__func__, idx, ret);
 		return ret;
 	}
 
