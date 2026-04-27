@@ -256,8 +256,8 @@ static const struct onboard_hub_data usb424_data = {
 static const struct onboard_hub_data usb2514_data = {
 	.power_on_delay_us = 500,
 	.reset_us = 1,
-	.num_supplies = 1,
-	.supply_names = { "vdd-supply" },
+	.num_supplies = 2,
+	.supply_names = { "vdd-supply", "vdda-supply" },
 };
 
 static const struct onboard_hub_data usb5744_data = {
