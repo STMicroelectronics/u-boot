@@ -246,6 +246,13 @@ static int usb_onboard_hub_bind(struct udevice *dev)
 	return -ENODEV;
 }
 
+static const struct onboard_hub_data usb424_data = {
+	.power_on_delay_us = 500,
+	.reset_us = 1,
+	.num_supplies = 1,
+	.supply_names = { "vdd-supply" },
+};
+
 static const struct onboard_hub_data usb2514_data = {
 	.power_on_delay_us = 500,
 	.reset_us = 1,
@@ -269,7 +276,11 @@ static const struct onboard_hub_data usbhx3_data = {
 
 static const struct udevice_id usb_onboard_hub_ids[] = {
 	/* Use generic usbVID,PID dt-bindings (usb-device.yaml) */
-	{	.compatible = "usb424,2514",	/* USB2514B USB 2.0 */
+	{
+		.compatible = "usb424,2422",	/* USB2422 USB 2.0 */
+		.data = (ulong)&usb424_data,
+	}, {
+		.compatible = "usb424,2514",	/* USB2514B USB 2.0 */
 		.data = (ulong)&usb2514_data,
 	}, {
 		.compatible = "usb424,2744",	/* USB2744 USB 2.0 */
