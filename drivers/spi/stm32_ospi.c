@@ -822,9 +822,9 @@ static const u16 dlybos_delay_ps[STM32_DLYBOS_DELAY_NB] = {
 22336, 23968, 25568, 27168, 28768, 30400, 32000, 33600, 35232, 36832, 38432, 40032
 };
 
-static u32 stm32_ospi_find_byp_cmd(u16 period_ps)
+static u32 stm32_ospi_find_byp_cmd(u32 period_ps)
 {
-	u16 half_period_ps = period_ps / 2;
+	u32 half_period_ps = period_ps / 2;
 	u8 max = STM32_DLYBOS_DELAY_NB - 1;
 	u8 i, min = 0;
 
@@ -851,7 +851,7 @@ static u32 stm32_ospi_find_byp_cmd(u16 period_ps)
 }
 
 static int stm32_ospi_dlyb_configure(struct udevice *dev,
-				     bool bypass_mode, u16 period_ps)
+				     bool bypass_mode, u32 period_ps)
 {
 	struct stm32_ospi_plat *plat = dev_get_plat(dev);
 	u32 sr, mask, val;
@@ -892,7 +892,7 @@ int stm32_ospi_dlyb_set_cr(struct udevice *dev, u32 dlyb_cr)
 {
 	bool bypass_mode = false;
 	int ret;
-	u16 period_ps;
+	u32 period_ps;
 	u8 rx_tap, tx_tap;
 
 	period_ps = FIELD_GET(DLYBOS_BYP_CMD_MASK, dlyb_cr);
@@ -1001,7 +1001,7 @@ static int stm32_ospi_dtr_calibration(struct udevice *bus)
 	phys_addr_t regs_base = plat->regs_base;
 	u32 dcr2, prescaler;
 	uint bus_freq;
-	u16 period_ps = 0;
+	u32 period_ps = 0;
 	u8 window_len = 0;
 	int ret;
 	bool bypass_mode = false;
@@ -1517,7 +1517,7 @@ static int stm32_hb_calibrate(struct udevice *dev)
 	struct stm32_ospi_plat *plat = dev_get_plat(dev);
 	struct stm32_ospi_priv *priv = dev_get_priv(dev);
 	u32 prescaler;
-	u16 period_ps = 0;
+	u32 period_ps = 0;
 	u8 window_len = 0;
 	int ret;
 	bool bypass_mode = false;
