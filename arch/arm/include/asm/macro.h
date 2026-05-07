@@ -265,7 +265,7 @@ lr	.req	x30
 
 	/* SCTLR_EL1 initialization
 	 *
-	 * setting RES1 bits (29,28,23,22,20,11) to 1
+	 * setting RES1 bits (29,28,23,22,11) to 1
 	 * and RES0 bits (31,30,27,21,17,13,10,6) +
 	 * UCI,EE,EOE,WXN,nTWE,nTWI,UCT,DZE,I,UMA,SED,ITD,
 	 * CP15BEN,SA0,SA,C,A,M to 0
