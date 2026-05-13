@@ -706,11 +706,9 @@ void *env_sf_get_env_addr(void)
 #if defined(CONFIG_OF_BOARD_FIXUP)
 
 #if defined(CONFIG_STM32MP21X)
-#define SPINAND_NOR_PATH "/soc@0/bus@42080000/spi@40430000/flash@0"
-#define HYPERFLASH_PATH "/soc@0/bus@42080000/memory-controller@40430000/flash@0"
+#define SPI_FLASH_PATH "/soc@0/bus@42080000/spi@40430000/flash@0"
 #else
-#define SPINAND_NOR_PATH "/soc@0/ommanager@40500000/spi@40430000/flash@0"
-#define HYPERFLASH_PATH "/soc@0/ommanager@40500000/memory-controller@40430000/flash@0"
+#define SPI_FLASH_PATH "/soc@0/ommanager@40500000/spi@0/flash@0"
 #endif
 
 static int fdt_update_fwu_mtdpart(void *blob, int nodeoff)
@@ -804,18 +802,10 @@ int fdt_update_fwu_mdata(void *blob)
 
 	case BOOT_FLASH_SPINAND:
 	case BOOT_FLASH_NOR:
-		/* flash0 */
-		ret = fdt_update_fwu_properties(blob, nodeoff, "u-boot,fwu-mdata-mtd",
-						SPINAND_NOR_PATH);
-		if (ret)
-			return ret;
-
-		ret = fdt_update_fwu_mtdpart(blob, nodeoff);
-		break;
 	case BOOT_FLASH_HYPERFLASH:
 		/* flash0 */
 		ret = fdt_update_fwu_properties(blob, nodeoff, "u-boot,fwu-mdata-mtd",
-						HYPERFLASH_PATH);
+						SPI_FLASH_PATH);
 		if (ret)
 			return ret;
 
