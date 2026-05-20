@@ -224,6 +224,18 @@ enum lvds_pixel {
 };
 
 /*
+ * Expected JEIDA-RGB666 data to be sent in LSB format
+ *	    bit6 ............................bit0
+ */
+const enum lvds_pixel lvds_bitmap_jeida_rgb666[5][7] = {
+	{ PIX_ONE, PIX_ONE, PIX_ZER, PIX_ZER, PIX_ZER, PIX_ONE, PIX_ONE },
+	{ PIX_G_2, PIX_R_7, PIX_R_6, PIX_R_5, PIX_R_4, PIX_R_3, PIX_R_2 },
+	{ PIX_B_3, PIX_B_2, PIX_G_7, PIX_G_6, PIX_G_5, PIX_G_4, PIX_G_3 },
+	{ PIX_D_E, PIX_V_S, PIX_H_S, PIX_B_7, PIX_B_6, PIX_B_5, PIX_B_4 },
+	{ PIX_ZER, PIX_ZER, PIX_ZER, PIX_ZER, PIX_ZER, PIX_ZER, PIX_ZER }
+};
+
+/*
  * Expected JEIDA-RGB888 data to be sent in LSB format
  *	    bit6 ............................bit0
  */
@@ -435,6 +447,21 @@ static int stm32_lvds_enable(struct udevice *dev)
 
 	/* Set Data Mapping */
 	switch (priv->bus_format) {
+	case MEDIA_BUS_FMT_RGB666_1X7X3_SPWG: /* JEIDA-RGB666 */
+		for (i = 0; i < 5; i++) {
+			lvds_dmlcr = ((lvds_bitmap_jeida_rgb666[i][0])
+				      + (lvds_bitmap_jeida_rgb666[i][1] << 5)
+				      + (lvds_bitmap_jeida_rgb666[i][2] << 10)
+				      + (lvds_bitmap_jeida_rgb666[i][3] << 15));
+			lvds_dmmcr = ((lvds_bitmap_jeida_rgb666[i][4])
+				      + (lvds_bitmap_jeida_rgb666[i][5] << 5)
+				      + (lvds_bitmap_jeida_rgb666[i][6] << 10));
+
+			/* Write registers at the end of computations */
+			lvds_writel(plat->base, LVDS_DMLCR(i), lvds_dmlcr);
+			lvds_writel(plat->base, LVDS_DMMCR(i), lvds_dmmcr);
+		}
+		break;
 	case MEDIA_BUS_FMT_RGB888_1X7X4_SPWG: /* VESA-RGB888 */
 		for (i = 0; i < 5; i++) {
 			lvds_dmlcr = ((lvds_bitmap_vesa_rgb888[i][0])
