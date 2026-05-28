@@ -18,5 +18,8 @@
 		pinctrl0 = &pinctrl;
 		pinctrl1 = &pinctrl_z;
 	};
+};
 
+&ltdc {
+	st,syscon = <&syscfg>;
 };
