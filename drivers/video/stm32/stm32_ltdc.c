@@ -651,10 +651,9 @@ static int stm32_ltdc_of_to_plat(struct udevice *dev)
 	if (IS_ENABLED(CONFIG_SYSCON) && IS_ENABLED(CONFIG_STM32MP25X)) {
 		ret = uclass_get_device_by_phandle(UCLASS_SYSCON, dev, "st,syscon", &syscon);
 		if (ret) {
-			if (ret != -ENOENT) {
+			if (ret != -ENOENT)
 				dev_err(dev, "unable to find syscon device\n");
-				return ret;
-			}
+			return ret;
 		} else {
 			plat->regmap = syscon_get_regmap(syscon);
 			if (IS_ERR(plat->regmap)) {
