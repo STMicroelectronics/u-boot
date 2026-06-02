@@ -46,7 +46,7 @@ endif
 
 targets += dt.dtb
 
-$(DTB): arch-dtbs $(local_dtbos)
+$(DTB): arch-dtbs $(local_dtbos) arch-ext-dtbs
 	$(Q)test -e $@ || (						\
 	echo >&2;							\
 	echo >&2 "Device Tree Source ($@) is not correctly specified.";	\
@@ -58,6 +58,15 @@ $(DTB): arch-dtbs $(local_dtbos)
 PHONY += arch-dtbs
 arch-dtbs:
 	$(Q)$(MAKE) $(build)=$(dt_dir) dtbs
+
+PHONY += arch-ext-dtbs
+arch-ext-dtbs: arch-dtbs
+	$(Q)if [ -e $(EXT_DTS) ]; then \
+		echo "  EXT_DTS in $(EXT_DTS)"; \
+		$(MAKE) $(build)=$(EXT_DTS) dtbs && \
+		(cp $(EXT_DTS)/*.dtb $(dt_dir)/st/ || \
+		/bin/true) || /bin/false; \
+	else /bin/true; fi
 
 ifneq ($(CONFIG_OF_UPSTREAM_INCLUDE_LOCAL_FALLBACK_DTBOS),)
 PHONY += local-dtbos
@@ -89,3 +98,4 @@ subdir- += ../arch/arc/dts ../arch/arm/dts ../arch/m68k/dts ../arch/microblaze/d
 	   ../arch/mips/dts ../arch/nios2/dts ../arch/powerpc/dts ../arch/riscv/dts	\
 	   ../arch/sandbox/dts ../arch/sh/dts ../arch/x86/dts ../arch/xtensa/dts	\
 	   ./upstream/src/arm64 ./upstream/src/$(ARCH)
++subdir- += $(EXT_DTS)
