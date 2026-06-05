@@ -163,6 +163,16 @@ endchoice
 config NR_DRAM_BANKS
 	default 1
 
+config DDR_4GB_TOP_RESERVED_SIZE
+	hex "Size of top 4GB DDR area which is reserved"
+	default 0
+	help
+		On all STM32MP SoCs family, it allows to reserve an area below
+		the 4GB boundarie ( see board_get_usable_ram_top() ) for secure
+		reserved-memory areas.
+		On STM32MP2x, this area can be reserved for GPU, ltdc_sec_layer
+		or ltdc_sec_rotation in which U-Boot can't be relocated.
+
 config DDR_CACHEABLE_SIZE
 	hex "Size of the DDR marked cacheable in pre-reloc stage"
 	default 0x40000000
