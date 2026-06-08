@@ -181,6 +181,25 @@ static bool reset_gpio(ofnode node)
 	return true;
 }
 
+static bool pd_gpio(ofnode node)
+{
+	struct gpio_desc pd_gpio;
+
+	gpio_request_by_name_nodev(node, "pd-gpios", 0, &pd_gpio, GPIOD_IS_OUT);
+
+	if (!dm_gpio_is_valid(&pd_gpio))
+		return false;
+
+	dm_gpio_set_value(&pd_gpio, true);
+	mdelay(1);
+	dm_gpio_set_value(&pd_gpio, false);
+	mdelay(10);
+
+	dm_gpio_free(NULL, &pd_gpio);
+
+	return true;
+}
+
 /* HELPER: search detected driver */
 struct detect_info_t {
 	bool (*detect)(void);
@@ -237,7 +256,7 @@ bool detect_stm32mp25x_adv753x(void)
 			return false;
 	}
 
-	if (!reset_gpio(node))
+	if (!pd_gpio(node))
 		return false;
 
 	mdelay(10);
@@ -582,7 +601,7 @@ static int fixup_stm32mp257_eval_panel(void *blob)
 	}
 
 	if (!detect_adv753x && !detect_etml0700z9ndha) {
-		nodeoff = fdt_status_disabled_by_compatible(blob, "st,stm32mp25-ltdc");
+		nodeoff = fdt_status_disabled_by_compatible(blob, "st,stm32mp255-ltdc");
 		if (nodeoff < 0)
 			return nodeoff;
 	}
