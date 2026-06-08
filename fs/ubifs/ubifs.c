@@ -542,7 +542,7 @@ static unsigned long ubifs_findfile(struct super_block *sb, char *filename)
 		}
 
 		ret = ubifs_finddir(sb, name, root_inum, &inum);
-		if (!ret)
+		if (ret <= 0)
 			return 0;
 		inode = ubifs_iget(sb, inum);
 
