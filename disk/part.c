@@ -341,10 +341,8 @@ int part_get_info_by_type(struct blk_desc *dev_desc, int part, int part_type,
 	struct part_driver *drv;
 
 	if (blk_enabled()) {
-#if CONFIG_IS_ENABLED(PARTITION_UUIDS)
 		/* The common case is no UUID support */
-		info->uuid[0] = 0;
-#endif
+		disk_partition_clr_uuid(info);
 #ifdef CONFIG_PARTITION_TYPE_GUID
 		info->type_guid[0] = 0;
 #endif
@@ -389,9 +387,7 @@ int part_get_info_whole_disk(struct blk_desc *dev_desc,
 	info->bootable = 0;
 	strcpy((char *)info->type, BOOT_PART_TYPE);
 	strcpy((char *)info->name, "Whole Disk");
-#if CONFIG_IS_ENABLED(PARTITION_UUIDS)
-	info->uuid[0] = 0;
-#endif
+	disk_partition_clr_uuid(info);
 #ifdef CONFIG_PARTITION_TYPE_GUID
 	info->type_guid[0] = 0;
 #endif
@@ -696,6 +692,45 @@ int part_get_info_by_name(struct blk_desc *dev_desc, const char *name,
 			break;
 		}
 		if (strcmp(name, (const char *)info->name) == 0) {
+			/* matched */
+			return i;
+		}
+	}
+
+	return -ENOENT;
+}
+
+int part_get_info_by_uuid(struct blk_desc *desc, const char *uuid,
+			  struct disk_partition *info)
+{
+	struct part_driver *part_drv;
+	int ret;
+	int i;
+
+	if (!CONFIG_IS_ENABLED(PARTITION_UUIDS))
+		return -ENOENT;
+
+	part_drv = part_driver_lookup_type(desc);
+	if (!part_drv)
+		return -1;
+
+	if (!part_drv->get_info) {
+		log_debug("## Driver %s does not have the get_info() method\n",
+			  part_drv->name);
+		return -ENOSYS;
+	}
+
+	for (i = 1; i < part_drv->max_entries; i++) {
+		ret = part_drv->get_info(desc, i, info);
+		if (ret != 0) {
+			/*
+			 * Partition with this index can't be obtained, but
+			 * further partitions might be, so keep checking.
+			 */
+			continue;
+		}
+
+		if (!strncasecmp(uuid, disk_partition_uuid(info), UUID_STR_LEN)) {
 			/* matched */
 			return i;
 		}

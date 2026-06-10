@@ -216,6 +216,30 @@ int fwu_sync_mdata(struct fwu_mdata *mdata, int part)
 	return 0;
 }
 
+int fwu_mdata_get_image_guid(efi_guid_t *image_guid, efi_guid_t image_type_guid,
+			     u32 bank_index)
+{
+	struct fwu_data *data = &g_fwu_data;
+	struct fwu_image_entry *image;
+	int i;
+
+	if (bank_index >= data->num_banks)
+		return -EINVAL;
+
+	for (i = 0; i < data->num_images; i++) {
+		image = &data->fwu_images[i];
+
+		if (!guidcmp(&image_type_guid, &image->image_type_guid)) {
+			struct fwu_image_bank_info *bank;
+
+			bank = &image->img_bank_info[bank_index];
+			guidcpy(image_guid, &bank->image_guid);
+			return 0;
+		}
+	}
+
+	return -ENOENT;
+}
 /**
  * fwu_mdata_copies_allocate() - Allocate memory for metadata
  * @mdata_size: Size of the metadata structure
@@ -630,6 +654,16 @@ __weak void fwu_plat_get_bootidx(uint *boot_idx)
 }
 
 /**
+ * fwu_platform_hook() - Platform specific processing with FWU metadata
+ *
+ * Return: 0 if OK, -ve on error
+ */
+__weak int fwu_platform_hook(struct udevice *dev, struct fwu_data *data)
+{
+	return 0;
+}
+
+/**
  * fwu_update_checks_pass() - Check if FWU update can be done
  *
  * Check if the FWU update can be executed. The updates are
@@ -686,6 +720,7 @@ static int fwu_boottime_checks(void *ctx, struct event *event)
 {
 	int ret;
 	u32 boot_idx, active_idx;
+	struct fwu_data *data;
 
 	ret = uclass_first_device_err(UCLASS_FWU_MDATA, &g_dev);
 	if (ret) {
@@ -743,6 +778,13 @@ static int fwu_boottime_checks(void *ctx, struct event *event)
 
 	if (!ret)
 		boottime_check = 1;
+
+	data = fwu_get_data();
+	ret = fwu_platform_hook(g_dev, data);
+	if (ret) {
+		log_err("fwu_platform_hook() failed\n");
+		return ret;
+	}
 
 	return 0;
 }

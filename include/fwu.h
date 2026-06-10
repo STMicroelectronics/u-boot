@@ -130,6 +130,17 @@ int fwu_write_mdata(struct udevice *dev, struct fwu_mdata *mdata,
 		    bool primary, uint32_t size);
 
 /**
+ * fwu_platform_hook() - Platform specific processing with FWU metadata
+ * @dev: FWU metadata device
+ * @data: FWU metadata
+ *
+ * Provide a platform specific function for processing with the FWU metadata.
+ *
+ * Return: 0 if OK, -ve on error
+ */
+int fwu_platform_hook(struct udevice *dev, struct fwu_data *data);
+
+/**
  * fwu_get_mdata() - Read, verify and return the FWU metadata
  *
  * Read both the metadata copies from the storage media, verify their checksum,
@@ -383,6 +394,9 @@ void fwu_populate_mdata_image_info(struct fwu_data *data);
  * Return: 0 if OK, -ve on error
  */
 int fwu_get_mdata_size(uint32_t *mdata_size);
+
+int fwu_mdata_get_image_guid(efi_guid_t *image_guid, efi_guid_t image_type_guid,
+			     u32 bank_index);
 
 /**
  * fwu_state_machine_updates() - Update FWU state of the platform

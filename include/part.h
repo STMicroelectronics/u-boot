@@ -80,6 +80,33 @@ struct disk_partition {
 #endif
 };
 
+/* Accessors for struct disk_partition field ->uuid */
+extern char *__invalid_use_of_disk_partition_uuid;
+
+static inline const char *disk_partition_uuid(const struct disk_partition *info)
+{
+#if CONFIG_IS_ENABLED(PARTITION_UUIDS)
+	return info->uuid;
+#else
+	return __invalid_use_of_disk_partition_uuid;
+#endif
+}
+
+static inline void disk_partition_set_uuid(struct disk_partition *info,
+					   const char *val)
+{
+#if CONFIG_IS_ENABLED(PARTITION_UUIDS)
+	strlcpy(info->uuid, val, UUID_STR_LEN + 1);
+#endif
+}
+
+static inline void disk_partition_clr_uuid(struct disk_partition *info)
+{
+#if CONFIG_IS_ENABLED(PARTITION_UUIDS)
+	*info->uuid = '\0';
+#endif
+}
+
 struct disk_part {
 	int partnum;
 	struct disk_partition gpt_part_info;
@@ -223,6 +250,20 @@ int part_get_info_by_name(struct blk_desc *dev_desc,
 			      const char *name, struct disk_partition *info);
 
 /**
+ * part_get_info_by_uuid() - Search for a partition by uuid
+ *                           among all available registered partitions
+ *
+ * @desc:	block device descriptor
+ * @uuid:	the specified table entry uuid
+ * @info:	the disk partition info
+ *
+ * Return: the partition number on match (starting on 1), -ENOENT on no match,
+ * otherwise error
+ */
+int part_get_info_by_uuid(struct blk_desc *desc, const char *uuid,
+			  struct disk_partition *info);
+
+/**
  * part_get_info_by_dev_and_name_or_num() - Get partition info from dev number
  *					    and part name, or dev number and
  *					    part number.
@@ -289,6 +330,12 @@ static inline int blk_get_device_part_str(const char *ifname,
 
 static inline int part_get_info_by_name(struct blk_desc *dev_desc,
 					const char *name,
+					struct disk_partition *info)
+{
+	return -ENOENT;
+}
+
+static inline int part_get_info_by_uuid(struct blk_desc *desc, const char *uuid,
 					struct disk_partition *info)
 {
 	return -ENOENT;
