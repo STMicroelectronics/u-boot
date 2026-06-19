@@ -34,12 +34,38 @@
 
 #define STM32_MAX_PROCS		2
 
+/* Use virtual ID by setting bit 8 of a channel ID */
+#define STM32_IPCC_CH_ID_MASK		GENMASK(7, 0)
+#define STM32_IPCC_CH_HIGH_PRIO_MASK	GENMASK(8, 8)
+#define STM32_IPCC_CH_VALID_MASK	(STM32_IPCC_CH_ID_MASK | \
+					 STM32_IPCC_CH_HIGH_PRIO_MASK)
+
 struct stm32_ipcc {
 	void __iomem *reg_base;
 	void __iomem *reg_proc;
 	u32 proc_id;
 	u32 n_chans;
 };
+
+static int stm32_ipcc_of_xlate(struct mbox_chan *chan,
+			       struct ofnode_phandle_args *args)
+{
+	dev_dbg(chan->dev, "%s(chan=%p)\n", __func__, chan);
+
+	if (args->args_count != 1) {
+		dev_dbg(chan->dev, "Invalid args_count: %d\n", args->args_count);
+		return -EINVAL;
+	}
+
+	if (args->args[0] & ~STM32_IPCC_CH_VALID_MASK) {
+		dev_dbg(chan->dev, "Invalid value: 0x%x\n", args->args[0]);
+		return -EINVAL;
+	}
+
+	chan->id = args->args[0] & STM32_IPCC_CH_ID_MASK;
+
+	return 0;
+}
 
 static int stm32_ipcc_request(struct mbox_chan *chan)
 {
@@ -151,6 +177,7 @@ static const struct udevice_id stm32_ipcc_ids[] = {
 };
 
 struct mbox_ops stm32_ipcc_mbox_ops = {
+	.of_xlate = stm32_ipcc_of_xlate,
 	.request = stm32_ipcc_request,
 	.rfree = stm32_ipcc_free,
 	.send = stm32_ipcc_send,
