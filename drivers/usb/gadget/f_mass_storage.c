@@ -679,8 +679,6 @@ static int sleep_thread(struct fsg_common *common)
 			k = 0;
 			schedule();
 		}
-
-		schedule();
 		dm_usb_gadget_handle_interrupts(udcdev);
 	}
 	common->thread_wakeup_needed = 0;
