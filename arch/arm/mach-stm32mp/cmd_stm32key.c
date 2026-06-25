@@ -129,6 +129,13 @@ const struct stm32key stm32mp21_list[] = {
 		.size = 8,
 	},
 	{
+		.name = "TFM-PRVK-ECIES",
+		.desc = "MCUBoot Encryption private Key for ECIES",
+		.start = 324,
+		.size = 8,
+		.key_format = format2,
+	},
+	{
 		.name = "RPROC-FW-ENC-KEY",
 		.desc = "Encryption/Decryption Key for remote processor firmware",
 		.start = 332,
@@ -217,6 +224,13 @@ const struct stm32key stm32mp2x_list[] = {
 		.desc = "Encryption/Decryption Master Key for FIP",
 		.start = 260,
 		.size = 8,
+	},
+	{
+		.name = "TFM-PRVK-ECIES",
+		.desc = "MCUBoot Encryption private Key for ECIES",
+		.start = 328,
+		.size = 8,
+		.key_format = format2,
 	},
 	{
 		.name = "RPROC-FW-ENC-KEY",
