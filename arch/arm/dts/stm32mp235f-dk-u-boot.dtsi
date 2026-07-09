@@ -22,8 +22,14 @@
 	phy-names = "usb2-phy";
 	dr_mode = "peripheral";
 	maximum-speed = "high-speed";
+	/delete-node/ port;
 };
 
 &sdmmc3 {
 	status = "disabled";
+};
+
+&ucpd {
+	status = "disabled";
+	/delete-node/ connector;
 };
