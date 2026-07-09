@@ -23,6 +23,7 @@
 
 &dwc3 {
 	dr_mode = "peripheral";
+	/delete-node/ port;
 };
 
 &flash0 {
@@ -64,4 +65,9 @@
 			reg = <0x00980000 0x03680000>;
 		};
 	};
+};
+
+&ucpd {
+	status = "disabled";
+	/delete-node/ connector;
 };

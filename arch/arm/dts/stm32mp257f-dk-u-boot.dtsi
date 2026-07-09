@@ -5,6 +5,10 @@
 
 #include "stm32mp25-u-boot.dtsi"
 
+/* Remove USB Type-C related nodes */
+/delete-node/ &i2c1;
+/delete-node/ &ucpd;
+
 / {
 	config {
 		u-boot,boot-led = "led-blue";
@@ -15,6 +19,8 @@
 		compatible = "u-boot,fwu-mdata-gpt";
 		fwu-mdata-store = <&sdmmc1>;
 	};
+
+	/delete-node/ usb-switch;
 };
 
 &dwc3 {
@@ -22,6 +28,7 @@
 	phy-names = "usb2-phy";
 	dr_mode = "peripheral";
 	maximum-speed = "high-speed";
+	/delete-node/ port;
 };
 
 &sdmmc3 {
