@@ -797,7 +797,15 @@ int fdt_update_fwu_mdata(void *blob)
 		ret = fdt_update_fwu_properties(blob, nodeoff, "u-boot,fwu-mdata-gpt",
 						"/soc@0/bus@42080000/mmc@48230000");
 		break;
+	case BOOT_FLASH_NAND:
+		/* nand@0 */
+		ret = fdt_update_fwu_properties(blob, nodeoff, "u-boot,fwu-mdata-mtd",
+						"/soc@0/memory-controller@48200000/nand-controller@4,0/nand@0");
+		if (ret)
+			return ret;
 
+		ret = fdt_update_fwu_mtdpart(blob, nodeoff);
+		break;
 	case BOOT_FLASH_SPINAND:
 	case BOOT_FLASH_NOR:
 	case BOOT_FLASH_HYPERFLASH:
