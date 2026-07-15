@@ -1080,7 +1080,7 @@ static int fdt_update_fwu_mtdpart(void *blob, int nodeoff)
 
 	ret = fdt_increase_size(blob, 100);
 	if (ret) {
-		printf("fdt_increase_size: err=%s\n", fdt_strerror(ret));
+		log_err("fdt_increase_size: err=%s\n", fdt_strerror(ret));
 		return ret;
 	}
 
@@ -1107,7 +1107,7 @@ int fdt_update_fwu_properties(void *blob, int nodeoff,
 
 	ret = fdt_increase_size(blob, 100);
 	if (ret) {
-		printf("fdt_increase_size: err=%s\n", fdt_strerror(ret));
+		log_err("fdt_increase_size: err=%s\n", fdt_strerror(ret));
 		return ret;
 	}
 
@@ -1146,7 +1146,7 @@ int fdt_update_fwu_mdata(void *blob)
 
 	nodeoff = fdt_path_offset(blob, "/fwu-mdata");
 	if (nodeoff < 0) {
-		log_info("no /fwu-mdata node ?\n");
+		log_debug("no /fwu-mdata node ?\n");
 
 		return 0;
 	}
