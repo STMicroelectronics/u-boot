@@ -43,30 +43,140 @@
 
 #define ALT_BUF_LEN			SZ_1K
 
-#define ROOTFS_MMC0_UUID \
+#define ROOTFS_A_MMC0_UUID \
 	EFI_GUID(0xE91C4E10, 0x16E6, 0x4C0E, \
 		 0xBD, 0x0E, 0x77, 0xBE, 0xCF, 0x4A, 0x35, 0x82)
-
-#define ROOTFS_MMC1_UUID \
+#define ROOTFS_B_MMC0_UUID\
+	EFI_GUID(0x360DB83F, 0xC038, 0x4E10, \
+		 0xAE, 0x79, 0x1D, 0xCE, 0x88, 0x46, 0xD2, 0xF0)
+#define ROOTFS_A_MMC1_UUID \
 	EFI_GUID(0x491F6117, 0x415D, 0x4F53, \
 		 0x88, 0xC9, 0x6E, 0x0D, 0xE5, 0x4D, 0xEA, 0xC6)
-
-#define ROOTFS_MMC2_UUID \
+#define ROOTFS_B_MMC1_UUID \
+	EFI_GUID(0x6E01295A, 0x8F81, 0x47D5, \
+		 0x94, 0x5C, 0xCB, 0x14, 0x4A, 0xE7, 0x50, 0x0C)
+#define ROOTFS_A_MMC2_UUID \
 	EFI_GUID(0xFD58F1C7, 0xBE0D, 0x4338, \
 		 0x88, 0xE9, 0xAD, 0x8F, 0x05, 0x0A, 0xEB, 0x18)
+#define ROOTFS_B_MMC2_UUID \
+	EFI_GUID(0x49A88364, 0xAF1A, 0x467A, \
+		0xA0, 0x49, 0x26, 0x9F, 0x94, 0x12, 0x2E, 0xE9)
+
+#define BOOTFS_A_MMC0_UUID \
+	EFI_GUID(0xC9B01B31, 0xB604, 0x4C2A, \
+		 0x95, 0xB4, 0xE2, 0x3A, 0xB4, 0x5F, 0xD0, 0xC5)
+#define BOOTFS_B_MMC0_UUID \
+	EFI_GUID(0x67A73CEA, 0x322C, 0x42C0, \
+		 0xB4, 0x77, 0x6E, 0xF0, 0x03, 0x9F, 0xEF, 0xED)
+#define BOOTFS_A_MMC1_UUID \
+	EFI_GUID(0x0EF36FAC, 0x9BA4, 0x4E39, \
+		 0x82, 0x3A, 0xBB, 0xB2, 0x33, 0x6C, 0x32, 0xBE)
+#define BOOTFS_B_MMC1_UUID \
+	EFI_GUID(0xF2C429F5, 0x9000, 0x4201, \
+		 0xAA, 0x0F, 0x96, 0xA9, 0x5E, 0xA8, 0xD9, 0xF9)
+#define BOOTFS_A_MMC2_UUID \
+	EFI_GUID(0x697AAA78, 0x8107, 0x11F1, \
+		 0xAB, 0x07, 0x02, 0x42, 0xAC, 0x12, 0x00, 0x02)
+#define BOOTFS_B_MMC2_UUID \
+	EFI_GUID(0x0CCBAFB6, 0x042C, 0x4B7F, \
+		 0x96, 0x68, 0x73, 0x24, 0x2C, 0x4C, 0x72, 0x57)
+
+#define VENDORFS_A_MMC0_UUID \
+	EFI_GUID(0x8ABDAAE5, 0xD940, 0x463A, \
+		 0x83, 0x26, 0xA2, 0xC6, 0xAF, 0x78, 0x8F, 0xE6)
+#define VENDORFS_B_MMC0_UUID \
+	EFI_GUID(0xD168DBCE, 0x65F3, 0x423C, \
+		 0x86, 0xAF, 0xA1, 0x15, 0x28, 0x89, 0x0B, 0x30)
+#define VENDORFS_A_MMC1_UUID \
+	EFI_GUID(0x9FDBBC13, 0x65D3, 0x4419, \
+		 0x93, 0x95, 0x88, 0xC6, 0x94, 0xA4, 0xEA, 0x79)
+#define VENDORFS_B_MMC1_UUID \
+	EFI_GUID(0x4752BA24, 0x2E0D, 0x45B9, \
+		 0x9C, 0x42, 0x00, 0x28, 0xEC, 0xE6, 0xE7, 0x4B)
+#define VENDORFS_A_MMC2_UUID \
+	EFI_GUID(0x292056ED, 0xFA8B, 0x4550, \
+		 0x94, 0xE9, 0x9A, 0xE5, 0x75, 0x90, 0x42, 0xD8)
+#define VENDORFS_B_MMC2_UUID \
+	EFI_GUID(0x69A81924, 0x2E4A, 0x4FE3, \
+		 0x86, 0x2A, 0x5C, 0x09, 0x79, 0x96, 0xF0, 0x59)
+
+#define USERFS_A_MMC0_UUID \
+	EFI_GUID(0x2D750516, 0x056C, 0x4FAE, \
+		 0x9D, 0x73, 0xF3, 0x14, 0x1F, 0x1C, 0xFF, 0xB4)
+#define USERFS_B_MMC0_UUID \
+	EFI_GUID(0x7E036063, 0x979D, 0x4000, \
+		 0x94, 0x9D, 0x33, 0xAB, 0x3E, 0x98, 0x7D, 0xE0)
+#define USERFS_A_MMC1_UUID \
+	EFI_GUID(0xE873E5BE, 0x10D5, 0x4670, \
+		 0xB8, 0xF1, 0x29, 0x05, 0xB5, 0xE7, 0xD9, 0x92)
+#define USERFS_B_MMC1_UUID \
+	EFI_GUID(0x445A0E58, 0xAA95, 0x4E75, \
+		 0x8C, 0x4F, 0xFF, 0x60, 0x3D, 0xDD, 0xB6, 0x0F)
+#define USERFS_A_MMC2_UUID \
+	EFI_GUID(0x0BAD8AE4, 0x5321, 0x4F39, \
+		 0x8F, 0x82, 0x41, 0xF8, 0xCB, 0xCD, 0xA3, 0xC0)
+#define USERFS_B_MMC2_UUID \
+	EFI_GUID(0x152401BC, 0x3C21, 0x4FDD, \
+		 0x91, 0x55, 0xC0, 0xC5, 0xC4, 0xE6, 0x66, 0x00)
 
 /* RAW partition (binary / bootloader) used Linux - reserved UUID */
 #define LINUX_RESERVED_UUID "8DA63339-0007-60C0-C436-083AC8230908"
 
+enum part_uuid_type_t {
+	PART_BOOTFS_A,
+	PART_BOOTFS_B,
+	PART_ROOTFS_A,
+	PART_ROOTFS_B,
+	PART_VENDORFS_A,
+	PART_VENDORFS_B,
+	PART_USERFS_A,
+	PART_USERFS_B,
+	PART_TYPE_NB,
+};
+
+struct linux_part_desc {
+	const char *name;
+	enum part_uuid_type_t type;
+};
+
+static const struct linux_part_desc linux_part[] = {
+	{"bootfs", PART_BOOTFS_A},
+	{"bootfs-a", PART_BOOTFS_A},
+	{"bootfs-b", PART_BOOTFS_B},
+	{"rootfs", PART_ROOTFS_A},
+	{"rootfs-a", PART_ROOTFS_A},
+	{"rootfs-b", PART_ROOTFS_B},
+	{"vendorfs", PART_VENDORFS_A},
+	{"vendorfs-a", PART_VENDORFS_A},
+	{"vendorfs-b", PART_VENDORFS_B},
+	{"userfs", PART_USERFS_A},
+	{"userfs-a", PART_USERFS_A},
+	{"userfs-b", PART_USERFS_B},
+};
+
+#define MMC_DEV_NB	3
+
 /*
- * unique partition guid (uuid) for partition named "rootfs"
- * on each MMC instance = SD Card or eMMC
- * allow fixed kernel bootcmd: "rootf=PARTUID=e91c4e10-..."
+ * Unique partition guid (uuid) for "linux" partition on each MMC instance
+ * for rootfs allow fixed kernel bootcmd: "rootf=PARTUID=e91c4e10-..."
+ * and allow support of A/B update for bootfs/rootfs/verdorfs/userfs partitions
  */
-static const efi_guid_t uuid_mmc[3] = {
-	ROOTFS_MMC0_UUID,
-	ROOTFS_MMC1_UUID,
-	ROOTFS_MMC2_UUID
+static const efi_guid_t linux_part_uuid[MMC_DEV_NB][PART_TYPE_NB] = {
+	{ BOOTFS_A_MMC0_UUID, BOOTFS_B_MMC0_UUID,
+	  ROOTFS_A_MMC0_UUID, ROOTFS_B_MMC0_UUID,
+	  VENDORFS_A_MMC0_UUID, VENDORFS_B_MMC0_UUID,
+	  USERFS_A_MMC0_UUID, USERFS_B_MMC0_UUID,
+	},
+	{ BOOTFS_A_MMC1_UUID, BOOTFS_B_MMC1_UUID,
+	  ROOTFS_A_MMC1_UUID, ROOTFS_B_MMC1_UUID,
+	  VENDORFS_A_MMC1_UUID, VENDORFS_B_MMC1_UUID,
+	  USERFS_A_MMC1_UUID, USERFS_B_MMC1_UUID,
+	},
+	{ BOOTFS_A_MMC2_UUID, BOOTFS_B_MMC2_UUID,
+	  ROOTFS_A_MMC2_UUID, ROOTFS_B_MMC2_UUID,
+	  VENDORFS_A_MMC2_UUID, VENDORFS_B_MMC2_UUID,
+	  USERFS_A_MMC2_UUID, USERFS_B_MMC2_UUID,
+	},
 };
 
 /*
@@ -1094,7 +1204,7 @@ static int create_gpt_partitions(struct stm32prog_data *data)
 	unsigned char *uuid_bin;
 	unsigned int mmc_id;
 	int i, j;
-	bool rootfs_found;
+	bool part_found[PART_TYPE_NB];
 	struct stm32prog_part_t *part;
 	const char *type_str;
 
@@ -1111,7 +1221,7 @@ static int create_gpt_partitions(struct stm32prog_data *data)
 
 		printf("partitions on mmc%d: ", data->dev[i].dev_id);
 		offset = 0;
-		rootfs_found = false;
+		memset(part_found, 0, sizeof(part_found));
 		memset(buf, 0, buflen);
 
 		list_for_each_entry(part, &data->dev[i].part_list, list) {
@@ -1170,14 +1280,23 @@ static int create_gpt_partitions(struct stm32prog_data *data)
 
 			/* partition UUID */
 			uuid_bin = NULL;
-			if (!rootfs_found && (!strcmp(part->name, "rootfs") ||
-					      !strcmp(part->name, "rootfs-a"))) {
-				mmc_id = part->dev_id;
-				rootfs_found = true;
-				if (mmc_id < ARRAY_SIZE(uuid_mmc))
-					uuid_bin = (unsigned char *)uuid_mmc[mmc_id].b;
-			}
-			if (part->part_type == PART_FIP) {
+			mmc_id = part->dev_id;
+			if ((mmc_id < MMC_DEV_NB) &&
+			    ((part->part_type == PART_FILESYSTEM) ||
+			     (part->part_type == PART_SYSTEM))) {
+				for (j = 0; j < ARRAY_SIZE(linux_part); j++) {
+					if (!strcmp(part->name, linux_part[j].name)) {
+						enum part_uuid_type_t type = linux_part[j].type;
+						/* Avoid duplicated UUID for same name/type */
+						if (!part_found[type]) {
+							part_found[type] = true;
+							uuid_bin = (unsigned char *)
+								&linux_part_uuid[mmc_id][type].b;
+						}
+						break;
+					}
+				}
+			} else if (part->part_type == PART_FIP) {
 				for (j = 0; j < ARRAY_SIZE(fip_part_name); j++)
 					if (!strcmp(part->name, fip_part_name[j])) {
 						uuid_bin = (unsigned char *)fip_part_uuid[j].b;
