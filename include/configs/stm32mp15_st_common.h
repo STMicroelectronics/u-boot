@@ -15,15 +15,9 @@
 		"part number ${devtype} ${devnum} ${boot_partuuid} devplist; " \
 	"env exists devplist || " \
 		"part list ${devtype} ${devnum} -bootable devplist; "
-
-#define ST_STM32MP15_FWU_ENV \
-	"altbootcmd=${bootcmd}\0"
-#else
-#define ST_STM32MP15_FWU_ENV
 #endif
 
 #define STM32MP_BOARD_EXTRA_ENV \
-	ST_STM32MP15_FWU_ENV \
 	"usb_pgood_delay=2000\0" \
 	"console=ttySTM0\0" \
 	"splashimage=" __stringify(CONFIG_SYS_LOAD_ADDR) "\0" \
@@ -61,7 +55,7 @@
 		"run distro_bootcmd;" \
 	"fi;\0"
 
-#define ST_STM32MP1_ALTBOOTCMD "altbootcmd=run bootcmd_stm32mp\0"
+#define ST_STM32MP1_ALTBOOTCMD "altbootcmd=run bootcmd\0"
 
 #undef CFG_EXTRA_ENV_SETTINGS
 #define CFG_EXTRA_ENV_SETTINGS \

@@ -48,7 +48,7 @@
 		"run distro_bootcmd;" \
 	"fi;\0"
 
-#define ST_STM32MP21_ALTBOOTCMD "altbootcmd=run bootcmd_stm32mp\0"
+#define ST_STM32MP21_ALTBOOTCMD "altbootcmd=run bootcmd\0"
 
 #undef CFG_EXTRA_ENV_SETTINGS
 #define CFG_EXTRA_ENV_SETTINGS \
