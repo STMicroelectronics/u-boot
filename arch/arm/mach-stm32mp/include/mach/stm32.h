@@ -67,6 +67,9 @@ enum forced_boot_mode {
 	BOOT_UMS_MMC2 = 0x12,
 };
 
+#define TAMP_FWU_BOOT_IDX_MASK		GENMASK(3, 0)
+#define TAMP_FWU_BOOT_IDX_OFFSET	0
+
 #endif
 
 /*
@@ -135,9 +138,6 @@ enum forced_boot_mode {
 /* TAMP registers */
 #define TAMP_BACKUP_REGISTER(x)		(STM32_TAMP_BASE + 0x100 + 4 * x)
 
-#define TAMP_FWU_BOOT_IDX_MASK		GENMASK(3, 0)
-#define TAMP_FWU_BOOT_IDX_OFFSET	0
-
 #ifdef CONFIG_STM32MP15X
 #define TAMP_BACKUP_MAGIC_NUMBER	TAMP_BACKUP_REGISTER(4)
 #define TAMP_BACKUP_BRANCH_ADDRESS	TAMP_BACKUP_REGISTER(5)
@@ -156,8 +156,6 @@ enum forced_boot_mode {
 #define TAMP_BOOT_CONTEXT		TAMP_BACKUP_REGISTER(30)
 #define TAMP_BOOTCOUNT			TAMP_BACKUP_REGISTER(31)
 
-#define TAMP_FWU_BOOT_IDX_MASK		GENMASK(3, 0)
-#define TAMP_FWU_BOOT_IDX_OFFSET	0
 #endif
 
 #endif /* __ASSEMBLY__ */
