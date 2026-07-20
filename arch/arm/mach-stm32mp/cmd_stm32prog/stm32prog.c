@@ -574,6 +574,8 @@ static int parse_type(struct stm32prog_data *data,
 		part->part_type = PART_SYSTEM;
 	} else if (!strcmp(p, "ESP")) {
 		part->part_type = PART_ESP;
+	} else if (!strcmp(p, "XBOOTLDR")) {
+		part->part_type = PART_XBOOTLDR;
 	} else if (!strcmp(p, "FileSystem")) {
 		part->part_type = PART_FILESYSTEM;
 	} else if (!strcmp(p, "RawImage")) {
@@ -1265,6 +1267,10 @@ static int create_gpt_partitions(struct stm32prog_data *data)
 				/* EFI System Partition */
 				type_str = "system";
 				break;
+			case PART_XBOOTLDR:
+				/* "Linux extended boot" (XBOOTLDR) */
+				type_str = "xbootldr";
+				break;
 			default: /* PART_FILESYSTEM or PART_SYSTEM for distro */
 				type_str = "linux";
 				break;
@@ -1273,7 +1279,8 @@ static int create_gpt_partitions(struct stm32prog_data *data)
 					   buflen - offset,
 					   ",type=%s", type_str);
 
-			if (part->part_type == PART_SYSTEM)
+			if ((part->part_type == PART_SYSTEM) ||
+			    (part->part_type == PART_XBOOTLDR))
 				offset += snprintf(buf + offset,
 						   buflen - offset,
 						   ",bootable");
@@ -1283,7 +1290,8 @@ static int create_gpt_partitions(struct stm32prog_data *data)
 			mmc_id = part->dev_id;
 			if ((mmc_id < MMC_DEV_NB) &&
 			    ((part->part_type == PART_FILESYSTEM) ||
-			     (part->part_type == PART_SYSTEM))) {
+			     (part->part_type == PART_SYSTEM) ||
+			     (part->part_type == PART_XBOOTLDR))) {
 				for (j = 0; j < ARRAY_SIZE(linux_part); j++) {
 					if (!strcmp(part->name, linux_part[j].name)) {
 						enum part_uuid_type_t type = linux_part[j].type;

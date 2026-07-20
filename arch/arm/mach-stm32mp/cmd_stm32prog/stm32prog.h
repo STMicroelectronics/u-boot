@@ -120,6 +120,7 @@ enum stm32prog_part_type {
 	PART_SYSTEM,
 	PART_FILESYSTEM,
 	PART_ESP,
+	PART_XBOOTLDR,
 	RAW_IMAGE,
 };
 
