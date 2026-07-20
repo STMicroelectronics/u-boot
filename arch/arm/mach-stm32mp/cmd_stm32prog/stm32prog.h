@@ -151,7 +151,7 @@ struct stm32prog_part_t {
 	char			name[16 + 1];
 	u64			addr;
 	u64			size;
-	enum stm32prog_part_type bin_nb;	/* SSBL repeatition */
+	u8			bin_nb;	/* SSBL repeatition */
 
 	/* information on associated device */
 	struct stm32prog_dev_t	*dev;		/* pointer to device */
