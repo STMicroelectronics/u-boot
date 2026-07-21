@@ -10,7 +10,7 @@
 
 #ifdef CONFIG_FWU_MULTI_BANK_UPDATE
 #define SCAN_DEV_FOR_BOOT_PARTS \
-	"setenv devplist; " \
+	"env delete devplist; " \
 	"env exists boot_partuuid && " \
 		"part number ${devtype} ${devnum} ${boot_partuuid} devplist; " \
 	"env exists devplist || " \
