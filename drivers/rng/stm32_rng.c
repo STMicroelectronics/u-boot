@@ -381,11 +381,11 @@ static int stm32_rng_of_to_plat(struct udevice *dev)
 	pdata->data = (struct stm32_rng_data *)dev_get_driver_data(dev);
 
 	if (pdata->data->nb_clock > 1) {
-		err = clk_get_by_name(dev, "rng_clk", &pdata->clk);
+		err = clk_get_by_name(dev, "core", &pdata->clk);
 		if (err)
 			return err;
 
-		err = clk_get_by_name(dev, "rng_hclk", &pdata->bus_clk);
+		err = clk_get_by_name(dev, "bus", &pdata->bus_clk);
 		if (err)
 			return err;
 	} else {
