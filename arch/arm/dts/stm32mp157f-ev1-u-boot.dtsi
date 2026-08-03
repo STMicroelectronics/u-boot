@@ -3,4 +3,4 @@
  * Copyright : STMicroelectronics 2018
  */
 
-#include "stm32mp157c-ev1-u-boot.dtsi"
+#include "stm32mp157c-ev1-no-scmi-u-boot.dtsi"

@@ -3,7 +3,7 @@
  * Copyright : STMicroelectronics 2022
  */
 
-#include "stm32mp15-scmi-u-boot.dtsi"
+#include "stm32mp15-u-boot.dtsi"
 
 / {
 	aliases {
