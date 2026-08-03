@@ -11,3 +11,7 @@
 		fwu-mdata-store = <&sdmmc1>;
 	};
 };
+
+&sdmmc2 {
+	status = "disabled";
+};
