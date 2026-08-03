@@ -7,10 +7,6 @@
 #include "stm32mp15-scmi-u-boot.dtsi"
 
 / {
-	aliases {
-		i2c3 = &i2c4;
-	};
-
 	config {
 		u-boot,mmc-env-partition = "u-boot-env";
 	};

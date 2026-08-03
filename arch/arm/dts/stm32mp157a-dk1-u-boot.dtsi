@@ -8,7 +8,6 @@
 
 / {
 	aliases {
-		i2c3 = &i2c4;
 		usb0 = &usbotg_hs;
 	};
 

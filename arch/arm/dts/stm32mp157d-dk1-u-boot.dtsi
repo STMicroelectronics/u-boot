@@ -3,4 +3,4 @@
  * Copyright : STMicroelectronics 2022
  */
 
-#include "stm32mp157a-dk1-no-scmi-u-boot.dtsi"
+#include "stm32mp157a-dk1-u-boot.dtsi"
