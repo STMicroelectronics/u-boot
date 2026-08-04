@@ -48,7 +48,8 @@
 #define FV	BIT(0)	/* Flip Vertical */
 
 struct hx8394_panel_priv {
-	struct udevice *reg;
+	struct udevice *vcc;
+	struct udevice *iovcc;
 	struct udevice *backlight;
 	struct gpio_desc reset;
 };
@@ -179,11 +180,19 @@ static int hx8394_panel_of_to_plat(struct udevice *dev)
 	struct hx8394_panel_priv *priv = dev_get_priv(dev);
 	int ret;
 
-	ret =  device_get_supply_regulator(dev, "power-supply",
-					   &priv->reg);
-	if (ret) {
-		dev_err(dev, "Warning: cannot get power supply\n");
-		return ret;
+	if (CONFIG_IS_ENABLED(DM_REGULATOR)) {
+		ret = device_get_supply_regulator(dev, "vcc-supply", &priv->vcc);
+		if (ret && ret != -ENOENT) {
+			dev_err(dev, "Warning: cannot get vcc supply\n");
+			return ret;
+		}
+
+		ret = device_get_supply_regulator(dev, "iovcc-supply",
+						  &priv->iovcc);
+		if (ret && ret != -ENOENT) {
+			dev_err(dev, "Warning: cannot get iovcc supply\n");
+			return ret;
+		}
 	}
 
 	ret = gpio_request_by_name(dev, "reset-gpios", 0, &priv->reset,
@@ -208,9 +217,22 @@ static int hx8394_panel_probe(struct udevice *dev)
 	struct mipi_dsi_panel_plat *plat = dev_get_plat(dev);
 	int ret;
 
-	ret = regulator_set_enable(priv->reg, true);
-	if (ret)
-		return ret;
+	if (CONFIG_IS_ENABLED(DM_REGULATOR)) {
+		if (priv->vcc) {
+			ret = regulator_set_enable(priv->vcc, true);
+			if (ret)
+				return ret;
+		}
+
+		if (priv->iovcc) {
+			ret = regulator_set_enable(priv->iovcc, true);
+			if (ret) {
+				if (priv->vcc)
+					regulator_set_enable(priv->vcc, false);
+				return ret;
+			}
+		}
+	}
 
 	/* reset panel */
 	dm_gpio_set_value(&priv->reset, true);
