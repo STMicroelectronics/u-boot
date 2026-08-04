@@ -16,6 +16,11 @@
 		st,adc_usb_pd = <&adc1 18>, <&adc1 19>;
 	};
 
+	fwu-mdata {
+		compatible = "u-boot,fwu-mdata-gpt";
+		fwu-mdata-store = <&sdmmc1>;
+	};
+
 	gpio-keys {
 		compatible = "gpio-keys";
 
