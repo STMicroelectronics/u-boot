@@ -71,7 +71,8 @@
 #define MCS_GAMMA_VN		0x70 /* Gamma VN1~VN16 */
 
 struct rm68200_panel_priv {
-	struct udevice *reg;
+	struct udevice *vcc;
+	struct udevice *iovcc;
 	struct udevice *backlight;
 	struct gpio_desc reset;
 };
@@ -266,10 +267,16 @@ static int rm68200_panel_of_to_plat(struct udevice *dev)
 	int ret;
 
 	if (CONFIG_IS_ENABLED(DM_REGULATOR)) {
-		ret =  device_get_supply_regulator(dev, "power-supply",
-						   &priv->reg);
+		ret = device_get_supply_regulator(dev, "vcc-supply", &priv->vcc);
 		if (ret && ret != -ENOENT) {
-			dev_err(dev, "Warning: cannot get power supply\n");
+			dev_err(dev, "Warning: cannot get vcc supply\n");
+			return ret;
+		}
+
+		ret = device_get_supply_regulator(dev, "iovcc-supply",
+						  &priv->iovcc);
+		if (ret && ret != -ENOENT) {
+			dev_err(dev, "Warning: cannot get iovcc supply\n");
 			return ret;
 		}
 	}
@@ -298,10 +305,21 @@ static int rm68200_panel_probe(struct udevice *dev)
 	struct mipi_dsi_panel_plat *plat = dev_get_plat(dev);
 	int ret;
 
-	if (CONFIG_IS_ENABLED(DM_REGULATOR) && priv->reg) {
-		ret = regulator_set_enable(priv->reg, true);
-		if (ret)
-			return ret;
+	if (CONFIG_IS_ENABLED(DM_REGULATOR)) {
+		if (priv->vcc) {
+			ret = regulator_set_enable(priv->vcc, true);
+			if (ret)
+				return ret;
+		}
+
+		if (priv->iovcc) {
+			ret = regulator_set_enable(priv->iovcc, true);
+			if (ret) {
+				if (priv->vcc)
+					regulator_set_enable(priv->vcc, false);
+				return ret;
+			}
+		}
 	}
 
 	/* reset panel */
