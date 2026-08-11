@@ -23,11 +23,6 @@
 	};
 
 	leds {
-		led-red {
-			label = "error";
-			gpios = <&gpioa 13 GPIO_ACTIVE_LOW>;
-		};
-
 		led-blue {
 			/delete-property/default-state;
 		};

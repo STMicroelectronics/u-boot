@@ -21,13 +21,6 @@
 		compatible = "u-boot,fwu-mdata-gpt";
 		fwu-mdata-store = <&sdmmc1>;
 	};
-
-	led {
-		led-red {
-			label = "error";
-			gpios = <&gpioa 13 GPIO_ACTIVE_LOW>;
-		};
-	};
 };
 
 &uart4_pins_a {
