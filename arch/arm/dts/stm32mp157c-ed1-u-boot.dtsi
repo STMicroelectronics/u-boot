@@ -15,22 +15,6 @@
 		compatible = "u-boot,fwu-mdata-gpt";
 		fwu-mdata-store = <&sdmmc1>;
 	};
-
-	gpio-keys {
-		compatible = "gpio-keys";
-
-		button-user-1 {
-			label = "User-1";
-			linux,code = <BTN_1>;
-			gpios = <&gpioa 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
-		};
-
-		button-user-2 {
-			label = "User-2";
-			linux,code = <BTN_2>;
-			gpios = <&gpioa 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
-		};
-	};
 };
 
 &uart4_pins_a {
