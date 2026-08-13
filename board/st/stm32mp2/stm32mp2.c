@@ -234,8 +234,7 @@ bool detect_stm32mp25x_etml0700zxxdha(void)
 	if (!ofnode_valid(node))
 		return false;
 
-	if (!reset_gpio(node))
-		return false;
+	reset_gpio(node);
 
 	mdelay(200);
 
@@ -262,8 +261,7 @@ bool detect_stm32mp25x_adv753x(void)
 			return false;
 	}
 
-	if (!pd_gpio(node))
-		return false;
+	pd_gpio(node);
 
 	mdelay(10);
 
