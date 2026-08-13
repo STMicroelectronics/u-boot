@@ -299,6 +299,16 @@ static void board_stm32mp25x_eval_init(void)
 	struct regmap *regmap;
 	int ret;
 
+	/* auto detection of connected hdmi bridge */
+	compatible = detect_device(stm32mp25x_bridges, ARRAY_SIZE(stm32mp25x_bridges));
+
+	if (!compatible)
+		/* remove the hdmi bridge in environment */
+		env_set("hdmi", "");
+	else
+		/* save the detected compatible in environment */
+		env_set("hdmi", compatible);
+
 	/* auto detection of connected panels */
 	compatible = detect_device(stm32mp25x_panels, ARRAY_SIZE(stm32mp25x_panels));
 
@@ -332,16 +342,6 @@ static void board_stm32mp25x_eval_init(void)
 		/* save the detected compatible in environment */
 		env_set("panel", compatible);
 	}
-
-	/* auto detection of connected hdmi bridge */
-	compatible = detect_device(stm32mp25x_bridges, ARRAY_SIZE(stm32mp25x_bridges));
-
-	if (!compatible)
-		/* remove the hdmi bridge in environment */
-		env_set("hdmi", "");
-	else
-		/* save the detected compatible in environment */
-		env_set("hdmi", compatible);
 }
 
 static void board_stm32mp2xx_disco_init(void)
