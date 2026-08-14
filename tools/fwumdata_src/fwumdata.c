@@ -246,21 +246,35 @@ static void update_crc(struct fwu_mdata *mdata, size_t size)
 	mdata->crc32 = crc32(0, (const u8 *)&mdata->version, size - sizeof(u32));
 }
 
+/*
+ * Return a pointer to metadata copy @id inside the contiguous buffer.
+ * Copies are laid out mdata_size bytes apart, which is not the same as
+ * sizeof(struct fwu_mdata): the latter only covers the common header, so
+ * indexing mdata as an array of struct fwu_mdata would make the copies
+ * overlap. Both copies are guaranteed to share the same size (checked in
+ * parse_config()).
+ */
+static struct fwu_mdata *mdata_copy(int id)
+{
+	return (struct fwu_mdata *)((u8 *)mdata + id * devices[0].mdata_size);
+}
+
 static int read_one_metadata(int mdata_id, size_t size)
 {
+	struct fwu_mdata *md = mdata_copy(mdata_id);
 	int ret;
 
 	ret = open_device(&devices[mdata_id]);
 	if (ret)
 		return ret;
 
-	ret = read_device(&devices[mdata_id], &mdata[mdata_id], size);
+	ret = read_device(&devices[mdata_id], md, size);
 	if (ret)
 		return ret;
 
-	if (mdata[mdata_id].version != 1 && mdata[mdata_id].version != 2) {
+	if (md->version != 1 && md->version != 2) {
 		fprintf(stderr, "Invalid metadata %d version: %u\n",
-			mdata_id, mdata[mdata_id].version);
+			mdata_id, md->version);
 	}
 
 	return 0;
@@ -283,12 +297,12 @@ static int read_metadata(bool update)
 	if (ret)
 		return ret;
 
-	if (validate_crc(&mdata[0], alloc_size) < 0) {
+	if (validate_crc(mdata_copy(0), alloc_size) < 0) {
 		fprintf(stderr,
 			"Warning: Primary metadata CRC validation failed\n");
 		mdata_mod = update;
 	} else {
-		valid_mdata = &mdata[0];
+		valid_mdata = mdata_copy(0);
 	}
 
 	if (have_redundant) {
@@ -296,16 +310,17 @@ static int read_metadata(bool update)
 		if (ret)
 			return ret;
 
-		if (validate_crc(&mdata[1], alloc_size) < 0) {
+		if (validate_crc(mdata_copy(1), alloc_size) < 0) {
 			fprintf(stderr,
 				"Warning: Secondary metadata CRC validation failed\n");
 			mdata_mod = update;
-		} else if (valid_mdata && mdata[0].crc32 != mdata[1].crc32) {
+		} else if (valid_mdata &&
+			   mdata_copy(0)->crc32 != mdata_copy(1)->crc32) {
 			fprintf(stderr,
 				"Metadatas valid but not equal, use first one as default\n");
 			mdata_mod = update;
 		} else {
-			valid_mdata = &mdata[1];
+			valid_mdata = mdata_copy(1);
 		}
 	}
 
@@ -313,7 +328,7 @@ static int read_metadata(bool update)
 		fprintf(stderr,
 			"No metadata valid, use first one as default\n");
 		mdata_mod = update;
-		valid_mdata = &mdata[0];
+		valid_mdata = mdata_copy(0);
 	}
 
 	if (valid_mdata->version == 2) {
