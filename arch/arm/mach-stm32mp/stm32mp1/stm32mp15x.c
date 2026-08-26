@@ -350,7 +350,7 @@ void get_soc_name(char name[SOC_NAME_SIZE])
 		 * Instead, report that this system is OTP-CLOSED and do not
 		 * report any SoC revision to avoid confusing users.
 		 */
-		snprintf(name, SOC_NAME_SIZE, "STM32MP%s%s SEC/C",
+		snprintf(name, SOC_NAME_SIZE, "STM32MP%s%s SEC.C",
 			 soc_type[type], soc_pkg[pkg]);
 	}
 }
