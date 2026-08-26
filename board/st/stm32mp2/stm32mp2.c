@@ -28,11 +28,17 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <linux/delay.h>
 #include <linux/stringify.h>
+#include <regmap.h>
+#include <syscon.h>
 
 #define ILITEK_REG_ID		0x40
 #define ILITEK_ID_LEN		7
 #define ADV7511_REG_CHIP_REVISION	0x00
 #define ADV7511_CHIP_REVISION_LEN	256
+
+#define SYSCFG_DISPLAYCLKCR 0x5000
+#define DISPLAYCLKCR_LVDS	0x01
+#define DISPLAYCLKCR_DPI	0x02
 
 #if CONFIG_IS_ENABLED(EFI_HAVE_CAPSULE_SUPPORT)
 struct efi_fw_image fw_images[1];
@@ -292,6 +298,8 @@ static void board_stm32mp25x_eval_init(void)
 	const char *compatible;
 	struct udevice *dev;
 	ofnode node;
+	struct regmap *regmap;
+	int ret;
 
 	/* auto detection of connected panels */
 	compatible = detect_device(stm32mp25x_panels, ARRAY_SIZE(stm32mp25x_panels));
@@ -308,6 +316,20 @@ static void board_stm32mp25x_eval_init(void)
 		device_find_global_by_ofnode(node, &dev);
 		device_remove(dev, DM_REMOVE_NORMAL);
 		device_unbind(dev);
+
+		/* Ensure syscfg is probed for display path relying on st,syscon */
+		ret = uclass_get_device_by_driver(UCLASS_SYSCON,
+						  DM_DRIVER_GET(syscon_stm32mp),
+						  &dev);
+		if (ret)
+			log_warning("syscfg init failed (%d)\n", ret);
+
+		/* Set default pixel clock to enable register access */
+		regmap = syscon_get_regmap(dev);
+		if (IS_ERR(regmap))
+			log_err("Fail to get Syscon regmap\n");
+		else
+			regmap_write(regmap, SYSCFG_DISPLAYCLKCR, DISPLAYCLKCR_DPI);
 	} else {
 		/* save the detected compatible in environment */
 		env_set("panel", compatible);
@@ -329,6 +351,8 @@ static void board_stm32mp2xx_disco_init(void)
 	const char *compatible;
 	struct udevice *dev;
 	ofnode node;
+	struct regmap *regmap;
+	int ret;
 
 	/* auto detection of connected panels */
 	compatible = detect_device(stm32mp25x_panels, ARRAY_SIZE(stm32mp25x_panels));
@@ -345,6 +369,20 @@ static void board_stm32mp2xx_disco_init(void)
 		device_find_global_by_ofnode(node, &dev);
 		device_remove(dev, DM_REMOVE_NORMAL);
 		device_unbind(dev);
+
+		/* Ensure syscfg is probed for display path relying on st,syscon */
+		ret = uclass_get_device_by_driver(UCLASS_SYSCON,
+						  DM_DRIVER_GET(syscon_stm32mp),
+						  &dev);
+		if (ret)
+			log_warning("syscfg init failed (%d)\n", ret);
+
+		/* Set default pixel clock to enable register access */
+		regmap = syscon_get_regmap(dev);
+		if (IS_ERR(regmap))
+			log_err("Fail to get Syscon regmap\n");
+		else
+			regmap_write(regmap, SYSCFG_DISPLAYCLKCR, DISPLAYCLKCR_DPI);
 	} else {
 		/* save the detected compatible in environment */
 		env_set("panel", compatible);
