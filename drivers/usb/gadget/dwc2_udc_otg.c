@@ -1168,6 +1168,9 @@ static int dwc2_udc_otg_probe(struct udevice *dev)
 	if (plat->activate_stm_ggpio_vbvaloval && plat->force_b_session_valid)
 		setbits_le32(&usbotg_reg->global_regs.ggpio, GGPIO_STM32_OTG_GCCFG_VBVALOVAL);
 
+	if (dwc2_iddig_filter_enabled(usbotg_reg))
+		mdelay(100);
+
 	ret = dwc2_udc_probe(plat);
 	if (ret)
 		return ret;
