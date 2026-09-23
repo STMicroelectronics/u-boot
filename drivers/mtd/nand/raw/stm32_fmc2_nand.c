@@ -997,6 +997,8 @@ static int stm32_fmc2_nfc_probe(struct udevice *dev)
 	if (dm_gpio_is_valid(&nand->wp_gpio))
 		dm_gpio_set_value(&nand->wp_gpio, 0);
 
+	mtd->dev = dev;
+
 	ret = nand_scan_ident(mtd, nand->ncs, NULL);
 	if (ret)
 		return ret;
