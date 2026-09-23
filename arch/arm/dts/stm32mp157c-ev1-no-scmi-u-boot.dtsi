@@ -82,7 +82,7 @@
 };
 
 &fmc {
-	nand-controller@4,0 {
+	nand_controller: nand-controller@4,0 {
 		nand@0 {
 			partitions {
 				compatible = "fixed-partitions";
