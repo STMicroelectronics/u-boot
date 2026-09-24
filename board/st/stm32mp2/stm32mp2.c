@@ -834,9 +834,9 @@ int fdt_update_fwu_mdata(void *blob)
 						"/soc@0/bus@42080000/mmc@48230000");
 		break;
 	case BOOT_FLASH_NAND:
-		/* nand@0 */
+		/* nand-controller@4,0 */
 		ret = fdt_update_fwu_properties(blob, nodeoff, "u-boot,fwu-mdata-mtd",
-						"/soc@0/memory-controller@48200000/nand-controller@4,0/nand@0");
+						"/soc@0/memory-controller@48200000/nand-controller@4,0");
 		if (ret)
 			return ret;
 
