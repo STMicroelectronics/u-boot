@@ -743,6 +743,17 @@ static int stm32_usb2phy_probe(struct udevice *dev)
 		phy_dev->vbus = NULL;
 	}
 
+	/*
+	 * From cold boot, the PHY reset isn't asserted. Proper power-on reset operation assumes
+	 * the reset to be asserted. So assert it, as it is necessary for warm reboot, before it
+	 * can be enabled in stm32_usb2phy_init().
+	 */
+	ret = reset_assert(&phy_dev->reset);
+	if (ret) {
+		dev_err(dev, "can't assert reset (%d)\n", ret);
+		return ret;
+	}
+
 	return 0;
 }
 
