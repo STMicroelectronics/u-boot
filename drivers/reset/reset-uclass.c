@@ -102,8 +102,8 @@ int reset_get_by_index_nodev(ofnode node, int index,
 				       index > 0, reset_ctl);
 }
 
-static int __reset_get_bulk(struct udevice *dev, ofnode node,
-			    struct reset_ctl_bulk *bulk)
+int reset_get_bulk_by_node(struct udevice *dev, ofnode node,
+			   struct reset_ctl_bulk *bulk)
 {
 	int i, ret, err, count;
 
@@ -140,7 +140,7 @@ bulk_get_err:
 
 int reset_get_bulk(struct udevice *dev, struct reset_ctl_bulk *bulk)
 {
-	return __reset_get_bulk(dev, dev_ofnode(dev), bulk);
+	return reset_get_bulk_by_node(dev, dev_ofnode(dev), bulk);
 }
 
 int reset_get_by_name(struct udevice *dev, const char *name,
@@ -327,7 +327,7 @@ struct reset_ctl_bulk *devm_reset_bulk_get_by_node(struct udevice *dev,
 	if (unlikely(!bulk))
 		return ERR_PTR(-ENOMEM);
 
-	rc = __reset_get_bulk(dev, node, bulk);
+	rc = reset_get_bulk_by_node(dev, node, bulk);
 	if (rc)
 		return ERR_PTR(rc);
 

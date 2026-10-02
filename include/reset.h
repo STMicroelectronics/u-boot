@@ -227,6 +227,22 @@ int reset_get_by_index_nodev(ofnode node, int index,
 int reset_get_bulk(struct udevice *dev, struct reset_ctl_bulk *bulk);
 
 /**
+ * reset_get_bulk_by_node - Get/request all reset signals of a device tree node.
+ *
+ * Same as reset_get_bulk(), but the reset signals are looked up in @node
+ * instead of @dev's node. The reset array is allocated with devm on @dev, so
+ * it lives as long as @dev, whatever the lifetime of the device bound to @node.
+ *
+ * @dev:	The client device, owner of the allocated reset array.
+ * @node:	The ofnode where the "resets" property is, e.g. a sub-node of
+ *		@dev's node.
+ * @bulk	A pointer to a reset control bulk struct to initialize.
+ * Return: 0 if OK, or a negative error code.
+ */
+int reset_get_bulk_by_node(struct udevice *dev, ofnode node,
+			   struct reset_ctl_bulk *bulk);
+
+/**
  * reset_get_by_name - Get/request a reset signal by name.
  *
  * This looks up and requests a reset signal. The name is relative to the
@@ -407,6 +423,12 @@ static inline int reset_get_by_index(struct udevice *dev, int index,
 
 static inline int reset_get_bulk(struct udevice *dev,
 				 struct reset_ctl_bulk *bulk)
+{
+	return -ENOTSUPP;
+}
+
+static inline int reset_get_bulk_by_node(struct udevice *dev, ofnode node,
+					 struct reset_ctl_bulk *bulk)
 {
 	return -ENOTSUPP;
 }
