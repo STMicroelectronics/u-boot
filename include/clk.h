@@ -174,6 +174,22 @@ int clk_get_by_index_nodev(ofnode node, int index, struct clk *clk);
 int clk_get_bulk(struct udevice *dev, struct clk_bulk *bulk);
 
 /**
+ * clk_get_bulk_by_node() - Get/request all clocks of a device tree node.
+ * @dev:	The client device, owner of the allocated clock array.
+ * @node:	The ofnode where the "clocks" property is, e.g. a sub-node of
+ *		@dev's node.
+ * @bulk:	A pointer to a clock bulk struct to initialize.
+ *
+ * Same as clk_get_bulk(), but the clocks are looked up in @node instead of
+ * @dev's node. The clock array is allocated with devm on @dev, so it lives as
+ * long as @dev, whatever the lifetime of the device bound to @node.
+ *
+ * Return: 0 if OK, or a negative error code.
+ */
+int clk_get_bulk_by_node(struct udevice *dev, ofnode node,
+			 struct clk_bulk *bulk);
+
+/**
  * clk_get_by_name() - Get/request a clock by name.
  * @dev:	The client device.
  * @name:	The name of the clock to request, within the client's list of
@@ -279,6 +295,12 @@ static inline int clk_get_by_index_nodev(ofnode node, int index,
 }
 
 static inline int clk_get_bulk(struct udevice *dev, struct clk_bulk *bulk)
+{
+	return -ENOSYS;
+}
+
+static inline int clk_get_bulk_by_node(struct udevice *dev, ofnode node,
+				       struct clk_bulk *bulk)
 {
 	return -ENOSYS;
 }

@@ -157,13 +157,15 @@ int clk_get_by_index_nodev(ofnode node, int index, struct clk *clk)
 				     index, clk);
 }
 
-int clk_get_bulk(struct udevice *dev, struct clk_bulk *bulk)
+int clk_get_bulk_by_node(struct udevice *dev, ofnode node,
+			 struct clk_bulk *bulk)
 {
 	int i, ret, err, count;
 
 	bulk->count = 0;
 
-	count = dev_count_phandle_with_args(dev, "clocks", "#clock-cells", 0);
+	count = ofnode_count_phandle_with_args(node, "clocks", "#clock-cells",
+					       0);
 	if (count < 1)
 		return count;
 
@@ -172,7 +174,7 @@ int clk_get_bulk(struct udevice *dev, struct clk_bulk *bulk)
 		return -ENOMEM;
 
 	for (i = 0; i < count; i++) {
-		ret = clk_get_by_index(dev, i, &bulk->clks[i]);
+		ret = clk_get_by_index_nodev(node, i, &bulk->clks[i]);
 		if (ret < 0)
 			goto bulk_get_err;
 
@@ -185,9 +187,14 @@ bulk_get_err:
 	err = clk_release_all(bulk->clks, bulk->count);
 	if (err)
 		debug("%s: could not release all clocks for %s\n",
-		      __func__, dev_read_name(dev));
+		      __func__, ofnode_get_name(node));
 
 	return ret;
+}
+
+int clk_get_bulk(struct udevice *dev, struct clk_bulk *bulk)
+{
+	return clk_get_bulk_by_node(dev, dev_ofnode(dev), bulk);
 }
 
 static struct clk *clk_set_default_get_by_id(struct clk *clk)
