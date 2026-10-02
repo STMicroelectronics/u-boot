@@ -650,18 +650,25 @@ int dwc3_glue_bind(struct udevice *parent)
 	return 0;
 }
 
-static int dwc3_glue_reset_init(struct udevice *dev,
+/*
+ * Clocks and resets may be described either in the glue node or in its DWC3
+ * child node (@node). They are always requested on behalf of the glue device
+ * (@dev): the devm allocated arrays must live as long as the glue device, and
+ * not be freed when the child is removed (e.g. at the end of fastboot or ums)
+ * while glue->clks, glue->resets and dwc3->ref_clk still point to them.
+ */
+static int dwc3_glue_reset_init(struct udevice *dev, ofnode node,
 				struct dwc3_glue_data *glue)
 {
 	int ret;
 
-	ret = reset_get_bulk(dev, &glue->resets);
+	ret = reset_get_bulk_by_node(dev, node, &glue->resets);
 	if (ret == -ENOTSUPP || ret == -ENOENT)
 		return 0;
 	else if (ret)
 		return ret;
 
-	if (device_is_compatible(dev, "qcom,dwc3")) {
+	if (ofnode_device_is_compatible(node, "qcom,dwc3")) {
 		reset_assert_bulk(&glue->resets);
 		/* We should wait at least 6 sleep clock cycles, that's
 		 * (6 / 32764) * 1000000 ~= 200us. But some platforms
@@ -678,12 +685,12 @@ static int dwc3_glue_reset_init(struct udevice *dev,
 	return 0;
 }
 
-static int dwc3_glue_clk_init(struct udevice *dev,
+static int dwc3_glue_clk_init(struct udevice *dev, ofnode node,
 			      struct dwc3_glue_data *glue)
 {
 	int ret;
 
-	ret = clk_get_bulk(dev, &glue->clks);
+	ret = clk_get_bulk_by_node(dev, node, &glue->clks);
 	if (ret == -ENOSYS || ret == -ENOENT)
 		return 0;
 	if (ret)
@@ -721,11 +728,11 @@ int dwc3_glue_probe(struct udevice *dev)
 
 	glue->regs = dev_read_addr_size_index(dev, 0, &glue->size);
 
-	ret = dwc3_glue_clk_init(dev, glue);
+	ret = dwc3_glue_clk_init(dev, dev_ofnode(dev), glue);
 	if (ret)
 		return ret;
 
-	ret = dwc3_glue_reset_init(dev, glue);
+	ret = dwc3_glue_reset_init(dev, dev_ofnode(dev), glue);
 	if (ret)
 		return ret;
 
@@ -740,13 +747,13 @@ int dwc3_glue_probe(struct udevice *dev)
 		return 0;
 
 	if (glue->clks.count == 0) {
-		ret = dwc3_glue_clk_init(child, glue);
+		ret = dwc3_glue_clk_init(dev, dev_ofnode(child), glue);
 		if (ret)
 			return ret;
 	}
 
 	if (glue->resets.count == 0) {
-		ret = dwc3_glue_reset_init(child, glue);
+		ret = dwc3_glue_reset_init(dev, dev_ofnode(child), glue);
 		if (ret)
 			return ret;
 	}
