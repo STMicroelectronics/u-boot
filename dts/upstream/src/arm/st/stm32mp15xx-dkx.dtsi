@@ -445,7 +445,7 @@
 	pmic@33 {
 		compatible = "st,stpmic1";
 		reg = <0x33>;
-		interrupts-extended = <&exti 55 IRQ_TYPE_EDGE_FALLING>;
+		interrupts-extended = <&gpioa 0 IRQ_TYPE_EDGE_FALLING>;
 		interrupt-controller;
 		#interrupt-cells = <2>;
 		bootph-all;
@@ -629,13 +629,14 @@
 };
 
 &iwdg1 {
-	bootph-all;
 	timeout-sec = <32>;
-	status = "disabled";
+	bootph-all;
+	status = "okay";
 };
 
 &iwdg2 {
 	timeout-sec = <32>;
+	bootph-all;
 	status = "okay";
 };
 

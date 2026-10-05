@@ -49,18 +49,6 @@
 		};
 	};
 
-	lpddr_channel: sdram-channel-0 {
-		compatible = "jedec,lpddr4-channel";
-		io-width = <16>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-	};
-
-	memory@80000000 {
-		device_type = "memory";
-		reg = <0x0 0x80000000 0x0 0x80000000>;
-	};
-
 	gpio-keys {
 		compatible = "gpio-keys";
 
@@ -107,6 +95,18 @@
 			color = <LED_COLOR_ID_ORANGE>;
 			gpios = <&gpioh 12 GPIO_ACTIVE_HIGH>;
 		};
+	};
+
+	lpddr_channel: sdram-channel-0 {
+		compatible = "jedec,lpddr4-channel";
+		io-width = <16>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0x80000000>;
 	};
 
 	options {
@@ -221,8 +221,8 @@
 };
 
 &arm_wdt {
-	bootph-all;
 	timeout-sec = <32>;
+	bootph-all;
 	status = "okay";
 };
 
@@ -509,6 +509,10 @@
 	bootph-all;
 };
 
+&pinctrl_z {
+	bootph-all;
+};
+
 &psci {
 	bootph-all;
 };
@@ -649,13 +653,13 @@
 };
 
 &usart2 {
+	bootph-all;
 	pinctrl-names = "default", "idle", "sleep";
 	pinctrl-0 = <&usart2_pins_a>;
 	pinctrl-1 = <&usart2_idle_pins_a>;
 	pinctrl-2 = <&usart2_sleep_pins_a>;
 	/delete-property/dmas;
 	/delete-property/dma-names;
-	bootph-all;
 	status = "okay";
 };
 

@@ -43,6 +43,11 @@
 		};
 	};
 
+	clock-hog {
+		compatible = "st,stm32-hog";
+		clocks = <&rcc CK_LPTIM4_AM>;
+	};
+
 	clocks {
 		cec_clock: cec-clock {
 			compatible = "fixed-clock";
@@ -63,31 +68,11 @@
 		};
 	};
 
-	gpio-leds {
-		compatible = "gpio-leds";
-
-		led_blue: led-blue {
-			function = LED_FUNCTION_HEARTBEAT;
-			color = <LED_COLOR_ID_BLUE>;
-			gpios = <&gpioj 7 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "heartbeat";
-			default-state = "off";
-		};
-
-		led-green {
-			color = <LED_COLOR_ID_GREEN>;
-			gpios = <&gpiod 8 GPIO_ACTIVE_HIGH>;
-		};
-
-		led-orange {
-			color = <LED_COLOR_ID_ORANGE>;
-			gpios = <&gpioj 6 GPIO_ACTIVE_HIGH>;
-		};
-	};
-
-	clock-hog {
-		compatible = "st,stm32-hog";
-		clocks = <&rcc CK_LPTIM4_AM>;
+	ddr_channel: sdram-channel-0 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "jedec,ddr4-channel";
+		io-width = <32>;
 	};
 
 	gpio-keys {
@@ -116,11 +101,26 @@
 		};
 	};
 
-	ddr_channel: sdram-channel-0 {
-		#address-cells = <1>;
-		#size-cells = <0>;
-		compatible = "jedec,ddr4-channel";
-		io-width = <32>;
+	gpio-leds {
+		compatible = "gpio-leds";
+
+		led_blue: led-blue {
+			function = LED_FUNCTION_HEARTBEAT;
+			color = <LED_COLOR_ID_BLUE>;
+			gpios = <&gpioj 7 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+			default-state = "off";
+		};
+
+		led-green {
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&gpiod 8 GPIO_ACTIVE_HIGH>;
+		};
+
+		led-orange {
+			color = <LED_COLOR_ID_ORANGE>;
+			gpios = <&gpioj 6 GPIO_ACTIVE_HIGH>;
+		};
 	};
 
 	hdmi: connector {
@@ -229,8 +229,8 @@
 };
 
 &arm_wdt {
-	bootph-all;
 	timeout-sec = <32>;
+	bootph-all;
 	status = "okay";
 };
 

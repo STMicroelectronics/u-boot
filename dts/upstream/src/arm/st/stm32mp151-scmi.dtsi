@@ -10,12 +10,6 @@
 / {
 	/delete-node/ opp-table-cpu0;
 
-	arm_wdt: watchdog {
-		compatible = "arm,smc-wdt";
-		arm,smc-id = <0xbc000000>;
-		status = "disabled";
-	};
-
 	cpus {
 
 		cpu@0 {
@@ -33,7 +27,7 @@
 
 			cpu_pwrdn: cpu-power-down {
 				compatible = "arm,idle-state";
-				arm,psci-suspend-param = <0x00000001>;
+				arm,psci-suspend-param = <0x00000002>;
 				local-timer-stop;
 				entry-latency-us = <150>;
 				exit-latency-us = <200>;
@@ -44,7 +38,7 @@
 		domain-idle-states {
 			stop1: domain-stop1 {
 				compatible = "domain-idle-state";
-				arm,psci-suspend-param = <0x00000011>;
+				arm,psci-suspend-param = <0x00000012>;
 				entry-latency-us = <800>;
 				exit-latency-us = <450>;
 				min-residency-us = <1600>;
@@ -52,7 +46,7 @@
 
 			lp_stop1: domain-lp-stop1 {
 				compatible = "domain-idle-state";
-				arm,psci-suspend-param = <0x0000021>;
+				arm,psci-suspend-param = <0x0000022>;
 				entry-latency-us = <800>;
 				exit-latency-us = <750>;
 				min-residency-us = <1600>;
@@ -60,7 +54,7 @@
 
 			lplv_stop1: domain-lplv-stop1 {
 				compatible = "domain-idle-state";
-				arm,psci-suspend-param = <0x00000211>;
+				arm,psci-suspend-param = <0x00000222>;
 				entry-latency-us = <2800>;
 				exit-latency-us = <4700>;
 				min-residency-us = <5600>;
@@ -130,17 +124,6 @@
 					};
 				};
 			};
-		};
-	};
-
-	gpio-keys {
-		compatible = "gpio-keys";
-
-		button-wakeup {
-			label = "wake-up";
-			linux,code = <KEY_WAKEUP>;
-			interrupts-extended = <&optee 0>;
-			wakeup-source;
 		};
 	};
 
@@ -419,6 +402,7 @@
 &spi6 {
 	clocks = <&scmi_clk CK_SCMI_SPI6>;
 	resets = <&scmi_reset RST_SCMI_SPI6>;
+	power-domains = <&d1_pd>;
 };
 
 &timers1 {

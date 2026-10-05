@@ -645,7 +645,10 @@
 
 &sdmmc2_b4_pins_a {
 	bootph-pre-ram;
-	pins {
+	pins1 {
+		bootph-pre-ram;
+	};
+	pins2 {
 		bootph-pre-ram;
 	};
 };

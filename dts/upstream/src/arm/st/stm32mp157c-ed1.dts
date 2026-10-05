@@ -9,11 +9,19 @@
 #include "stm32mp157c-ed1-no-scmi.dts"
 #include "stm32mp157-scmi.dtsi"
 #include "stm32mp15xc-scmi.dtsi"
-#include <dt-bindings/regulator/st,stm32mp15-regulator.h>
 
 / {
 	model = "STMicroelectronics STM32MP157C eval daughter";
 	compatible = "st,stm32mp157c-ed1", "st,stm32mp157";
+
+	gpio-keys {
+		button-wakeup {
+			label = "wake-up";
+			linux,code = <KEY_WAKEUP>;
+			interrupts-extended = <&optee 0>;
+			wakeup-source;
+		};
+	};
 
 	reserved-memory {
 		optee@fe000000 {
@@ -24,8 +32,8 @@
 };
 
 &arm_wdt {
-	bootph-all;
 	timeout-sec = <32>;
+	bootph-all;
 	status = "okay";
 };
 
@@ -34,9 +42,13 @@
 
 	pmic@33 {
 		status = "disabled";
-
 		/delete-node/ regulators;
 	};
+};
+
+&iwdg1 {
+	/* IWDG1 is secure and managed through arm_wdt */
+	status = "disabled";
 };
 
 &lptimer4 {
@@ -87,7 +99,6 @@
 	v1v8: regulator@c {
 		reg = <VOLTD_SCMI_STPMIC1_LDO6>;
 		regulator-name = "v1v8";
-		regulator-enable-ramp-delay = <300000>;
 	};
 
 	vbus_otg: regulator@f {

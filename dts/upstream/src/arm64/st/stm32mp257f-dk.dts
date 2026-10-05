@@ -42,6 +42,11 @@
 		};
 	};
 
+	clock-hog {
+		compatible = "st,stm32-hog";
+		clocks = <&rcc CK_LPTIM4_AM>;
+	};
+
 	clocks {
 		clk_ext_camera: clk-ext-camera {
 			#clock-cells = <0>;
@@ -54,11 +59,6 @@
 			compatible = "fixed-clock";
 			clock-frequency = <24000000>;
 		};
-	};
-
-	clock-hog {
-		compatible = "st,stm32-hog";
-		clocks = <&rcc CK_LPTIM4_AM>;
 	};
 
 	dmic0: dmic-0 {
@@ -252,8 +252,8 @@
 };
 
 &arm_wdt {
-	bootph-all;
 	timeout-sec = <32>;
+	bootph-all;
 	status = "okay";
 };
 

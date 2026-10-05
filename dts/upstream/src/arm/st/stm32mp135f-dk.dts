@@ -191,8 +191,8 @@
 };
 
 &arm_wdt {
-	bootph-all;
 	timeout-sec = <32>;
+	bootph-all;
 	status = "okay";
 };
 
@@ -476,6 +476,7 @@
 
 &iwdg2 {
 	timeout-sec = <32>;
+	bootph-all;
 	status = "okay";
 };
 

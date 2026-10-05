@@ -33,7 +33,7 @@
 			cpu_pwrdn: cpu-power-down {
 
 				compatible = "arm,idle-state";
-				arm,psci-suspend-param = <0x00000001>;
+				arm,psci-suspend-param = <0x00000002>;
 				local-timer-stop;
 				entry-latency-us = <150>;
 				exit-latency-us = <200>;
@@ -44,7 +44,7 @@
 		domain-idle-states {
 			stop1: domain-stop1 {
 				compatible = "domain-idle-state";
-				arm,psci-suspend-param = <0x00000011>;
+				arm,psci-suspend-param = <0x00000012>;
 				entry-latency-us = <300>;
 				exit-latency-us = <500>;
 				min-residency-us = <1500>;
@@ -52,7 +52,7 @@
 
 			lp_stop1: domain-lp-stop1 {
 				compatible = "domain-idle-state";
-				arm,psci-suspend-param = <0x0000021>;
+				arm,psci-suspend-param = <0x0000022>;
 				entry-latency-us = <350>;
 				exit-latency-us = <600>;
 				min-residency-us = <2000>;
@@ -1933,6 +1933,26 @@
 			st,mem-map = <0x0a040000 0x20000>;
 		};
 
+		bsec: efuse@44000000 {
+			compatible = "st,stm32mp25-bsec";
+			reg = <0x44000000 0x0 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			part_number_otp@24 {
+				reg = <0x24 0x4>;
+			};
+
+			vrefint: vrefin-cal@1b8 {
+				reg = <0x1b8 0x2>;
+			};
+
+			package_otp@1e8 {
+				reg = <0x1e8 0x1>;
+				bits = <0 3>;
+			};
+		};
+
 		dts: thermal-sensor@44070000 {
 			compatible = "moortec,mr75203";
 			reg = <0x44070000 0x0 0x80>,
@@ -2124,26 +2144,6 @@
 				<&intc GIC_SPI 205 IRQ_TYPE_LEVEL_HIGH>,
 				<&intc GIC_SPI 206 IRQ_TYPE_LEVEL_HIGH>,
 				<&intc GIC_SPI 207 IRQ_TYPE_LEVEL_HIGH>;
-		};
-
-		bsec: efuse@44000000 {
-			compatible = "st,stm32mp25-bsec";
-			reg = <0x44000000 0x0 0x1000>;
-			#address-cells = <1>;
-			#size-cells = <1>;
-
-			part_number_otp@24 {
-				reg = <0x24 0x4>;
-			};
-
-			vrefint: vrefin-cal@1b8 {
-				reg = <0x1b8 0x2>;
-			};
-
-			package_otp@1e8 {
-				reg = <0x1e8 0x1>;
-				bits = <0 3>;
-			};
 		};
 
 		syscfg: syscon@44230000 {

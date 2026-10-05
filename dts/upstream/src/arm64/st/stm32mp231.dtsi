@@ -32,7 +32,7 @@
 
 			cpu_pwrdn: cpu-power-down {
 				compatible = "arm,idle-state";
-				arm,psci-suspend-param = <0x00000001>;
+				arm,psci-suspend-param = <0x00000002>;
 				local-timer-stop;
 				entry-latency-us = <150>;
 				exit-latency-us = <200>;
@@ -43,7 +43,7 @@
 		domain-idle-states {
 			stop1: domain-stop1 {
 				compatible = "domain-idle-state";
-				arm,psci-suspend-param = <0x00000011>;
+				arm,psci-suspend-param = <0x00000012>;
 				entry-latency-us = <300>;
 				exit-latency-us = <500>;
 				min-residency-us = <1500>;
@@ -51,7 +51,7 @@
 
 			lp_stop1: domain-lp-stop1 {
 				compatible = "domain-idle-state";
-				arm,psci-suspend-param = <0x0000021>;
+				arm,psci-suspend-param = <0x0000022>;
 				entry-latency-us = <350>;
 				exit-latency-us = <600>;
 				min-residency-us = <2000>;
@@ -59,7 +59,7 @@
 
 			lplv_stop1: domain-lplv-stop1 {
 				compatible = "domain-idle-state";
-				arm,psci-suspend-param = <0x00000211>;
+				arm,psci-suspend-param = <0x00000222>;
 				entry-latency-us = <500>;
 				exit-latency-us = <2000>;
 				min-residency-us = <2500>;
@@ -342,6 +342,18 @@
 			#dma-cells = <3>;
 		};
 
+		ipcc1: mailbox@40490000 {
+			compatible = "st,stm32mp1-ipcc";
+			#mbox-cells = <1>;
+			reg = <0x40490000 0x400>;
+			st,proc-id = <0>;
+			interrupts = <GIC_SPI 171 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 172 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "rx", "tx";
+			clocks = <&scmi_clk CK_SCMI_IPCC1>;
+			status = "disabled";
+		};
+
 		ommanager: ommanager@40500000 {
 			compatible = "st,stm32mp25-omm";
 			reg = <0x40500000 0x400>, <0x60000000 0x10000000>;
@@ -394,18 +406,6 @@
 				st,syscfg-dlyb = <&syscfg 0x1400>;
 				status = "disabled";
 			};
-		};
-
-		ipcc1: mailbox@40490000 {
-			compatible = "st,stm32mp1-ipcc";
-			#mbox-cells = <1>;
-			reg = <0x40490000 0x400>;
-			st,proc-id = <0>;
-			interrupts = <GIC_SPI 171 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 172 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names = "rx", "tx";
-			clocks = <&scmi_clk CK_SCMI_IPCC1>;
-			status = "disabled";
 		};
 
 		rifsc: bus@42080000 {

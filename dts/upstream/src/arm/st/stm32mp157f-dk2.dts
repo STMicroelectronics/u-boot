@@ -13,7 +13,6 @@
 #include "stm32mp15xx-dkx.dtsi"
 #include "stm32mp157-scmi.dtsi"
 #include "stm32mp15xc-scmi.dtsi"
-#include <dt-bindings/regulator/st,stm32mp15-regulator.h>
 
 / {
 	model = "STMicroelectronics STM32MP157F-DK2 Discovery Board";
@@ -37,6 +36,15 @@
 		};
 	};
 
+	gpio-keys {
+		button-wakeup {
+			label = "wake-up";
+			linux,code = <KEY_WAKEUP>;
+			interrupts-extended = <&optee 0>;
+			wakeup-source;
+		};
+	};
+
 	reserved-memory {
 		optee@de000000 {
 			reg = <0xde000000 0x2000000>;
@@ -53,8 +61,8 @@
 };
 
 &arm_wdt {
-	bootph-all;
 	timeout-sec = <32>;
+	bootph-all;
 	status = "okay";
 };
 
@@ -123,6 +131,11 @@
 
 		/delete-node/ regulators;
 	};
+};
+
+&iwdg1 {
+	/* IWDG1 is secure and managed through arm_wdt */
+	status = "disabled";
 };
 
 &lptimer4 {
@@ -256,16 +269,13 @@
 };
 
 &usbotg_hs {
+	/*
+	 * Forcing dr_mode = "peripheral"/"role-switch-default-mode = "peripheral"; as stusb1600
+	 * on i2c4 bus has been secured. This causes the pull-up on D+/D- to be raised as soon as
+	 * the OTG is configured at runtime, regardless of the presence of VBUS. Notice that on
+	 * self-powered devices like stm32mp157f-dk2, this isn't compliant with the USB standard.
+	 */
 	dr_mode = "peripheral";
 	role-switch-default-mode = "peripheral";
-	/*
-	 * Forcing dr_mode = "peripheral"/"role-switch-default-mode = "peripheral";
-	 * will cause the pull-up on D+/D- to be raised as soon as the OTG is configured at runtime,
-	 * regardless of the presence of VBUS. Notice that on self-powered devices like
-	 * stm32mp157f-dk2, this isn't compliant with the USB standard. That's why usbotg_hs is kept
-	 * disabled here.
-	 */
-	status = "disabled";
-
 	/delete-node/ port;
 };
