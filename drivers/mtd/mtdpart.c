@@ -882,21 +882,39 @@ int add_mtd_partitions(struct mtd_info *master,
 }
 
 #if CONFIG_IS_ENABLED(DM) && CONFIG_IS_ENABLED(OF_CONTROL)
-int add_mtd_partitions_of(struct mtd_info *master)
+static ofnode mtd_get_of_partitions(ofnode node)
 {
-	ofnode parts, child;
-	int i = 0;
+	ofnode parts;
 
-	if (!master->dev && !ofnode_valid(master->flash_node))
-		return 0;
+	if (!ofnode_valid(node))
+		return ofnode_null();
 
-	if (master->dev)
-		parts = ofnode_find_subnode(mtd_get_ofnode(master), "partitions");
-	else
-		parts = ofnode_find_subnode(master->flash_node, "partitions");
-
+	parts = ofnode_find_subnode(node, "partitions");
 	if (!ofnode_valid(parts) || !ofnode_is_enabled(parts) ||
 	    !ofnode_device_is_compatible(parts, "fixed-partitions"))
+		return ofnode_null();
+
+	return parts;
+}
+
+int add_mtd_partitions_of(struct mtd_info *master)
+{
+	ofnode parts = ofnode_null(), child;
+	int i = 0;
+
+	if (master->dev)
+		parts = mtd_get_of_partitions(mtd_get_ofnode(master));
+
+	/*
+	 * Some controllers (e.g. stm32_fmc2) bind a single DM device for the
+	 * NAND controller while the flash chip, and thus its "partitions"
+	 * subnode, is described by a child node which is not bound as a
+	 * udevice. Fall back to flash_node, which points at the flash chip.
+	 */
+	if (!ofnode_valid(parts))
+		parts = mtd_get_of_partitions(master->flash_node);
+
+	if (!ofnode_valid(parts))
 		return 0;
 
 	ofnode_for_each_subnode(child, parts) {
